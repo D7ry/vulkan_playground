@@ -1,6 +1,7 @@
 #include "VulkanApplication.h"
 #include <GLFW/glfw3.h>
 #include <vulkan/vulkan_core.h>
+#include "utils/ShaderUtils.h"
 
 void VulkanApplication::Run() {
         INFO("Initializing Vulkan Application...");
@@ -176,23 +177,24 @@ VKAPI_ATTR VkBool32 VKAPI_CALL VulkanApplication::debugCallback(VkDebugUtilsMess
         return VK_FALSE;
 }
 VulkanApplication::QueueFamilyIndices VulkanApplication::findQueueFamilies(VkPhysicalDevice device) {
+        INFO("Finding graphics and presentation queue families...");
+
         QueueFamilyIndices indices;
         uint32_t queueFamilyCount = 0;
         vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
         std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount); // initialize vector to store queue familieis
         vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
-
         int i = 0;
         for (const auto& queueFamily : queueFamilies) {
                 VkBool32 presentationSupport = false;
                 if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
                         indices.graphicsFamily = i;
-                        INFO("Graphics family found at %d\n", i);
+                        INFO("Graphics family found at {}", i);
                 }
                 vkGetPhysicalDeviceSurfaceSupportKHR(device, i, this->_surface, &presentationSupport);
                 if (presentationSupport) {
                         indices.presentationFamily = i;
-                        INFO("Presentation family found at %d\n", i);
+                        INFO("Presentation family found at {}", i);
                 }
                 if (indices.isComplete()) {
                         break;
@@ -396,7 +398,7 @@ VkExtent2D VulkanApplication::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& c
         }
 }
 void VulkanApplication::createImageViews() {
-        INFO("Creating image views...");
+        INFO("Creating {} image views...", this->_swapChainImages.size());
         this->_swapChainImageViews.resize(this->_swapChainImages.size());
         for (size_t i = 0; i < this->_swapChainImages.size(); i++) {
                 VkImageViewCreateInfo createInfo{};
@@ -418,4 +420,48 @@ void VulkanApplication::createImageViews() {
                 }
         }
         INFO("Image views created.");
+}
+void VulkanApplication::createGraphicsPipeline()
+{
+            // programmable stages
+    VkShaderModule vertShaderModule = ShaderCreation::createShaderModule(this->_logicalDevice, "shaders/vert.spv");
+    VkShaderModule fragShaderModule =  ShaderCreation::createShaderModule(this->_logicalDevice, "shaders/frag.spv");
+
+    VkPipelineShaderStageCreateInfo vertShaderStageInfo = {};
+    vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
+    vertShaderStageInfo.module = vertShaderModule;
+    vertShaderStageInfo.pName = "main";
+
+    VkPipelineShaderStageCreateInfo fragShaderStageInfo = {};
+    fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+    fragShaderStageInfo.module = fragShaderModule;
+    fragShaderStageInfo.pName = "main";
+
+    VkPipelineShaderStageCreateInfo shaderStages[] = {
+        vertShaderStageInfo, fragShaderStageInfo}; // put the 2 stages together.
+
+    // dynamic states
+    std::vector<VkDynamicState> dynamicStates = {VK_DYNAMIC_STATE_VIEWPORT,
+                                                 VK_DYNAMIC_STATE_SCISSOR};
+
+    VkPipelineDynamicStateCreateInfo dynamicStateCreateInfo = {};
+    dynamicStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+    dynamicStateCreateInfo.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
+    dynamicStateCreateInfo.pDynamicStates = dynamicStates.data();
+    // the configurations of these values will be ignored and they will be specified at draw time;
+
+
+    // vertex input bindings
+    VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
+    vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    // no descriptions
+    vertexInputInfo.vertexBindingDescriptionCount = 0;
+    vertexInputInfo.pVertexBindingDescriptions = nullptr;
+    vertexInputInfo.vertexAttributeDescriptionCount = 0; 
+    vertexInputInfo.pVertexAttributeDescriptions = nullptr;
+
+    vkDestroyShaderModule(_logicalDevice, fragShaderModule, nullptr);
+    vkDestroyShaderModule(_logicalDevice, vertShaderModule, nullptr);
 }

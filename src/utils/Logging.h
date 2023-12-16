@@ -4,6 +4,7 @@ namespace Logging {
 void Init();
 }
 
+
 #define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_TRACE
 #define INFO(...) SPDLOG_INFO(__VA_ARGS__)
 #define WARN(...) SPDLOG_WARN(__VA_ARGS__)

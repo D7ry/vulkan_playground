@@ -17,6 +17,7 @@ add_executable(vulkan_playground
         src/main.cpp
         src/application/VulkanApplication.cpp
         src/utils/Logging.cpp
+        src/utils/ShaderUtils.cpp
 )
 target_include_directories(vulkan_playground PUBLIC src)
 target_include_directories(vulkan_playground PRIVATE spdlog_headers)

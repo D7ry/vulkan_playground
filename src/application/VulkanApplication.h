@@ -14,6 +14,7 @@
 #include <set>
 #include <stdexcept>
 #include <vector>
+//TODO: create a serialization scheme for tweakable settings.
 
 /**
  * @brief A Vulkan application.
