@@ -28,7 +28,7 @@ class VulkanApplication {
       public:
         void Run();
 
-      private:
+      protected:
         struct QueueFamilyIndices {
                 std::optional<uint32_t> graphicsFamily;
                 std::optional<uint32_t> presentationFamily;
@@ -77,7 +77,7 @@ class VulkanApplication {
 
         void destroyImageViews();
 
-        void createGraphicsPipeline();
+        virtual void createGraphicsPipeline();
 
         /**
          * @brief Initializes Vulkan.

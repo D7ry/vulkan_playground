@@ -16,6 +16,7 @@ set(spdlog_headers ${spdlog_repo}/include/spdlog)
 add_executable(vulkan_playground 
         src/main.cpp
         src/application/VulkanApplication.cpp
+        src/application/TriangleApp.cpp
         src/utils/Logging.cpp
         src/utils/ShaderUtils.cpp
 )
