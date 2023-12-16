@@ -1,0 +1,1 @@
+/usr/bin/c++ CMakeFiles/vulkan_playground.dir/src/main.cpp.o -o vulkan_playground  /usr/lib/x86_64-linux-gnu/libvulkan.so -lglfw -ldl -lpthread -lX11 -lXxf86vm -lXrandr -lXi 
