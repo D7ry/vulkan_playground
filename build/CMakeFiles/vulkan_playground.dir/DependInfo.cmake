@@ -8,6 +8,7 @@ set(CMAKE_DEPENDS_LANGUAGES
 
 # The set of dependency files which are needed:
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
+  "/home/d7ry/repo/vulkan_playground/src/application/VulkanApplication.cpp" "CMakeFiles/vulkan_playground.dir/src/application/VulkanApplication.cpp.o" "gcc" "CMakeFiles/vulkan_playground.dir/src/application/VulkanApplication.cpp.o.d"
   "/home/d7ry/repo/vulkan_playground/src/main.cpp" "CMakeFiles/vulkan_playground.dir/src/main.cpp.o" "gcc" "CMakeFiles/vulkan_playground.dir/src/main.cpp.o.d"
   )
 

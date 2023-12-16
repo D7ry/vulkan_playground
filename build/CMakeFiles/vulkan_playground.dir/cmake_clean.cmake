@@ -1,4 +1,6 @@
 file(REMOVE_RECURSE
+  "CMakeFiles/vulkan_playground.dir/src/application/VulkanApplication.cpp.o"
+  "CMakeFiles/vulkan_playground.dir/src/application/VulkanApplication.cpp.o.d"
   "CMakeFiles/vulkan_playground.dir/src/main.cpp.o"
   "CMakeFiles/vulkan_playground.dir/src/main.cpp.o.d"
   "vulkan_playground"

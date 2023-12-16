@@ -14,3 +14,11 @@
 #include <set>
 #include <stdexcept>
 #include <vector>
+
+/**
+ * @brief Base class for all Vulkan applications.
+ */
+class VulkanApplication {
+      public:
+        void Run();
+};

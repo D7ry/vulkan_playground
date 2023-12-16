@@ -129,6 +129,30 @@ vulkan_playground/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/vulkan_playground.dir/build.make CMakeFiles/vulkan_playground.dir/build
 .PHONY : vulkan_playground/fast
 
+src/application/VulkanApplication.o: src/application/VulkanApplication.cpp.o
+.PHONY : src/application/VulkanApplication.o
+
+# target to build an object file
+src/application/VulkanApplication.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/vulkan_playground.dir/build.make CMakeFiles/vulkan_playground.dir/src/application/VulkanApplication.cpp.o
+.PHONY : src/application/VulkanApplication.cpp.o
+
+src/application/VulkanApplication.i: src/application/VulkanApplication.cpp.i
+.PHONY : src/application/VulkanApplication.i
+
+# target to preprocess a source file
+src/application/VulkanApplication.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/vulkan_playground.dir/build.make CMakeFiles/vulkan_playground.dir/src/application/VulkanApplication.cpp.i
+.PHONY : src/application/VulkanApplication.cpp.i
+
+src/application/VulkanApplication.s: src/application/VulkanApplication.cpp.s
+.PHONY : src/application/VulkanApplication.s
+
+# target to generate assembly for a file
+src/application/VulkanApplication.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/vulkan_playground.dir/build.make CMakeFiles/vulkan_playground.dir/src/application/VulkanApplication.cpp.s
+.PHONY : src/application/VulkanApplication.cpp.s
+
 src/main.o: src/main.cpp.o
 .PHONY : src/main.o
 
@@ -162,6 +186,9 @@ help:
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
 	@echo "... vulkan_playground"
+	@echo "... src/application/VulkanApplication.o"
+	@echo "... src/application/VulkanApplication.i"
+	@echo "... src/application/VulkanApplication.s"
 	@echo "... src/main.o"
 	@echo "... src/main.i"
 	@echo "... src/main.s"
