@@ -28,6 +28,18 @@ class VulkanApplication {
         void Run();
 
       private:
+        struct QueueFamilyIndices {
+                std::optional<uint32_t> graphicsFamily;
+                std::optional<uint32_t> presentationFamily;
+                inline bool isComplete() { return graphicsFamily.has_value() && presentationFamily.has_value(); }
+        };
+
+        struct SwapChainSupportDetails {
+                VkSurfaceCapabilitiesKHR capabilities;
+                std::vector<VkSurfaceFormatKHR> formats;
+                std::vector<VkPresentModeKHR> presentModes;
+        };
+
         /**
          * @brief Initializes a GLFW window and set it as a member variable for
          * drawing.
@@ -37,8 +49,32 @@ class VulkanApplication {
          * @brief Creates a vulkan instance, save to a field of this class.
          */
         void createInstance();
-        
+
         void createSurface();
+
+        QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
+
+        bool checkDeviceExtensionSupport(VkPhysicalDevice device);
+
+        bool isDeviceSuitable(VkPhysicalDevice device);
+
+        void pickPhysicalDevice();
+
+        void createLogicalDevice();
+
+        SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
+
+        VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
+
+        VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
+
+        VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
+
+        void createSwapChain();
+
+        void createImageViews();
+
+        void createGraphicsPipeline();
 
         /**
          * @brief Initializes Vulkan.
@@ -58,7 +94,7 @@ class VulkanApplication {
         const bool enableValidationLayers = true;
 #endif
         static inline const std::vector<const char*> VALIDATION_LAYERS = {"VK_LAYER_KHRONOS_validation"};
-
+        static inline const std::vector<const char*> DEVICE_EXTENSIONS = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
         bool checkValidationLayerSupport();
 
         // debug messenger setup
@@ -76,9 +112,24 @@ class VulkanApplication {
         static inline const char* ENGINE_NAME = "No Engine";
         static inline const uint32_t ENGINE_VERSION = VK_MAKE_VERSION(1, 0, 0);
         static inline const uint32_t API_VERSION = VK_API_VERSION_1_0;
-        
+
         GLFWwindow* _window;
         VkInstance _instance;
         VkSurfaceKHR _surface;
         VkDebugUtilsMessengerEXT _debugMessenger;
+
+        // devices
+        VkPhysicalDevice _physicalDevice = VK_NULL_HANDLE;
+        VkDevice _logicalDevice = VK_NULL_HANDLE;
+
+        VkQueue _graphicsQueue = VK_NULL_HANDLE;
+        VkQueue _presentationQueue = VK_NULL_HANDLE;
+
+        // swapchain
+        VkSwapchainKHR _swapChain = VK_NULL_HANDLE;
+        std::vector<VkImage> _swapChainImages;
+        VkFormat _swapChainImageFormat;
+        VkExtent2D _swapChainExtent;
+
+        std::vector<VkImageView> _swapChainImageViews;
 };

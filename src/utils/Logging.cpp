@@ -1,4 +1,7 @@
 #include "Logging.h"
+#include "spdlog/spdlog.h"
 void Logging::Init() {
-        spdlog::set_pattern("[%H:%M:%S] [%s:%#] (%!) %v ");
+
+        spdlog::set_pattern("\033[1;37m[%H:%M:%S] [%^%l%$] [%s:%#] (%!) %v\033[0m");
+
 };
