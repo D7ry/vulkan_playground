@@ -21,4 +21,7 @@
 class VulkanApplication {
       public:
         void Run();
+
+      private:
+        void initWindow();
 };

@@ -1,8 +1,13 @@
 #pragma once
-#include "spdlog/spdlog.h"
-#define INFO(...) spdlog::info(__VA_ARGS__)
-#define WARN(...) spdlog::warn(__VA_ARGS__)
-#define ERROR(...) spdlog::error(__VA_ARGS__)
-#define FATAL(...) spdlog::critical(__VA_ARGS__)
-#define DEBUG(...) spdlog::debug(__VA_ARGS__)
-#define TRACE(...) spdlog::trace(__VA_ARGS__)
+namespace Logging {
+void Init();
+}
+#define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_TRACE
+#define INFO(...) SPDLOG_INFO(__VA_ARGS__)
+#define WARN(...) SPDLOG_WARN(__VA_ARGS__)
+#define ERROR(...) SPDLOG_ERROR(__VA_ARGS__)
+#define TRACE(...) SPDLOG_TRACE(__VA_ARGS__)
+#define DEBUG(...) SPDLOG_DEBUG(__VA_ARGS__)
+#define FATAL(...) SPDLOG_CRITICAL(__VA_ARGS__)
+
+
