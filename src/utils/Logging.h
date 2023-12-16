@@ -1,7 +1,9 @@
 #pragma once
+#include "spdlog/spdlog.h"
 namespace Logging {
 void Init();
 }
+
 #define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_TRACE
 #define INFO(...) SPDLOG_INFO(__VA_ARGS__)
 #define WARN(...) SPDLOG_WARN(__VA_ARGS__)
@@ -11,3 +13,4 @@ void Init();
 #define FATAL(...) SPDLOG_CRITICAL(__VA_ARGS__)
 
 
+#define INIT_LOGS() Logging::Init()

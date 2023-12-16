@@ -1,7 +1,8 @@
 #include "application/VulkanApplication.h"
+#include "spdlog/spdlog.h"
 
 int main(int argc, char** argv) {
-        Logging::Init();
+        INIT_LOGS();
         INFO("Logger initialized.");
 
         VulkanApplication app;
