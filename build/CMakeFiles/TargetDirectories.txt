@@ -1,3 +1,0 @@
-/home/d7ry/repo/vulkan_playground/build/CMakeFiles/vulkan_playground.dir
-/home/d7ry/repo/vulkan_playground/build/CMakeFiles/edit_cache.dir
-/home/d7ry/repo/vulkan_playground/build/CMakeFiles/rebuild_cache.dir
