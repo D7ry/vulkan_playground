@@ -6,7 +6,7 @@ VkShaderModule ShaderCreation::createShaderModule(VkDevice logicalDevice, const 
                 shaderCode = readFile(shaderCodeFile);
                 return createShaderModule(logicalDevice, shaderCode);
         } catch (const std::exception& e) {
-                FATAL("Failed to read shader file: {}", e.what());
+                FATAL("Failed to read shader file {}: {}", shaderCodeFile, e.what());
         }
         return nullptr;
 }

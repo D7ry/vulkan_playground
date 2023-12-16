@@ -42,7 +42,7 @@ void VulkanApplication::initVulkan() {
         this->createLogicalDevice();
         this->createSwapChain();
         this->createImageViews();
-        //this->createGraphicsPipeline();
+        this->createGraphicsPipeline();
         INFO("Vulkan initialized.");
 }
 
@@ -464,4 +464,18 @@ void VulkanApplication::createGraphicsPipeline()
 
     vkDestroyShaderModule(_logicalDevice, fragShaderModule, nullptr);
     vkDestroyShaderModule(_logicalDevice, vertShaderModule, nullptr);
+}
+void VulkanApplication::cleanup() {
+        this->destroyImageViews();
+        vkDestroySwapchainKHR(this->_logicalDevice, this->_swapChain, nullptr);
+        vkDestroyDevice(this->_logicalDevice, nullptr);
+        vkDestroySurfaceKHR(this->_instance, this->_surface, nullptr);
+        vkDestroyInstance(this->_instance, nullptr);
+        glfwDestroyWindow(this->_window);
+        glfwTerminate();
+}
+void VulkanApplication::destroyImageViews() {
+        for (auto imageView : this->_swapChainImageViews) {
+                vkDestroyImageView(this->_logicalDevice, imageView, nullptr);
+        }
 }

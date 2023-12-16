@@ -75,6 +75,8 @@ class VulkanApplication {
 
         void createImageViews();
 
+        void destroyImageViews();
+
         void createGraphicsPipeline();
 
         /**
@@ -87,6 +89,8 @@ class VulkanApplication {
          *
          */
         void mainLoop();
+
+        void cleanup();
 
         // validation layers, enable under debug mode only
 #ifdef NDEBUG
