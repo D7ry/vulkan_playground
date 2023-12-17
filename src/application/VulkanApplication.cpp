@@ -27,8 +27,13 @@ void VulkanApplication::mainLoop() {
         INFO("Entering main render loop...");
         while (!glfwWindowShouldClose(this->_window)) {
                 glfwPollEvents();
+                drawFrame();
         }
         INFO("Main loop exited.");
+}
+
+void VulkanApplication::drawFrame() {
+        // nothing to draw
 }
 
 void VulkanApplication::initVulkan() {
@@ -44,6 +49,9 @@ void VulkanApplication::initVulkan() {
         this->createImageViews();
         this->createRenderPass();
         this->createGraphicsPipeline();
+        this->createFramebuffers();
+        this->createCommandPool();
+        this->createCommandBuffer();
         INFO("Vulkan initialized.");
 }
 
@@ -422,45 +430,30 @@ void VulkanApplication::createImageViews() {
         }
         INFO("Image views created.");
 }
-void VulkanApplication::createGraphicsPipeline() {
-        ERROR("Base vulkan application does not have a graphics pipeline.");
-}
+void VulkanApplication::createGraphicsPipeline() { ERROR("Base vulkan application does not have a graphics pipeline."); }
 
-//https://vulkan-tutorial.com/Drawing_a_triangle/Graphics_pipeline_basics/Render_passes
-void VulkanApplication::createRenderPass() {
-        ERROR("Base vulkan application does not have a render pass.");
-}
+// https://vulkan-tutorial.com/Drawing_a_triangle/Graphics_pipeline_basics/Render_passes
+void VulkanApplication::createRenderPass() { ERROR("Base vulkan application does not have a render pass."); }
 
-void VulkanApplication::createFramebuffers(){
-        INFO("Creating {} framebuffers...", this->_swapChainImageViews.size());
-        this->_swapChainFrameBuffers.resize(this->_swapChainImageViews.size());
-        // iterate through image views and create framebuffers
-        for (size_t i = 0; i < _swapChainImageViews.size(); i++) {
-                VkImageView atachments [] = {
-                        _swapChainImageViews[i]
-                };
-                VkFramebufferCreateInfo framebufferInfo{};
-                framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-                framebufferInfo.renderPass = _renderPass; // each framebuffer is associated with a render pass;  they need to be compatible i.e. having same number of attachments and same formats
-                framebufferInfo.attachmentCount = 1;
-                framebufferInfo.pAttachments = atachments;
-                framebufferInfo.width = _swapChainExtent.width;
-                framebufferInfo.height = _swapChainExtent.height;
-                framebufferInfo.layers = 1; // number of layers in image arrays
-                if (vkCreateFramebuffer(_logicalDevice, &framebufferInfo, nullptr, &_swapChainFrameBuffers[i]) != VK_SUCCESS) {
-                        FATAL("Failed to create framebuffer!");
-                }
-        }
-}
+void VulkanApplication::createFramebuffers() { ERROR("Base vulkan application does not have a frame buffer."); }
+
+void VulkanApplication::createCommandPool() { ERROR("Base vulkan application does not have a command pool."); }
+
+void VulkanApplication::createCommandBuffer() { ERROR("Base vulkan application does not have a command buffer."); }
+
+void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) { ERROR("Base vulkan application does not have a command buffer."); }
+
 void VulkanApplication::cleanup() {
         INFO("Cleaning up...");
+        vkDestroyCommandPool(this->_logicalDevice, this->_commandPool, nullptr);
         for (auto framebuffer : this->_swapChainFrameBuffers) {
                 vkDestroyFramebuffer(this->_logicalDevice, framebuffer, nullptr);
         }
         vkDestroyPipeline(this->_logicalDevice, this->_graphicsPipeline, nullptr);
         vkDestroyPipelineLayout(this->_logicalDevice, this->_pipelineLayout, nullptr);
-        this->destroyImageViews();
-        vkDestroyPipelineLayout(this->_logicalDevice, this->_pipelineLayout, nullptr);
+        for (auto imageView : this->_swapChainImageViews) {
+                vkDestroyImageView(this->_logicalDevice, imageView, nullptr);
+        }
         vkDestroyRenderPass(this->_logicalDevice, this->_renderPass, nullptr);
         vkDestroySwapchainKHR(this->_logicalDevice, this->_swapChain, nullptr);
         vkDestroyDevice(this->_logicalDevice, nullptr);
@@ -469,9 +462,4 @@ void VulkanApplication::cleanup() {
         glfwDestroyWindow(this->_window);
         glfwTerminate();
         INFO("Resource cleaned up.");
-}
-void VulkanApplication::destroyImageViews() {
-        for (auto imageView : this->_swapChainImageViews) {
-                vkDestroyImageView(this->_logicalDevice, imageView, nullptr);
-        }
 }

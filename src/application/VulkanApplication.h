@@ -76,16 +76,13 @@ class VulkanApplication {
 
         void createImageViews();
 
-        void destroyImageViews();
 
-        /**
-         * @brief Initialize the graphics pipeline of the app. Compile SPIR-V shaders.
-         */
         virtual void createGraphicsPipeline();
-
         virtual void createRenderPass();
-
         virtual void createFramebuffers();
+        virtual void createCommandPool();
+        virtual void createCommandBuffer();
+        virtual void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
 
         /**
          * @brief Initializes Vulkan.
@@ -97,6 +94,7 @@ class VulkanApplication {
          *
          */
         void mainLoop();
+        virtual void drawFrame();
 
         void cleanup();
 
@@ -152,4 +150,7 @@ class VulkanApplication {
         VkRenderPass _renderPass = VK_NULL_HANDLE;
 
         VkPipeline _graphicsPipeline = VK_NULL_HANDLE;
+
+        VkCommandPool _commandPool = VK_NULL_HANDLE;
+        VkCommandBuffer _commandBuffer = VK_NULL_HANDLE;
 };

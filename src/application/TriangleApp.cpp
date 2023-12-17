@@ -215,3 +215,115 @@ void TriangleApp::createRenderPass() {
                 FATAL("Failed to create render pass!");
         }
 }
+void TriangleApp::createFramebuffers() {
+        INFO("Creating {} framebuffers...", this->_swapChainImageViews.size());
+        this->_swapChainFrameBuffers.resize(this->_swapChainImageViews.size());
+        // iterate through image views and create framebuffers
+        for (size_t i = 0; i < _swapChainImageViews.size(); i++) {
+                VkImageView atachments[] = {_swapChainImageViews[i]};
+                VkFramebufferCreateInfo framebufferInfo{};
+                framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+                framebufferInfo.renderPass = _renderPass; // each framebuffer is associated with a render pass;  they need to be compatible i.e.
+                                                          // having same number of attachments and same formats
+                framebufferInfo.attachmentCount = 1;
+                framebufferInfo.pAttachments = atachments;
+                framebufferInfo.width = _swapChainExtent.width;
+                framebufferInfo.height = _swapChainExtent.height;
+                framebufferInfo.layers = 1; // number of layers in image arrays
+                if (vkCreateFramebuffer(_logicalDevice, &framebufferInfo, nullptr, &_swapChainFrameBuffers[i]) != VK_SUCCESS) {
+                        FATAL("Failed to create framebuffer!");
+                }
+        }
+        INFO("Framebuffers created.");
+}
+
+void TriangleApp::createCommandPool() {
+        INFO("Creating command pool...");
+        QueueFamilyIndices queueFamilyIndices = findQueueFamilies(this->_physicalDevice);
+
+        VkCommandPoolCreateInfo poolInfo {};
+        poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+        poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT; // ALlow command buffers to be re-recorded individually
+        // we want to re-record the command buffer every single frame.
+        poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
+
+        if (vkCreateCommandPool(this->_logicalDevice, &poolInfo, nullptr, &this->_commandPool) != VK_SUCCESS) {
+                FATAL("Failed to create command pool!");
+        }
+        INFO("Command pool created.");
+}
+
+void TriangleApp::createCommandBuffer() {
+        INFO("Creating command buffer");
+
+        VkCommandBufferAllocateInfo allocInfo {};
+        allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        allocInfo.commandPool = this->_commandPool;
+        allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        allocInfo.commandBufferCount = 1;
+
+        if (vkAllocateCommandBuffers(this->_logicalDevice, &allocInfo, &this->_commandBuffer) != VK_SUCCESS) {
+                FATAL("Failed to allocate command buffers!");
+        }
+}
+
+void TriangleApp::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
+        INFO("Recording command buffer...");
+        VkCommandBufferBeginInfo beginInfo{};
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        beginInfo.flags = 0; // Optional
+        beginInfo.pInheritanceInfo = nullptr; // Optional
+
+        if (vkBeginCommandBuffer(this->_commandBuffer, &beginInfo) != VK_SUCCESS) {
+                FATAL("Failed to begin recording command buffer!");
+        }
+
+        // start render pass
+        VkRenderPassBeginInfo renderPassInfo{};
+        renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        renderPassInfo.renderPass = this->_renderPass;
+        renderPassInfo.framebuffer = this->_swapChainFrameBuffers[imageIndex];
+
+        renderPassInfo.renderArea.offset = {0, 0};
+        renderPassInfo.renderArea.extent = this->_swapChainExtent;
+
+        VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}}; // black with 100% opacity
+        renderPassInfo.clearValueCount = 1;
+        renderPassInfo.pClearValues = &clearColor;
+
+        vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+        // bind graphics pipeline
+        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, this->_graphicsPipeline);
+
+        VkViewport viewport{};
+        viewport.x = 0.0f;
+        viewport.y = 0.0f;
+        viewport.width = static_cast<float>(_swapChainExtent.width);
+        viewport.height = static_cast<float>(_swapChainExtent.height);
+        viewport.minDepth = 0.0f;
+        viewport.maxDepth = 1.0f;
+        vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+
+        VkRect2D scissor{};
+        scissor.offset = {0, 0};
+        scissor.extent = _swapChainExtent;
+        vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+
+        // issue the draw command
+        vkCmdDraw(commandBuffer, 3, 1, 0, 0);
+        vkCmdEndRenderPass(commandBuffer);
+
+        if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
+                FATAL("Failed to record command buffer!");
+        }
+        INFO("Command buffer recorded.");
+}
+
+void TriangleApp::drawFrame() {
+       //  Wait for the previous frame to finish
+       //  Acquire an image from the swap chain
+       //  Record a command buffer which draws the scene onto that image
+       //  Submit the recorded command buffer
+       //  Present the swap chain image
+}
