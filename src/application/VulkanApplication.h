@@ -1,5 +1,6 @@
 #pragma once
 #include <vulkan/vulkan.h>
+#include <vulkan/vulkan_core.h>
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
@@ -77,7 +78,12 @@ class VulkanApplication {
 
         void destroyImageViews();
 
+        /**
+         * @brief Initialize the graphics pipeline of the app. Compile SPIR-V shaders.
+         */
         virtual void createGraphicsPipeline();
+
+        void createRenderPass();
 
         /**
          * @brief Initializes Vulkan.
@@ -134,7 +140,10 @@ class VulkanApplication {
         VkSwapchainKHR _swapChain = VK_NULL_HANDLE;
         std::vector<VkImage> _swapChainImages;
         VkFormat _swapChainImageFormat;
-        VkExtent2D _swapChainExtent;
+        VkExtent2D _swapChainExtent; // resolution of the swapchain images
 
         std::vector<VkImageView> _swapChainImageViews;
+
+        VkPipelineLayout _pipelineLayout = VK_NULL_HANDLE;
+        VkRenderPass _renderPass = VK_NULL_HANDLE;
 };

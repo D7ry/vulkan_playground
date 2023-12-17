@@ -1,4 +1,5 @@
 #include "ShaderUtils.h"
+#include <vulkan/vulkan_core.h>
 
 VkShaderModule ShaderCreation::createShaderModule(VkDevice logicalDevice, const char* shaderCodeFile) {
         std::vector<char> shaderCode;
@@ -12,7 +13,7 @@ VkShaderModule ShaderCreation::createShaderModule(VkDevice logicalDevice, const 
         return nullptr;
 }
 VkShaderModule ShaderCreation::createShaderModule(VkDevice logicalDevice, const std::vector<char>& shaderCode) {
-        INFO("Creating shader module.");
+        INFO("Compiling SPIR-V shader code...");
         VkShaderModuleCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
         createInfo.codeSize = shaderCode.size();

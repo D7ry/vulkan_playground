@@ -8,7 +8,7 @@ void VulkanApplication::Run() {
         this->initWindow();
         this->initVulkan();
         this->mainLoop();
-        // cleanup();
+        this->cleanup();
 }
 
 void VulkanApplication::initWindow() {
@@ -42,6 +42,7 @@ void VulkanApplication::initVulkan() {
         this->createLogicalDevice();
         this->createSwapChain();
         this->createImageViews();
+        this->createRenderPass();
         this->createGraphicsPipeline();
         INFO("Vulkan initialized.");
 }
@@ -422,18 +423,59 @@ void VulkanApplication::createImageViews() {
         INFO("Image views created.");
 }
 void VulkanApplication::createGraphicsPipeline() {
-        INFO("Creating graphics pipeline...");
+        ERROR("Base vulkan application does not have a graphics pipeline.");
+}
 
-        INFO("Base vulkan application does not have a graphics pipeline.");
+//https://vulkan-tutorial.com/Drawing_a_triangle/Graphics_pipeline_basics/Render_passes
+void VulkanApplication::createRenderPass() {
+        INFO("Creating render pass...");
+        VkAttachmentDescription colorAttachment{};
+        colorAttachment.format = this->_swapChainImageFormat;
+        colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+
+        colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+
+        // don't care about stencil
+        colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+
+        colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+        // set up subpass
+        VkAttachmentReference colorAttachmentRef{};
+        colorAttachmentRef.attachment = 0;
+        colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+        VkSubpassDescription subpass{};
+        subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+        subpass.colorAttachmentCount = 1;
+        subpass.pColorAttachments = &colorAttachmentRef;
+
+        VkRenderPassCreateInfo renderPassInfo{};
+        renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+        renderPassInfo.attachmentCount = 1;
+        renderPassInfo.pAttachments = &colorAttachment;
+        renderPassInfo.subpassCount = 1;
+        renderPassInfo.pSubpasses = &subpass;
+
+        if (vkCreateRenderPass(this->_logicalDevice, &renderPassInfo, nullptr, &this->_renderPass) != VK_SUCCESS) {
+                FATAL("Failed to create render pass!");
+        }
 }
 void VulkanApplication::cleanup() {
+        INFO("Cleaning up...");
         this->destroyImageViews();
+        vkDestroyPipelineLayout(this->_logicalDevice, this->_pipelineLayout, nullptr);
+        vkDestroyRenderPass(this->_logicalDevice, this->_renderPass, nullptr);
         vkDestroySwapchainKHR(this->_logicalDevice, this->_swapChain, nullptr);
         vkDestroyDevice(this->_logicalDevice, nullptr);
         vkDestroySurfaceKHR(this->_instance, this->_surface, nullptr);
         vkDestroyInstance(this->_instance, nullptr);
         glfwDestroyWindow(this->_window);
         glfwTerminate();
+        INFO("Resource cleaned up.");
 }
 void VulkanApplication::destroyImageViews() {
         for (auto imageView : this->_swapChainImageViews) {
