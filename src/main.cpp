@@ -1,6 +1,4 @@
-#include "application/VulkanApplication.h"
 #include "application/TriangleApp.h"
-#include "spdlog/spdlog.h"
 
 int main(int argc, char** argv) {
         INIT_LOGS();
