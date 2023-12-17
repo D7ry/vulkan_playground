@@ -10,6 +10,7 @@ class TriangleApp : public VulkanApplication {
       virtual void createCommandPool() override;
       virtual void createCommandBuffer() override;
       virtual void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) override;
+      virtual void createVertexBuffer() override;
 
       virtual void drawFrame() override;
 
@@ -18,5 +19,5 @@ class TriangleApp : public VulkanApplication {
       {{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
       {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
       {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
-      }
+      };
 };

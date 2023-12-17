@@ -282,7 +282,7 @@ void TriangleApp::createCommandBuffer() {
         }
 }
 
-void TriangleApp::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
+void TriangleApp::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) { // called every frame
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         beginInfo.flags = 0; // Optional
@@ -324,6 +324,10 @@ void TriangleApp::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t im
         scissor.extent = _swapChainExtent;
         vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
+        VkBuffer vertexBuffers[] = {this->_vertexBuffer};
+        VkDeviceSize offsets[] = {0};
+        vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+
         // issue the draw command
         vkCmdDraw(commandBuffer, 3, 1, 0, 0);
         vkCmdEndRenderPass(commandBuffer);
@@ -331,6 +335,40 @@ void TriangleApp::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t im
         if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
                 FATAL("Failed to record command buffer!");
         }
+}
+
+void TriangleApp::createVertexBuffer() {
+        INFO("Creating vertex buffer...");
+        VkBufferCreateInfo bufferCreateInfo = {};
+        bufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        bufferCreateInfo.size = sizeof(this->_vertices[0]) * this->_vertices.size();
+        bufferCreateInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT; // this is for vertex buffers
+        bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;   // only used by one queue family
+
+        if (vkCreateBuffer(this->_logicalDevice, &bufferCreateInfo, nullptr, &this->_vertexBuffer) != VK_SUCCESS) {
+                FATAL("Failed to create vertex buffer!");
+        }
+
+        VkMemoryRequirements memRequirements;
+        vkGetBufferMemoryRequirements(_logicalDevice, _vertexBuffer, &memRequirements);
+
+        VkMemoryAllocateInfo allocInfo{};
+        allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        allocInfo.allocationSize = memRequirements.size;
+        allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+        if (vkAllocateMemory(_logicalDevice, &allocInfo, nullptr, &_vertexBufferMemory) != VK_SUCCESS) {
+                FATAL("Failed to allocate vertex buffer memory!");
+        }
+
+        vkBindBufferMemory(_logicalDevice, _vertexBuffer, _vertexBufferMemory, 0);
+
+        // fill the vertex buffer
+        void* data;
+        // map the buffer memory into CPU accessible memory
+        vkMapMemory(_logicalDevice, _vertexBufferMemory, 0, bufferCreateInfo.size, 0, &data);
+        memcpy(data, _vertices.data(), (size_t)bufferCreateInfo.size); // copy the data
+        vkUnmapMemory(_logicalDevice, _vertexBufferMemory);
 }
 
 void TriangleApp::drawFrame() {

@@ -68,6 +68,7 @@ void VulkanApplication::initVulkan() {
         this->createRenderPass();
         this->createGraphicsPipeline();
         this->createFramebuffers();
+        this->createVertexBuffer();
         this->createCommandPool();
         this->createCommandBuffer();
         this->createSynchronizationObjects();
@@ -478,6 +479,8 @@ void VulkanApplication::createImageViews() {
         }
         INFO("Image views created.");
 }
+void VulkanApplication::createVertexBuffer() { ERROR("Base vulkan application does not have a vertex buffer."); }
+
 void VulkanApplication::createGraphicsPipeline() { ERROR("Base vulkan application does not have a graphics pipeline."); }
 
 // https://vulkan-tutorial.com/Drawing_a_triangle/Graphics_pipeline_basics/Render_passes
@@ -516,6 +519,12 @@ void VulkanApplication::createSynchronizationObjects() {
 void VulkanApplication::cleanup() {
         INFO("Cleaning up...");
         cleanupSwapChain();
+        if (_vertexBuffer != VK_NULL_HANDLE) {
+                vkDestroyBuffer(this->_logicalDevice, _vertexBuffer, nullptr);
+        }
+        if (_vertexBufferMemory != VK_NULL_HANDLE) {
+                vkFreeMemory(this->_logicalDevice, _vertexBufferMemory, nullptr);
+        }
 
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
                 vkDestroySemaphore(this->_logicalDevice, this->_semaRenderFinished[i], nullptr);
@@ -541,4 +550,16 @@ void VulkanApplication::cleanup() {
         glfwDestroyWindow(this->_window);
         glfwTerminate();
         INFO("Resource cleaned up.");
+}
+uint32_t VulkanApplication::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
+        VkPhysicalDeviceMemoryProperties memProperties;
+        vkGetPhysicalDeviceMemoryProperties(_physicalDevice, &memProperties);
+
+        for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
+                if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+                        return i;
+                }
+        }
+
+        FATAL("Failed to find suitable memory type!");
 }

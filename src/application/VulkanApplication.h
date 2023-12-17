@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdint>
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_core.h>
 #define GLFW_INCLUDE_VULKAN
@@ -71,7 +72,7 @@ class VulkanApplication {
 
         void createImageViews();
 
-
+        virtual void createVertexBuffer();
         virtual void createGraphicsPipeline();
         virtual void createRenderPass();
         virtual void createFramebuffers();
@@ -80,6 +81,7 @@ class VulkanApplication {
         virtual void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
 
         void createSynchronizationObjects();
+
 
         /**
          * @brief Initializes Vulkan.
@@ -94,6 +96,9 @@ class VulkanApplication {
         virtual void drawFrame();
 
         void cleanup();
+
+        // utility methods
+        uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 
         // validation layers, enable under debug mode only
 #ifdef NDEBUG
@@ -152,6 +157,9 @@ class VulkanApplication {
         VkPipeline _graphicsPipeline = VK_NULL_HANDLE;
 
         VkCommandPool _commandPool = VK_NULL_HANDLE;
+
+        VkBuffer _vertexBuffer = VK_NULL_HANDLE;
+        VkDeviceMemory _vertexBufferMemory = VK_NULL_HANDLE;
 
         std::vector<VkCommandBuffer> _commandBuffers;
         std::vector<VkSemaphore> _semaImageAvailable;
