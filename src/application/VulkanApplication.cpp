@@ -430,8 +430,33 @@ void VulkanApplication::createGraphicsPipeline() {
 void VulkanApplication::createRenderPass() {
         ERROR("Base vulkan application does not have a render pass.");
 }
+
+void VulkanApplication::createFramebuffers(){
+        INFO("Creating {} framebuffers...", this->_swapChainImageViews.size());
+        this->_swapChainFrameBuffers.resize(this->_swapChainImageViews.size());
+        // iterate through image views and create framebuffers
+        for (size_t i = 0; i < _swapChainImageViews.size(); i++) {
+                VkImageView atachments [] = {
+                        _swapChainImageViews[i]
+                };
+                VkFramebufferCreateInfo framebufferInfo{};
+                framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+                framebufferInfo.renderPass = _renderPass; // each framebuffer is associated with a render pass;  they need to be compatible i.e. having same number of attachments and same formats
+                framebufferInfo.attachmentCount = 1;
+                framebufferInfo.pAttachments = atachments;
+                framebufferInfo.width = _swapChainExtent.width;
+                framebufferInfo.height = _swapChainExtent.height;
+                framebufferInfo.layers = 1; // number of layers in image arrays
+                if (vkCreateFramebuffer(_logicalDevice, &framebufferInfo, nullptr, &_swapChainFrameBuffers[i]) != VK_SUCCESS) {
+                        FATAL("Failed to create framebuffer!");
+                }
+        }
+}
 void VulkanApplication::cleanup() {
         INFO("Cleaning up...");
+        for (auto framebuffer : this->_swapChainFrameBuffers) {
+                vkDestroyFramebuffer(this->_logicalDevice, framebuffer, nullptr);
+        }
         vkDestroyPipeline(this->_logicalDevice, this->_graphicsPipeline, nullptr);
         vkDestroyPipelineLayout(this->_logicalDevice, this->_pipelineLayout, nullptr);
         this->destroyImageViews();

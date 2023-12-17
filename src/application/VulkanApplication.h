@@ -85,6 +85,8 @@ class VulkanApplication {
 
         virtual void createRenderPass();
 
+        virtual void createFramebuffers();
+
         /**
          * @brief Initializes Vulkan.
          *
@@ -141,6 +143,8 @@ class VulkanApplication {
         std::vector<VkImage> _swapChainImages;
         VkFormat _swapChainImageFormat;
         VkExtent2D _swapChainExtent; // resolution of the swapchain images
+
+        std::vector<VkFramebuffer> _swapChainFrameBuffers;
 
         std::vector<VkImageView> _swapChainImageViews;
 
