@@ -1,6 +1,7 @@
 #include "VulkanApplication.h"
 #include "utils/ShaderUtils.h"
 #include <GLFW/glfw3.h>
+#include <cstddef>
 #include <vulkan/vulkan_core.h>
 
 void VulkanApplication::Run() {
@@ -352,6 +353,31 @@ void VulkanApplication::createSwapChain() {
         _swapChainExtent = extent;
         INFO("Swap chain created!\n");
 }
+void VulkanApplication::cleanupSwapChain() {
+        for (VkFramebuffer framebuffer : this->_swapChainFrameBuffers) {
+                vkDestroyFramebuffer(this->_logicalDevice, framebuffer, nullptr);
+        }
+        for (VkImageView imageView : this->_swapChainImageViews) {
+                vkDestroyImageView(this->_logicalDevice, imageView, nullptr);
+        }
+        vkDestroySwapchainKHR(this->_logicalDevice, this->_swapChain, nullptr);
+}
+void VulkanApplication::recreateSwapChain() {
+        // need to recreate render pass for HDR changing, we're not doing that for now 
+        vkDeviceWaitIdle(_logicalDevice);
+
+        // handle window minimization
+        int width = 0, height = 0;
+        do  {
+                // keep waiting until the window is not minimized
+                glfwGetFramebufferSize(_window, &width, &height);
+                glfwWaitEvents();
+        } while (width == 0 || height == 0);
+
+        this->createSwapChain();
+        this->createImageViews();
+        this->createRenderPass();
+}
 VulkanApplication::SwapChainSupportDetails VulkanApplication::querySwapChainSupport(VkPhysicalDevice device) {
         SwapChainSupportDetails details;
 
@@ -469,23 +495,27 @@ void VulkanApplication::createSynchronizationObjects() {
 }
 void VulkanApplication::cleanup() {
         INFO("Cleaning up...");
+        cleanupSwapChain();
+
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
                 vkDestroySemaphore(this->_logicalDevice, this->_semaRenderFinished[i], nullptr);
                 vkDestroySemaphore(this->_logicalDevice, this->_semaImageAvailable[i], nullptr);
                 vkDestroyFence(this->_logicalDevice, this->_fenceInFlight[i], nullptr);
         }
         vkDestroyCommandPool(this->_logicalDevice, this->_commandPool, nullptr);
-        for (auto framebuffer : this->_swapChainFrameBuffers) {
-                vkDestroyFramebuffer(this->_logicalDevice, framebuffer, nullptr);
-        }
+
         vkDestroyPipeline(this->_logicalDevice, this->_graphicsPipeline, nullptr);
         vkDestroyPipelineLayout(this->_logicalDevice, this->_pipelineLayout, nullptr);
-        for (auto imageView : this->_swapChainImageViews) {
-                vkDestroyImageView(this->_logicalDevice, imageView, nullptr);
-        }
+
         vkDestroyRenderPass(this->_logicalDevice, this->_renderPass, nullptr);
-        vkDestroySwapchainKHR(this->_logicalDevice, this->_swapChain, nullptr);
         vkDestroyDevice(this->_logicalDevice, nullptr);
+        if (enableValidationLayers) {
+                if (this->_debugMessenger != nullptr) {
+                        //TODO: implement this
+                        //vkDestroyDebugUtilsMessengerEXT(_instance, _debugMessenger, nullptr);
+                }
+        }
+
         vkDestroySurfaceKHR(this->_instance, this->_surface, nullptr);
         vkDestroyInstance(this->_instance, nullptr);
         glfwDestroyWindow(this->_window);

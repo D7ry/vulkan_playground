@@ -73,6 +73,8 @@ class VulkanApplication {
         VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
 
         void createSwapChain();
+        void recreateSwapChain();
+        void cleanupSwapChain();
 
         void createImageViews();
 
