@@ -1,5 +1,6 @@
 #include "TriangleApp.h"
 #include "utils/ShaderUtils.h"
+#include <cstdint>
 #include <vulkan/vulkan_core.h>
 
 void TriangleApp::createGraphicsPipeline() {
@@ -204,12 +205,23 @@ void TriangleApp::createRenderPass() {
         subpass.colorAttachmentCount = 1;
         subpass.pColorAttachments = &colorAttachmentRef;
 
+        // dependency to make sure that the render pass waits for the image to be available before drawing
+        VkSubpassDependency dependency{};
+        dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+        dependency.dstSubpass = 0;
+        dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        dependency.srcAccessMask = 0;
+        dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
         VkRenderPassCreateInfo renderPassInfo{};
         renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
         renderPassInfo.attachmentCount = 1;
         renderPassInfo.pAttachments = &colorAttachment;
         renderPassInfo.subpassCount = 1;
         renderPassInfo.pSubpasses = &subpass;
+        renderPassInfo.dependencyCount = 1;
+        renderPassInfo.pDependencies = &dependency;
 
         if (vkCreateRenderPass(this->_logicalDevice, &renderPassInfo, nullptr, &this->_renderPass) != VK_SUCCESS) {
                 FATAL("Failed to create render pass!");
@@ -268,7 +280,6 @@ void TriangleApp::createCommandBuffer() {
 }
 
 void TriangleApp::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
-        INFO("Recording command buffer...");
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         beginInfo.flags = 0; // Optional
@@ -317,13 +328,51 @@ void TriangleApp::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t im
         if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
                 FATAL("Failed to record command buffer!");
         }
-        INFO("Command buffer recorded.");
 }
 
 void TriangleApp::drawFrame() {
        //  Wait for the previous frame to finish
+       vkWaitForFences(this->_logicalDevice, 1, &this->_fenceInFlight, VK_TRUE, UINT64_MAX);
+       vkResetFences(this->_logicalDevice, 1, &this->_fenceInFlight);
+
        //  Acquire an image from the swap chain
+       uint32_t imageIndex;
+       vkAcquireNextImageKHR(this->_logicalDevice, _swapChain, UINT64_MAX, _semaImageAvailable, VK_NULL_HANDLE, &imageIndex);
        //  Record a command buffer which draws the scene onto that image
+       vkResetCommandBuffer(this->_commandBuffer, 0);
+       this->recordCommandBuffer(this->_commandBuffer, imageIndex);
        //  Submit the recorded command buffer
+       VkSubmitInfo submitInfo{};
+       submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+       VkSemaphore waitSemaphores[] = {_semaImageAvailable}; // use imageAvailable semaphore to make sure that the image is available before drawing
+        VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+        submitInfo.waitSemaphoreCount = 1;
+        submitInfo.pWaitSemaphores = waitSemaphores;
+        submitInfo.pWaitDstStageMask = waitStages;
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &_commandBuffer;
+
+        VkSemaphore signalSemaphores[] = {_semaRenderFinished};
+        submitInfo.signalSemaphoreCount = 1;
+        submitInfo.pSignalSemaphores = signalSemaphores;
+
+        if (vkQueueSubmit(_graphicsQueue, 1, &submitInfo, _fenceInFlight) != VK_SUCCESS) {
+                FATAL("Failed to submit draw command buffer!");
+        }
+
        //  Present the swap chain image
+       VkPresentInfoKHR presentInfo{};
+        presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+
+        presentInfo.waitSemaphoreCount = 1;
+        presentInfo.pWaitSemaphores = signalSemaphores; // wait for render to finish before presenting
+
+        VkSwapchainKHR swapChains[] = {_swapChain};
+        presentInfo.swapchainCount = 1;
+        presentInfo.pSwapchains = swapChains;
+        presentInfo.pImageIndices = &imageIndex; // specify which image to present
+        presentInfo.pResults = nullptr;          // Optional: can be used to check if presentation was successful
+
+        vkQueuePresentKHR(_presentationQueue, &presentInfo);
 }

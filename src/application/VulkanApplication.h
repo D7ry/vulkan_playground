@@ -84,6 +84,8 @@ class VulkanApplication {
         virtual void createCommandBuffer();
         virtual void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
 
+        void createSynchronizationObjects();
+
         /**
          * @brief Initializes Vulkan.
          *
@@ -153,4 +155,8 @@ class VulkanApplication {
 
         VkCommandPool _commandPool = VK_NULL_HANDLE;
         VkCommandBuffer _commandBuffer = VK_NULL_HANDLE;
+
+        VkSemaphore _semaImageAvailable = VK_NULL_HANDLE;
+        VkSemaphore _semaRenderFinished = VK_NULL_HANDLE;
+        VkFence _fenceInFlight = VK_NULL_HANDLE;
 };

@@ -29,6 +29,7 @@ void VulkanApplication::mainLoop() {
                 glfwPollEvents();
                 drawFrame();
         }
+        vkDeviceWaitIdle(this->_logicalDevice);
         INFO("Main loop exited.");
 }
 
@@ -40,7 +41,7 @@ void VulkanApplication::initVulkan() {
         INFO("Initializing Vulkan...");
         this->createInstance();
         if (this->enableValidationLayers) {
-                this->setupDebugMessenger();
+                //this->setupDebugMessenger();
         }
         this->createSurface();
         this->pickPhysicalDevice();
@@ -52,6 +53,7 @@ void VulkanApplication::initVulkan() {
         this->createFramebuffers();
         this->createCommandPool();
         this->createCommandBuffer();
+        this->createSynchronizationObjects();
         INFO("Vulkan initialized.");
 }
 
@@ -441,10 +443,28 @@ void VulkanApplication::createCommandPool() { ERROR("Base vulkan application doe
 
 void VulkanApplication::createCommandBuffer() { ERROR("Base vulkan application does not have a command buffer."); }
 
-void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) { ERROR("Base vulkan application does not have a command buffer."); }
+void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
+        ERROR("Base vulkan application does not have a command buffer.");
+}
 
+void VulkanApplication::createSynchronizationObjects() {
+        INFO("Creating synchronization objects...");
+        VkSemaphoreCreateInfo semaphoreInfo{};
+        semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+        VkFenceCreateInfo fenceInfo{};
+        fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+        fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT; // create with a signaled bit so that the 1st frame can start right away
+        if (vkCreateSemaphore(_logicalDevice, &semaphoreInfo, nullptr, &_semaImageAvailable) != VK_SUCCESS ||
+            vkCreateSemaphore(_logicalDevice, &semaphoreInfo, nullptr, &_semaRenderFinished) != VK_SUCCESS ||
+            vkCreateFence(_logicalDevice, &fenceInfo, nullptr, &_fenceInFlight) != VK_SUCCESS) {
+                FATAL("Failed to create synchronization objects for a frame!");
+        }
+}
 void VulkanApplication::cleanup() {
         INFO("Cleaning up...");
+        vkDestroySemaphore(this->_logicalDevice, this->_semaRenderFinished, nullptr);
+        vkDestroySemaphore(this->_logicalDevice, this->_semaImageAvailable, nullptr);
+        vkDestroyFence(this->_logicalDevice, this->_fenceInFlight, nullptr);
         vkDestroyCommandPool(this->_logicalDevice, this->_commandPool, nullptr);
         for (auto framebuffer : this->_swapChainFrameBuffers) {
                 vkDestroyFramebuffer(this->_logicalDevice, framebuffer, nullptr);
