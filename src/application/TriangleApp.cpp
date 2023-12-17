@@ -7,8 +7,8 @@ void TriangleApp::createGraphicsPipeline() {
 
         INFO("setting up shader modules...");
         // programmable stages
-        VkShaderModule vertShaderModule = ShaderCreation::createShaderModule(this->_logicalDevice, "../shaders/frag_test.frag.spv");
-        VkShaderModule fragShaderModule = ShaderCreation::createShaderModule(this->_logicalDevice, "../shaders/vert_test.vert.spv");
+        VkShaderModule vertShaderModule = ShaderCreation::createShaderModule(this->_logicalDevice, "../shaders/vert_test.vert.spv");
+        VkShaderModule fragShaderModule = ShaderCreation::createShaderModule(this->_logicalDevice, "../shaders/frag_test.frag.spv");
 
         VkPipelineShaderStageCreateInfo vertShaderStageInfo = {};
         vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -83,9 +83,9 @@ void TriangleApp::createGraphicsPipeline() {
         rasterizer.depthClampEnable = VK_FALSE; // if true, fragments beyond the near and far planes are clamped instead of discarded
         rasterizer.rasterizerDiscardEnable =
             VK_FALSE; // if true, geometry never passes through the rasterizer stage(nothing it put into the frame buffer)
-        rasterizer.polygonMode = VK_POLYGON_MODE_FILL; // fill the area of the polygon with fragments
-        rasterizer.lineWidth = 1.0f;                   // thickness of lines in terms of number of fragments
-        rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;   // cull back faces
+        rasterizer.polygonMode = VK_POLYGON_MODE_FILL;  // fill the area of the polygon with fragments
+        rasterizer.lineWidth = 1.0f;                    // thickness of lines in terms of number of fragments
+        rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;    // cull back faces
         rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE; // vertex order for faces to be considered front-facing
         rasterizer.depthBiasEnable = VK_FALSE;          // depth biasing
         rasterizer.depthBiasConstantFactor = 0.0f;      // optional
@@ -98,10 +98,10 @@ void TriangleApp::createGraphicsPipeline() {
         multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
         multisampling.sampleShadingEnable = VK_FALSE;
         multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-        multisampling.minSampleShading = 1.0f; // Optional
-        multisampling.pSampleMask = nullptr; // Optional
+        multisampling.minSampleShading = 1.0f;          // Optional
+        multisampling.pSampleMask = nullptr;            // Optional
         multisampling.alphaToCoverageEnable = VK_FALSE; // Optional
-        multisampling.alphaToOneEnable = VK_FALSE; // Optional
+        multisampling.alphaToOneEnable = VK_FALSE;      // Optional
 
         // depth buffering
         // we're not there yet, so we'll disable it for now
@@ -110,22 +110,23 @@ void TriangleApp::createGraphicsPipeline() {
 
         INFO("setting up color blending...");
         // controls configuration per attached frame buffer
-        //https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkBlendOp.html
-        //https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkBlendFactor.html
+        // https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkBlendOp.html
+        // https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkBlendFactor.html
         VkPipelineColorBlendAttachmentState colorBlendAttachment{};
-        colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-        colorBlendAttachment.blendEnable = VK_FALSE; // set to true to enable blending
-        colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE; // Optional
+        colorBlendAttachment.colorWriteMask =
+            VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+        colorBlendAttachment.blendEnable = VK_FALSE;                     // set to true to enable blending
+        colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;  // Optional
         colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
-        colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD; // Optional
-        colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE; // Optional
+        colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;             // Optional
+        colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;  // Optional
         colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
-        colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD; // Optional
+        colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;             // Optional
 
         // global color blending settings
         VkPipelineColorBlendStateCreateInfo colorBlending{};
         colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-        colorBlending.logicOpEnable = VK_FALSE; // set to true to enable blending
+        colorBlending.logicOpEnable = VK_FALSE;   // set to true to enable blending
         colorBlending.logicOp = VK_LOGIC_OP_COPY; // Optional
         colorBlending.attachmentCount = 1;
         colorBlending.pAttachments = &colorBlendAttachment;
@@ -138,17 +139,79 @@ void TriangleApp::createGraphicsPipeline() {
         // pipeline layout - controlling uniform values
         VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
         pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        pipelineLayoutInfo.setLayoutCount = 0; // Optional
-        pipelineLayoutInfo.pSetLayouts = nullptr; // Optional
-        pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
+        pipelineLayoutInfo.setLayoutCount = 0;            // Optional
+        pipelineLayoutInfo.pSetLayouts = nullptr;         // Optional
+        pipelineLayoutInfo.pushConstantRangeCount = 0;    // Optional
         pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
 
         if (vkCreatePipelineLayout(_logicalDevice, &pipelineLayoutInfo, nullptr, &this->_pipelineLayout) != VK_SUCCESS) {
                 FATAL("Failed to create pipeline layout!");
         }
 
+        // put things together
+        VkGraphicsPipelineCreateInfo pipelineInfo{};
+        pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+        pipelineInfo.stageCount = 2;
+        pipelineInfo.pStages = shaderStages;
+        pipelineInfo.pVertexInputState = &vertexInputInfo;
+        pipelineInfo.pInputAssemblyState = &inputAssembly;
+        pipelineInfo.pViewportState = &viewportState;
+        pipelineInfo.pRasterizationState = &rasterizer;
+        pipelineInfo.pMultisampleState = &multisampling;
+        pipelineInfo.pDepthStencilState = nullptr; // Optional
+        pipelineInfo.pColorBlendState = &colorBlending;
+        pipelineInfo.pDynamicState = &dynamicStateCreateInfo;
+        pipelineInfo.layout = this->_pipelineLayout;
+        pipelineInfo.renderPass = this->_renderPass;
+        pipelineInfo.subpass = 0;
+
+        // only need to specify when deriving from an existing pipeline
+        pipelineInfo.basePipelineHandle = VK_NULL_HANDLE; // Optional
+        pipelineInfo.basePipelineIndex = -1;              // Optional
+
+        if (vkCreateGraphicsPipelines(this->_logicalDevice, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &this->_graphicsPipeline) != VK_SUCCESS) {
+                FATAL("Failed to create graphics pipeline!");
+        }
 
         vkDestroyShaderModule(_logicalDevice, fragShaderModule, nullptr);
         vkDestroyShaderModule(_logicalDevice, vertShaderModule, nullptr);
         INFO("Graphics pipeline created.");
+}
+
+void TriangleApp::createRenderPass() {
+        INFO("Creating render pass...");
+        VkAttachmentDescription colorAttachment{};
+        colorAttachment.format = this->_swapChainImageFormat;
+        colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+
+        colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+
+        // don't care about stencil
+        colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+
+        colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+        // set up subpass
+        VkAttachmentReference colorAttachmentRef{};
+        colorAttachmentRef.attachment = 0;
+        colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+        VkSubpassDescription subpass{};
+        subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+        subpass.colorAttachmentCount = 1;
+        subpass.pColorAttachments = &colorAttachmentRef;
+
+        VkRenderPassCreateInfo renderPassInfo{};
+        renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+        renderPassInfo.attachmentCount = 1;
+        renderPassInfo.pAttachments = &colorAttachment;
+        renderPassInfo.subpassCount = 1;
+        renderPassInfo.pSubpasses = &subpass;
+
+        if (vkCreateRenderPass(this->_logicalDevice, &renderPassInfo, nullptr, &this->_renderPass) != VK_SUCCESS) {
+                FATAL("Failed to create render pass!");
+        }
 }

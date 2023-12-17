@@ -83,7 +83,7 @@ class VulkanApplication {
          */
         virtual void createGraphicsPipeline();
 
-        void createRenderPass();
+        virtual void createRenderPass();
 
         /**
          * @brief Initializes Vulkan.
@@ -146,4 +146,6 @@ class VulkanApplication {
 
         VkPipelineLayout _pipelineLayout = VK_NULL_HANDLE;
         VkRenderPass _renderPass = VK_NULL_HANDLE;
+
+        VkPipeline _graphicsPipeline = VK_NULL_HANDLE;
 };
