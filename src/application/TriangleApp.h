@@ -1,5 +1,6 @@
 #pragma once
 #include "VulkanApplication.h"
+#include "structs/Vertex.h"
 
 class TriangleApp : public VulkanApplication {
       protected:
@@ -11,4 +12,11 @@ class TriangleApp : public VulkanApplication {
       virtual void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) override;
 
       virtual void drawFrame() override;
+
+      // Vertices, for demonstration purposes
+      const std::vector<Vertex> _vertices = {
+      {{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+      {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
+      {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+      }
 };

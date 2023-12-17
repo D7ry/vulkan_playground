@@ -27,15 +27,16 @@ void TriangleApp::createGraphicsPipeline() {
         VkPipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo, fragShaderStageInfo}; // put the 2 stages together.
 
         INFO("setting up vertex input bindings...");
-        // the configurations of these values will be ignored and they will be specified at draw time;
-        // vertex input bindings
         VkPipelineVertexInputStateCreateInfo vertexInputInfo = {}; // describes the format of the vertex data.
         vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-        // no descriptions for now, we're experimenting
-        vertexInputInfo.vertexBindingDescriptionCount = 0;
-        vertexInputInfo.pVertexBindingDescriptions = nullptr;
-        vertexInputInfo.vertexAttributeDescriptionCount = 0;
-        vertexInputInfo.pVertexAttributeDescriptions = nullptr;
+        // set up vertex descriptions
+        VkVertexInputBindingDescription bindingDescription = Vertex::GetBindingDescription();
+        std::unique_ptr<std::vector<VkVertexInputAttributeDescription>> attributeDescriptions = Vertex::GetAttributeDescriptions();
+
+        vertexInputInfo.vertexBindingDescriptionCount = 1;
+        vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
+        vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions->size());
+        vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions->data();
 
         // Input assembly
         VkPipelineInputAssemblyStateCreateInfo inputAssembly =
