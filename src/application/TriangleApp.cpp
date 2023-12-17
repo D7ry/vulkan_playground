@@ -268,13 +268,15 @@ void TriangleApp::createCommandPool() {
 void TriangleApp::createCommandBuffer() {
         INFO("Creating command buffer");
 
+        this->_commandBuffers.resize(this->MAX_FRAMES_IN_FLIGHT);
+
         VkCommandBufferAllocateInfo allocInfo {};
         allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
         allocInfo.commandPool = this->_commandPool;
         allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        allocInfo.commandBufferCount = 1;
+        allocInfo.commandBufferCount = (uint32_t)this->_commandBuffers.size();
 
-        if (vkAllocateCommandBuffers(this->_logicalDevice, &allocInfo, &this->_commandBuffer) != VK_SUCCESS) {
+        if (vkAllocateCommandBuffers(this->_logicalDevice, &allocInfo, this->_commandBuffers.data()) != VK_SUCCESS) {
                 FATAL("Failed to allocate command buffers!");
         }
 }
@@ -285,7 +287,7 @@ void TriangleApp::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t im
         beginInfo.flags = 0; // Optional
         beginInfo.pInheritanceInfo = nullptr; // Optional
 
-        if (vkBeginCommandBuffer(this->_commandBuffer, &beginInfo) != VK_SUCCESS) {
+        if (vkBeginCommandBuffer(this->_commandBuffers[_currentFrame], &beginInfo) != VK_SUCCESS) {
                 FATAL("Failed to begin recording command buffer!");
         }
 
@@ -332,32 +334,32 @@ void TriangleApp::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t im
 
 void TriangleApp::drawFrame() {
        //  Wait for the previous frame to finish
-       vkWaitForFences(this->_logicalDevice, 1, &this->_fenceInFlight, VK_TRUE, UINT64_MAX);
-       vkResetFences(this->_logicalDevice, 1, &this->_fenceInFlight);
+       vkWaitForFences(this->_logicalDevice, 1, &this->_fenceInFlight[this->_currentFrame], VK_TRUE, UINT64_MAX);
+       vkResetFences(this->_logicalDevice, 1, &this->_fenceInFlight[this->_currentFrame]);
 
        //  Acquire an image from the swap chain
        uint32_t imageIndex;
-       vkAcquireNextImageKHR(this->_logicalDevice, _swapChain, UINT64_MAX, _semaImageAvailable, VK_NULL_HANDLE, &imageIndex);
+       vkAcquireNextImageKHR(this->_logicalDevice, _swapChain, UINT64_MAX, _semaImageAvailable[this->_currentFrame], VK_NULL_HANDLE, &imageIndex);
        //  Record a command buffer which draws the scene onto that image
-       vkResetCommandBuffer(this->_commandBuffer, 0);
-       this->recordCommandBuffer(this->_commandBuffer, imageIndex);
+       vkResetCommandBuffer(this->_commandBuffers[this->_currentFrame], 0);
+       this->recordCommandBuffer(this->_commandBuffers[this->_currentFrame], imageIndex);
        //  Submit the recorded command buffer
        VkSubmitInfo submitInfo{};
        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-       VkSemaphore waitSemaphores[] = {_semaImageAvailable}; // use imageAvailable semaphore to make sure that the image is available before drawing
+       VkSemaphore waitSemaphores[] = {_semaImageAvailable[_currentFrame]}; // use imageAvailable semaphore to make sure that the image is available before drawing
         VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
         submitInfo.waitSemaphoreCount = 1;
         submitInfo.pWaitSemaphores = waitSemaphores;
         submitInfo.pWaitDstStageMask = waitStages;
         submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &_commandBuffer;
+        submitInfo.pCommandBuffers = &_commandBuffers[_currentFrame];
 
-        VkSemaphore signalSemaphores[] = {_semaRenderFinished};
+        VkSemaphore signalSemaphores[] = {_semaRenderFinished[_currentFrame]};
         submitInfo.signalSemaphoreCount = 1;
         submitInfo.pSignalSemaphores = signalSemaphores;
 
-        if (vkQueueSubmit(_graphicsQueue, 1, &submitInfo, _fenceInFlight) != VK_SUCCESS) {
+        if (vkQueueSubmit(_graphicsQueue, 1, &submitInfo, _fenceInFlight[_currentFrame]) != VK_SUCCESS) {
                 FATAL("Failed to submit draw command buffer!");
         }
 
@@ -375,4 +377,7 @@ void TriangleApp::drawFrame() {
         presentInfo.pResults = nullptr;          // Optional: can be used to check if presentation was successful
 
         vkQueuePresentKHR(_presentationQueue, &presentInfo);
+
+        //  Advance to the next frame
+        _currentFrame = (_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 }

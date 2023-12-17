@@ -125,6 +125,7 @@ class VulkanApplication {
         static inline const char* ENGINE_NAME = "No Engine";
         static inline const uint32_t ENGINE_VERSION = VK_MAKE_VERSION(1, 0, 0);
         static inline const uint32_t API_VERSION = VK_API_VERSION_1_0;
+        static inline const int MAX_FRAMES_IN_FLIGHT = 2;
 
         GLFWwindow* _window;
         VkInstance _instance;
@@ -154,9 +155,11 @@ class VulkanApplication {
         VkPipeline _graphicsPipeline = VK_NULL_HANDLE;
 
         VkCommandPool _commandPool = VK_NULL_HANDLE;
-        VkCommandBuffer _commandBuffer = VK_NULL_HANDLE;
 
-        VkSemaphore _semaImageAvailable = VK_NULL_HANDLE;
-        VkSemaphore _semaRenderFinished = VK_NULL_HANDLE;
-        VkFence _fenceInFlight = VK_NULL_HANDLE;
+        std::vector<VkCommandBuffer> _commandBuffers;
+        std::vector<VkSemaphore> _semaImageAvailable;
+        std::vector<VkSemaphore> _semaRenderFinished;
+        std::vector<VkFence> _fenceInFlight;
+
+        uint32_t _currentFrame = 0;
 };

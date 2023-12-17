@@ -449,22 +449,31 @@ void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint3
 
 void VulkanApplication::createSynchronizationObjects() {
         INFO("Creating synchronization objects...");
+        this->_semaImageAvailable.resize(MAX_FRAMES_IN_FLIGHT);
+        this->_semaRenderFinished.resize(MAX_FRAMES_IN_FLIGHT);
+        this->_fenceInFlight.resize(MAX_FRAMES_IN_FLIGHT);
+
+
         VkSemaphoreCreateInfo semaphoreInfo{};
         semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
         VkFenceCreateInfo fenceInfo{};
         fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
         fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT; // create with a signaled bit so that the 1st frame can start right away
-        if (vkCreateSemaphore(_logicalDevice, &semaphoreInfo, nullptr, &_semaImageAvailable) != VK_SUCCESS ||
-            vkCreateSemaphore(_logicalDevice, &semaphoreInfo, nullptr, &_semaRenderFinished) != VK_SUCCESS ||
-            vkCreateFence(_logicalDevice, &fenceInfo, nullptr, &_fenceInFlight) != VK_SUCCESS) {
-                FATAL("Failed to create synchronization objects for a frame!");
+        for (size_t i = 0; i < this->MAX_FRAMES_IN_FLIGHT; i++) {
+                if (vkCreateSemaphore(_logicalDevice, &semaphoreInfo, nullptr, &_semaImageAvailable[i]) != VK_SUCCESS ||
+                    vkCreateSemaphore(_logicalDevice, &semaphoreInfo, nullptr, &_semaRenderFinished[i]) != VK_SUCCESS ||
+                    vkCreateFence(_logicalDevice, &fenceInfo, nullptr, &_fenceInFlight[i]) != VK_SUCCESS) {
+                        FATAL("Failed to create synchronization objects for a frame!");
+                }
         }
 }
 void VulkanApplication::cleanup() {
         INFO("Cleaning up...");
-        vkDestroySemaphore(this->_logicalDevice, this->_semaRenderFinished, nullptr);
-        vkDestroySemaphore(this->_logicalDevice, this->_semaImageAvailable, nullptr);
-        vkDestroyFence(this->_logicalDevice, this->_fenceInFlight, nullptr);
+        for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+                vkDestroySemaphore(this->_logicalDevice, this->_semaRenderFinished[i], nullptr);
+                vkDestroySemaphore(this->_logicalDevice, this->_semaImageAvailable[i], nullptr);
+                vkDestroyFence(this->_logicalDevice, this->_fenceInFlight[i], nullptr);
+        }
         vkDestroyCommandPool(this->_logicalDevice, this->_commandPool, nullptr);
         for (auto framebuffer : this->_swapChainFrameBuffers) {
                 vkDestroyFramebuffer(this->_logicalDevice, framebuffer, nullptr);
