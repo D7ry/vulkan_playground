@@ -129,6 +129,8 @@ class VulkanApplication {
         static inline const uint32_t API_VERSION = VK_API_VERSION_1_0;
         static inline const int MAX_FRAMES_IN_FLIGHT = 2;
 
+        static void framebufferResizeCallback(GLFWwindow* window, int width, int height);
+
         GLFWwindow* _window;
         VkInstance _instance;
         VkSurfaceKHR _surface;
@@ -162,6 +164,8 @@ class VulkanApplication {
         std::vector<VkSemaphore> _semaImageAvailable;
         std::vector<VkSemaphore> _semaRenderFinished;
         std::vector<VkFence> _fenceInFlight;
+
+        bool _framebufferResized = false;
 
         uint32_t _currentFrame = 0;
 };

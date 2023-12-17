@@ -16,8 +16,10 @@ void VulkanApplication::initWindow() {
         INFO("Initializing GLFW...");
         glfwInit();
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-        glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+        glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
         this->_window = glfwCreateWindow(800, 600, "Vulkan", nullptr, nullptr);
+        glfwSetWindowUserPointer(_window, this);
+        glfwSetFramebufferSizeCallback(_window, this->framebufferResizeCallback);
         if (this->_window == nullptr) {
                 ERROR("Failed to create GLFW window.");
         }
@@ -36,6 +38,12 @@ void VulkanApplication::mainLoop() {
 
 void VulkanApplication::drawFrame() {
         // nothing to draw
+}
+
+void VulkanApplication::framebufferResizeCallback(GLFWwindow* window, int width, int height) {
+        INFO("Window resized to {}x{}", width, height);
+        auto app = reinterpret_cast<VulkanApplication*>(glfwGetWindowUserPointer(window));
+        app->_framebufferResized = true;
 }
 
 void VulkanApplication::initVulkan() {
@@ -354,6 +362,7 @@ void VulkanApplication::createSwapChain() {
         INFO("Swap chain created!\n");
 }
 void VulkanApplication::cleanupSwapChain() {
+        INFO("Cleaning up swap chain...");
         for (VkFramebuffer framebuffer : this->_swapChainFrameBuffers) {
                 vkDestroyFramebuffer(this->_logicalDevice, framebuffer, nullptr);
         }
@@ -364,19 +373,22 @@ void VulkanApplication::cleanupSwapChain() {
 }
 void VulkanApplication::recreateSwapChain() {
         // need to recreate render pass for HDR changing, we're not doing that for now 
-        vkDeviceWaitIdle(_logicalDevice);
-
+        INFO("Recreating swap chain...");
         // handle window minimization
         int width = 0, height = 0;
-        do  {
-                // keep waiting until the window is not minimized
-                glfwGetFramebufferSize(_window, &width, &height);
-                glfwWaitEvents();
-        } while (width == 0 || height == 0);
+        glfwGetFramebufferSize(_window, &width, &height);
+        while (width == 0 || height == 0) {
+            glfwGetFramebufferSize(_window, &width, &height);
+            glfwWaitEvents();
+        }
+        // wait for device to be idle
+        vkDeviceWaitIdle(_logicalDevice);
+        this->cleanupSwapChain();
 
         this->createSwapChain();
         this->createImageViews();
-        this->createRenderPass();
+        this->createFramebuffers();
+        INFO("Swap chain recreated.");
 }
 VulkanApplication::SwapChainSupportDetails VulkanApplication::querySwapChainSupport(VkPhysicalDevice device) {
         SwapChainSupportDetails details;

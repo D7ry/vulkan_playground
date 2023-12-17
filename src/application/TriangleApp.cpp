@@ -335,11 +335,20 @@ void TriangleApp::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t im
 void TriangleApp::drawFrame() {
        //  Wait for the previous frame to finish
        vkWaitForFences(this->_logicalDevice, 1, &this->_fenceInFlight[this->_currentFrame], VK_TRUE, UINT64_MAX);
-       vkResetFences(this->_logicalDevice, 1, &this->_fenceInFlight[this->_currentFrame]);
 
        //  Acquire an image from the swap chain
        uint32_t imageIndex;
-       vkAcquireNextImageKHR(this->_logicalDevice, _swapChain, UINT64_MAX, _semaImageAvailable[this->_currentFrame], VK_NULL_HANDLE, &imageIndex);
+       VkResult result = vkAcquireNextImageKHR(this->_logicalDevice, _swapChain, UINT64_MAX, _semaImageAvailable[this->_currentFrame], VK_NULL_HANDLE, &imageIndex);
+       if (result == VK_ERROR_OUT_OF_DATE_KHR ||  result == VK_SUBOPTIMAL_KHR) {
+                this->recreateSwapChain();
+                return;
+       } else if (result != VK_SUCCESS) {
+                FATAL("Failed to acquire swap chain image!");
+       }
+
+        // lock the fence
+        vkResetFences(this->_logicalDevice, 1, &this->_fenceInFlight[this->_currentFrame]);
+
        //  Record a command buffer which draws the scene onto that image
        vkResetCommandBuffer(this->_commandBuffers[this->_currentFrame], 0);
        this->recordCommandBuffer(this->_commandBuffers[this->_currentFrame], imageIndex);
@@ -376,8 +385,13 @@ void TriangleApp::drawFrame() {
         presentInfo.pImageIndices = &imageIndex; // specify which image to present
         presentInfo.pResults = nullptr;          // Optional: can be used to check if presentation was successful
 
-        vkQueuePresentKHR(_presentationQueue, &presentInfo);
-
+        result = vkQueuePresentKHR(_presentationQueue, &presentInfo);
+        if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || this->_framebufferResized) {
+                this->recreateSwapChain();
+                this->_framebufferResized = false;
+        } else if (result != VK_SUCCESS) {
+                FATAL("Failed to present swap chain image!");
+        }
         //  Advance to the next frame
         _currentFrame = (_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 }
