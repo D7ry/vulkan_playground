@@ -339,35 +339,20 @@ void TriangleApp::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t im
 
 void TriangleApp::createVertexBuffer() {
         INFO("Creating vertex buffer...");
-        VkBufferCreateInfo bufferCreateInfo = {};
-        bufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        bufferCreateInfo.size = sizeof(this->_vertices[0]) * this->_vertices.size();
-        bufferCreateInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT; // this is for vertex buffers
-        bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;   // only used by one queue family
-
-        if (vkCreateBuffer(this->_logicalDevice, &bufferCreateInfo, nullptr, &this->_vertexBuffer) != VK_SUCCESS) {
-                FATAL("Failed to create vertex buffer!");
-        }
-
-        VkMemoryRequirements memRequirements;
-        vkGetBufferMemoryRequirements(_logicalDevice, _vertexBuffer, &memRequirements);
-
-        VkMemoryAllocateInfo allocInfo{};
-        allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        allocInfo.allocationSize = memRequirements.size;
-        allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-        if (vkAllocateMemory(_logicalDevice, &allocInfo, nullptr, &_vertexBufferMemory) != VK_SUCCESS) {
-                FATAL("Failed to allocate vertex buffer memory!");
-        }
-
-        vkBindBufferMemory(_logicalDevice, _vertexBuffer, _vertexBufferMemory, 0);
+        VkDeviceSize vertexBufferSize = sizeof(_vertices[0]) * _vertices.size();
+        createBuffer(_physicalDevice,
+                     _logicalDevice,
+                     vertexBufferSize,
+                     VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                     _vertexBuffer,
+                     _vertexBufferMemory);
 
         // fill the vertex buffer
         void* data;
         // map the buffer memory into CPU accessible memory
-        vkMapMemory(_logicalDevice, _vertexBufferMemory, 0, bufferCreateInfo.size, 0, &data);
-        memcpy(data, _vertices.data(), (size_t)bufferCreateInfo.size); // copy the data
+        vkMapMemory(_logicalDevice, _vertexBufferMemory, 0, vertexBufferSize, 0, &data);
+        memcpy(data, _vertices.data(), (size_t)vertexBufferSize); // copy the data
         vkUnmapMemory(_logicalDevice, _vertexBufferMemory);
 }
 

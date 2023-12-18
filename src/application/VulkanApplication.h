@@ -5,11 +5,10 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
-
 #include <optional>
 
 #include <vector>
-//TODO: create a serialization scheme for tweakable settings.
+// TODO: create a serialization scheme for tweakable settings.
 
 /**
  * @brief A Vulkan application.
@@ -82,7 +81,6 @@ class VulkanApplication {
 
         void createSynchronizationObjects();
 
-
         /**
          * @brief Initializes Vulkan.
          *
@@ -98,7 +96,17 @@ class VulkanApplication {
         void cleanup();
 
         // utility methods
-        uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
+
+        /**
+         * @brief FInd the memory type that conforms to typeFilter and properties.
+         * TypeFilter are obtained form vkGetBufferMemoryRequirements().memoryTypeBits
+         */
+        static uint32_t findMemoryType(VkPhysicalDevice physicalDevice, uint32_t typeFilter, VkMemoryPropertyFlags properties);
+        /**
+         * @brief Allocate buffer on both CPU and GPU memory, and bind them together.
+         */
+        static void createBuffer(VkPhysicalDevice physicalDevice, VkDevice device, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer,
+                                 VkDeviceMemory& bufferMemory);
 
         // validation layers, enable under debug mode only
 #ifdef NDEBUG

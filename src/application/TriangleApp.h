@@ -16,7 +16,7 @@ class TriangleApp : public VulkanApplication {
 
       // Vertices, for demonstration purposes
       const std::vector<Vertex> _vertices = {
-      {{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+      {{0.0f, -0.75f}, {1.0f, 1.0f, 0.0f}},
       {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
       {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
       };
