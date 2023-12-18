@@ -39,8 +39,8 @@ void TriangleApp::createGraphicsPipeline() {
         vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions->data();
 
         // Input assembly
-        VkPipelineInputAssemblyStateCreateInfo inputAssembly =
-            {}; // describes what kind of geometry will be drawn from the vertices and if primitive restart should be enabled.
+        VkPipelineInputAssemblyStateCreateInfo inputAssembly
+                = {}; // describes what kind of geometry will be drawn from the vertices and if primitive restart should be enabled.
         inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
         inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST; // draw triangles
         inputAssembly.primitiveRestartEnable = VK_FALSE;              // don't restart primitives
@@ -83,8 +83,8 @@ void TriangleApp::createGraphicsPipeline() {
         VkPipelineRasterizationStateCreateInfo rasterizer = {}; // does the actual rasterization and outputs fragments
         rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
         rasterizer.depthClampEnable = VK_FALSE; // if true, fragments beyond the near and far planes are clamped instead of discarded
-        rasterizer.rasterizerDiscardEnable =
-            VK_FALSE; // if true, geometry never passes through the rasterizer stage(nothing it put into the frame buffer)
+        rasterizer.rasterizerDiscardEnable
+                = VK_FALSE; // if true, geometry never passes through the rasterizer stage(nothing it put into the frame buffer)
         rasterizer.polygonMode = VK_POLYGON_MODE_FILL;  // fill the area of the polygon with fragments
         rasterizer.lineWidth = 1.0f;                    // thickness of lines in terms of number of fragments
         rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;    // cull back faces
@@ -115,8 +115,8 @@ void TriangleApp::createGraphicsPipeline() {
         // https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkBlendOp.html
         // https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkBlendFactor.html
         VkPipelineColorBlendAttachmentState colorBlendAttachment{};
-        colorBlendAttachment.colorWriteMask =
-            VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+        colorBlendAttachment.colorWriteMask
+                = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
         colorBlendAttachment.blendEnable = VK_FALSE;                     // set to true to enable blending
         colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;  // Optional
         colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
@@ -254,7 +254,7 @@ void TriangleApp::createCommandPool() {
         INFO("Creating command pool...");
         QueueFamilyIndices queueFamilyIndices = findQueueFamilies(this->_physicalDevice);
 
-        VkCommandPoolCreateInfo poolInfo {};
+        VkCommandPoolCreateInfo poolInfo{};
         poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
         poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT; // ALlow command buffers to be re-recorded individually
         // we want to re-record the command buffer every single frame.
@@ -271,7 +271,7 @@ void TriangleApp::createCommandBuffer() {
 
         this->_commandBuffers.resize(this->MAX_FRAMES_IN_FLIGHT);
 
-        VkCommandBufferAllocateInfo allocInfo {};
+        VkCommandBufferAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
         allocInfo.commandPool = this->_commandPool;
         allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
@@ -285,7 +285,7 @@ void TriangleApp::createCommandBuffer() {
 void TriangleApp::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) { // called every frame
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        beginInfo.flags = 0; // Optional
+        beginInfo.flags = 0;                  // Optional
         beginInfo.pInheritanceInfo = nullptr; // Optional
 
         if (vkBeginCommandBuffer(this->_commandBuffers[_currentFrame], &beginInfo) != VK_SUCCESS) {
@@ -340,13 +340,14 @@ void TriangleApp::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t im
 void TriangleApp::createVertexBuffer() {
         INFO("Creating vertex buffer...");
         VkDeviceSize vertexBufferSize = sizeof(_vertices[0]) * _vertices.size();
-        createBuffer(_physicalDevice,
-                     _logicalDevice,
-                     vertexBufferSize,
-                     VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-                     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                     _vertexBuffer,
-                     _vertexBufferMemory);
+        createBuffer(
+                _physicalDevice,
+                _logicalDevice,
+                vertexBufferSize,
+                VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                _vertexBuffer,
+                _vertexBufferMemory);
 
         // fill the vertex buffer
         void* data;
@@ -357,30 +358,32 @@ void TriangleApp::createVertexBuffer() {
 }
 
 void TriangleApp::drawFrame() {
-       //  Wait for the previous frame to finish
-       vkWaitForFences(this->_logicalDevice, 1, &this->_fenceInFlight[this->_currentFrame], VK_TRUE, UINT64_MAX);
+        //  Wait for the previous frame to finish
+        vkWaitForFences(this->_logicalDevice, 1, &this->_fenceInFlight[this->_currentFrame], VK_TRUE, UINT64_MAX);
 
-       //  Acquire an image from the swap chain
-       uint32_t imageIndex;
-       VkResult result = vkAcquireNextImageKHR(this->_logicalDevice, _swapChain, UINT64_MAX, _semaImageAvailable[this->_currentFrame], VK_NULL_HANDLE, &imageIndex);
-       if (result == VK_ERROR_OUT_OF_DATE_KHR ||  result == VK_SUBOPTIMAL_KHR) {
+        //  Acquire an image from the swap chain
+        uint32_t imageIndex;
+        VkResult result = vkAcquireNextImageKHR(
+                this->_logicalDevice, _swapChain, UINT64_MAX, _semaImageAvailable[this->_currentFrame], VK_NULL_HANDLE, &imageIndex);
+        if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
                 this->recreateSwapChain();
                 return;
-       } else if (result != VK_SUCCESS) {
+        } else if (result != VK_SUCCESS) {
                 FATAL("Failed to acquire swap chain image!");
-       }
+        }
 
         // lock the fence
         vkResetFences(this->_logicalDevice, 1, &this->_fenceInFlight[this->_currentFrame]);
 
-       //  Record a command buffer which draws the scene onto that image
-       vkResetCommandBuffer(this->_commandBuffers[this->_currentFrame], 0);
-       this->recordCommandBuffer(this->_commandBuffers[this->_currentFrame], imageIndex);
-       //  Submit the recorded command buffer
-       VkSubmitInfo submitInfo{};
-       submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        //  Record a command buffer which draws the scene onto that image
+        vkResetCommandBuffer(this->_commandBuffers[this->_currentFrame], 0);
+        this->recordCommandBuffer(this->_commandBuffers[this->_currentFrame], imageIndex);
+        //  Submit the recorded command buffer
+        VkSubmitInfo submitInfo{};
+        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-       VkSemaphore waitSemaphores[] = {_semaImageAvailable[_currentFrame]}; // use imageAvailable semaphore to make sure that the image is available before drawing
+        VkSemaphore waitSemaphores[]
+                = {_semaImageAvailable[_currentFrame]}; // use imageAvailable semaphore to make sure that the image is available before drawing
         VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
         submitInfo.waitSemaphoreCount = 1;
         submitInfo.pWaitSemaphores = waitSemaphores;
@@ -396,8 +399,8 @@ void TriangleApp::drawFrame() {
                 FATAL("Failed to submit draw command buffer!");
         }
 
-       //  Present the swap chain image
-       VkPresentInfoKHR presentInfo{};
+        //  Present the swap chain image
+        VkPresentInfoKHR presentInfo{};
         presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 
         presentInfo.waitSemaphoreCount = 1;

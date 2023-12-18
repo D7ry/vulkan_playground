@@ -58,7 +58,7 @@ void VulkanApplication::initVulkan() {
         INFO("Initializing Vulkan...");
         this->createInstance();
         if (this->enableValidationLayers) {
-                //this->setupDebugMessenger();
+                // this->setupDebugMessenger();
         }
         this->createSurface();
         this->pickPhysicalDevice();
@@ -165,8 +165,11 @@ void VulkanApplication::createSurface() {
         }
 }
 
-VkResult VulkanApplication::CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,
-                                                         const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger) {
+VkResult VulkanApplication::CreateDebugUtilsMessengerEXT(
+    VkInstance instance,
+    const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,
+    const VkAllocationCallbacks* pAllocator,
+    VkDebugUtilsMessengerEXT* pDebugMessenger) {
         INFO("setting up debug messenger .... \n");
         auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
 
@@ -180,10 +183,10 @@ VkResult VulkanApplication::CreateDebugUtilsMessengerEXT(VkInstance instance, co
 void VulkanApplication::populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo) {
         createInfo = {};
         createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-        createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
-                                     VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-        createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
-                                 VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+        createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT
+                                     | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+        createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT
+                                 | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
         createInfo.pfnUserCallback = debugCallback;
 }
 void VulkanApplication::setupDebugMessenger() {
@@ -198,9 +201,11 @@ void VulkanApplication::setupDebugMessenger() {
                 FATAL("Failed to set up debug messenger!");
         }
 }
-VKAPI_ATTR VkBool32 VKAPI_CALL VulkanApplication::debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-                                                                VkDebugUtilsMessageTypeFlagsEXT messageType,
-                                                                const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData) {
+VKAPI_ATTR VkBool32 VKAPI_CALL VulkanApplication::debugCallback(
+    VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+    VkDebugUtilsMessageTypeFlagsEXT messageType,
+    const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
+    void* pUserData) {
         std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
 
         return VK_FALSE;
@@ -381,14 +386,14 @@ void VulkanApplication::cleanupSwapChain() {
         vkDestroySwapchainKHR(this->_logicalDevice, this->_swapChain, nullptr);
 }
 void VulkanApplication::recreateSwapChain() {
-        // need to recreate render pass for HDR changing, we're not doing that for now 
+        // need to recreate render pass for HDR changing, we're not doing that for now
         INFO("Recreating swap chain...");
         // handle window minimization
         int width = 0, height = 0;
         glfwGetFramebufferSize(_window, &width, &height);
         while (width == 0 || height == 0) {
-            glfwGetFramebufferSize(_window, &width, &height);
-            glfwWaitEvents();
+                glfwGetFramebufferSize(_window, &width, &height);
+                glfwWaitEvents();
         }
         // wait for device to be idle
         vkDeviceWaitIdle(_logicalDevice);
@@ -502,16 +507,15 @@ void VulkanApplication::createSynchronizationObjects() {
         this->_semaRenderFinished.resize(MAX_FRAMES_IN_FLIGHT);
         this->_fenceInFlight.resize(MAX_FRAMES_IN_FLIGHT);
 
-
         VkSemaphoreCreateInfo semaphoreInfo{};
         semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
         VkFenceCreateInfo fenceInfo{};
         fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
         fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT; // create with a signaled bit so that the 1st frame can start right away
         for (size_t i = 0; i < this->MAX_FRAMES_IN_FLIGHT; i++) {
-                if (vkCreateSemaphore(_logicalDevice, &semaphoreInfo, nullptr, &_semaImageAvailable[i]) != VK_SUCCESS ||
-                    vkCreateSemaphore(_logicalDevice, &semaphoreInfo, nullptr, &_semaRenderFinished[i]) != VK_SUCCESS ||
-                    vkCreateFence(_logicalDevice, &fenceInfo, nullptr, &_fenceInFlight[i]) != VK_SUCCESS) {
+                if (vkCreateSemaphore(_logicalDevice, &semaphoreInfo, nullptr, &_semaImageAvailable[i]) != VK_SUCCESS
+                    || vkCreateSemaphore(_logicalDevice, &semaphoreInfo, nullptr, &_semaRenderFinished[i]) != VK_SUCCESS
+                    || vkCreateFence(_logicalDevice, &fenceInfo, nullptr, &_fenceInFlight[i]) != VK_SUCCESS) {
                         FATAL("Failed to create synchronization objects for a frame!");
                 }
         }
@@ -540,8 +544,8 @@ void VulkanApplication::cleanup() {
         vkDestroyDevice(this->_logicalDevice, nullptr);
         if (enableValidationLayers) {
                 if (this->_debugMessenger != nullptr) {
-                        //TODO: implement this
-                        //vkDestroyDebugUtilsMessengerEXT(_instance, _debugMessenger, nullptr);
+                        // TODO: implement this
+                        // vkDestroyDebugUtilsMessengerEXT(_instance, _debugMessenger, nullptr);
                 }
         }
 
@@ -563,8 +567,14 @@ uint32_t VulkanApplication::findMemoryType(VkPhysicalDevice physicalDevice, uint
 
         FATAL("Failed to find suitable memory type!");
 }
-void VulkanApplication::createBuffer(VkPhysicalDevice physicalDevice, VkDevice device, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer,
-                                     VkDeviceMemory& bufferMemory) {
+void VulkanApplication::createBuffer(
+        VkPhysicalDevice physicalDevice,
+        VkDevice device,
+        VkDeviceSize size,
+        VkBufferUsageFlags usage,
+        VkMemoryPropertyFlags properties,
+        VkBuffer& buffer,
+        VkDeviceMemory& bufferMemory) {
         VkBufferCreateInfo bufferInfo{};
         bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
         bufferInfo.size = size;
