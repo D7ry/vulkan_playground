@@ -8,6 +8,7 @@
 #include <optional>
 
 #include <vector>
+#include "utils/DeltaTimer.h"
 // TODO: create a serialization scheme for tweakable settings.
 
 /**
@@ -224,4 +225,6 @@ class VulkanApplication {
         bool _framebufferResized = false;
 
         uint32_t _currentFrame = 0;
+
+        DeltaTimer _deltaTimer;
 };

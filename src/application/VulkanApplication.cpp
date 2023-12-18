@@ -57,6 +57,7 @@ void VulkanApplication::mainLoop() {
         while (!glfwWindowShouldClose(this->_window)) {
                 glfwPollEvents();
                 drawFrame();
+                _deltaTimer.Update();
         }
         vkDeviceWaitIdle(this->_logicalDevice);
         INFO("Main loop exited.");
