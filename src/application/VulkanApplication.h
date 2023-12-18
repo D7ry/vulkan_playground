@@ -108,6 +108,8 @@ class VulkanApplication {
         static void createBuffer(VkPhysicalDevice physicalDevice, VkDevice device, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer,
                                  VkDeviceMemory& bufferMemory);
 
+        static void copyBuffer(VkDevice device, VkCommandPool commandPool, VkQueue queue, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
+
         // validation layers, enable under debug mode only
 #ifdef NDEBUG
         const bool enableValidationLayers = false;
@@ -168,6 +170,9 @@ class VulkanApplication {
 
         VkBuffer _vertexBuffer = VK_NULL_HANDLE;
         VkDeviceMemory _vertexBufferMemory = VK_NULL_HANDLE;
+
+        VkBuffer _stagingBuffer = VK_NULL_HANDLE;
+        VkDeviceMemory _stagingBufferMemory = VK_NULL_HANDLE;
 
         std::vector<VkCommandBuffer> _commandBuffers;
         std::vector<VkSemaphore> _semaImageAvailable;
