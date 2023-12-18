@@ -72,6 +72,7 @@ class VulkanApplication {
         void createImageViews();
 
         virtual void createVertexBuffer();
+        virtual void createIndexBuffer();
         virtual void createGraphicsPipeline();
         virtual void createRenderPass();
         virtual void createFramebuffers();
@@ -105,8 +106,17 @@ class VulkanApplication {
         /**
          * @brief Allocate buffer on both CPU and GPU memory, and bind them together.
          */
-        static void createBuffer(VkPhysicalDevice physicalDevice, VkDevice device, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer,
-                                 VkDeviceMemory& bufferMemory);
+        static void createBuffer(
+                VkPhysicalDevice physicalDevice,
+                VkDevice device,
+                VkDeviceSize size,
+                VkBufferUsageFlags usage,
+                VkMemoryPropertyFlags properties,
+                VkBuffer& buffer,
+                VkDeviceMemory& bufferMemory
+        );
+
+        static std::pair<VkBuffer, VkDeviceMemory> createStagingBuffer(VulkanApplication* app, VkDeviceSize bufferSize);
 
         static void copyBuffer(VkDevice device, VkCommandPool commandPool, VkQueue queue, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 
@@ -121,13 +131,20 @@ class VulkanApplication {
         bool checkValidationLayerSupport();
 
         // debug messenger setup
-        static VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,
-                                                     const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger);
+        static VkResult CreateDebugUtilsMessengerEXT(
+                VkInstance instance,
+                const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,
+                const VkAllocationCallbacks* pAllocator,
+                VkDebugUtilsMessengerEXT* pDebugMessenger
+        );
         void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
         void setupDebugMessenger();
-        static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-                                                            VkDebugUtilsMessageTypeFlagsEXT messageType,
-                                                            const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData);
+        static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
+                VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+                VkDebugUtilsMessageTypeFlagsEXT messageType,
+                const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
+                void* pUserData
+        );
 
         // private fields
         static inline const char* APPLICATION_NAME = "Vulkan Application";
@@ -170,9 +187,9 @@ class VulkanApplication {
 
         VkBuffer _vertexBuffer = VK_NULL_HANDLE;
         VkDeviceMemory _vertexBufferMemory = VK_NULL_HANDLE;
-
-        VkBuffer _stagingBuffer = VK_NULL_HANDLE;
-        VkDeviceMemory _stagingBufferMemory = VK_NULL_HANDLE;
+        
+        VkBuffer _indexBuffer = VK_NULL_HANDLE;
+        VkDeviceMemory _indexBufferMemory = VK_NULL_HANDLE;
 
         std::vector<VkCommandBuffer> _commandBuffers;
         std::vector<VkSemaphore> _semaImageAvailable;

@@ -70,6 +70,7 @@ void VulkanApplication::initVulkan() {
         this->createFramebuffers();
         this->createCommandPool();
         this->createVertexBuffer();
+        this->createIndexBuffer();
         this->createCommandBuffer();
         this->createSynchronizationObjects();
         INFO("Vulkan initialized.");
@@ -166,10 +167,11 @@ void VulkanApplication::createSurface() {
 }
 
 VkResult VulkanApplication::CreateDebugUtilsMessengerEXT(
-    VkInstance instance,
-    const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,
-    const VkAllocationCallbacks* pAllocator,
-    VkDebugUtilsMessengerEXT* pDebugMessenger) {
+        VkInstance instance,
+        const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,
+        const VkAllocationCallbacks* pAllocator,
+        VkDebugUtilsMessengerEXT* pDebugMessenger
+) {
         INFO("setting up debug messenger .... \n");
         auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
 
@@ -202,10 +204,11 @@ void VulkanApplication::setupDebugMessenger() {
         }
 }
 VKAPI_ATTR VkBool32 VKAPI_CALL VulkanApplication::debugCallback(
-    VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-    VkDebugUtilsMessageTypeFlagsEXT messageType,
-    const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-    void* pUserData) {
+        VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+        VkDebugUtilsMessageTypeFlagsEXT messageType,
+        const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
+        void* pUserData
+) {
         std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
 
         return VK_FALSE;
@@ -486,6 +489,8 @@ void VulkanApplication::createImageViews() {
 }
 void VulkanApplication::createVertexBuffer() { ERROR("Base vulkan application does not have a vertex buffer."); }
 
+void VulkanApplication::createIndexBuffer() { ERROR("Base vulkan application does not have an index buffer."); }
+
 void VulkanApplication::createGraphicsPipeline() { ERROR("Base vulkan application does not have a graphics pipeline."); }
 
 // https://vulkan-tutorial.com/Drawing_a_triangle/Graphics_pipeline_basics/Render_passes
@@ -528,6 +533,12 @@ void VulkanApplication::cleanup() {
         }
         if (_vertexBufferMemory != VK_NULL_HANDLE) {
                 vkFreeMemory(this->_logicalDevice, _vertexBufferMemory, nullptr);
+        }
+        if (_indexBuffer != VK_NULL_HANDLE) {
+                vkDestroyBuffer(this->_logicalDevice, _indexBuffer, nullptr);
+        }
+        if (_indexBufferMemory != VK_NULL_HANDLE) {
+                vkFreeMemory(this->_logicalDevice, _indexBufferMemory, nullptr);
         }
 
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
@@ -574,7 +585,8 @@ void VulkanApplication::createBuffer(
         VkBufferUsageFlags usage,
         VkMemoryPropertyFlags properties,
         VkBuffer& buffer,
-        VkDeviceMemory& bufferMemory) {
+        VkDeviceMemory& bufferMemory
+) {
         VkBufferCreateInfo bufferInfo{};
         bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
         bufferInfo.size = size;
@@ -599,7 +611,14 @@ void VulkanApplication::createBuffer(
 
         vkBindBufferMemory(device, buffer, bufferMemory, 0);
 }
-void VulkanApplication::copyBuffer(VkDevice device, VkCommandPool commandPool, VkQueue queue, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
+void VulkanApplication::copyBuffer(
+        VkDevice device,
+        VkCommandPool commandPool,
+        VkQueue queue,
+        VkBuffer srcBuffer,
+        VkBuffer dstBuffer,
+        VkDeviceSize size
+) {
         VkCommandBufferAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
         allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
@@ -620,7 +639,7 @@ void VulkanApplication::copyBuffer(VkDevice device, VkCommandPool commandPool, V
                 FATAL("Failed to begin recording command buffer for buffer copy!");
         }
 
-        VkBufferCopy copyRegion {};
+        VkBufferCopy copyRegion{};
         copyRegion.srcOffset = 0;
         copyRegion.dstOffset = 0;
         copyRegion.size = size;
@@ -651,4 +670,18 @@ void VulkanApplication::copyBuffer(VkDevice device, VkCommandPool commandPool, V
         vkWaitForFences(device, 1, &fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
         vkDestroyFence(device, fence, nullptr);
         vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer);
+}
+std::pair<VkBuffer, VkDeviceMemory> VulkanApplication::createStagingBuffer(VulkanApplication* app, VkDeviceSize bufferSize) {
+        VkBuffer stagingBuffer;
+        VkDeviceMemory stagingBufferMemory;
+        createBuffer(
+                app->_physicalDevice,
+                app->_logicalDevice,
+                bufferSize,
+                VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                stagingBuffer,
+                stagingBufferMemory
+        );
+        return {stagingBuffer, stagingBufferMemory};
 }

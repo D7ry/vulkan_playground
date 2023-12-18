@@ -328,8 +328,11 @@ void TriangleApp::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t im
         VkDeviceSize offsets[] = {0};
         vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
 
+        vkCmdBindIndexBuffer(commandBuffer, this->_indexBuffer, 0, VK_INDEX_TYPE_UINT16);
+
         // issue the draw command
-        vkCmdDraw(commandBuffer, 3, 1, 0, 0);
+        //vkCmdDraw(commandBuffer, 3, 1, 0, 0);
+        vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(_indices.size()), 1, 0, 0, 0);
         vkCmdEndRenderPass(commandBuffer);
 
         if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
@@ -343,39 +346,62 @@ void TriangleApp::createVertexBuffer() {
         INFO("Creating vertex buffer...");
         VkDeviceSize vertexBufferSize = sizeof(_vertices[0]) * _vertices.size();
 
-        // creaet a stage buffer and fill
-        createBuffer(
-                _physicalDevice,
-                _logicalDevice,
-                vertexBufferSize,
-                VK_BUFFER_USAGE_TRANSFER_SRC_BIT, // can be used as source in a memory transfer operation
-                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                _stagingBuffer,
-                _stagingBufferMemory);
-
-        // fill the buffer
+        std::pair<VkBuffer, VkDeviceMemory> res = createStagingBuffer(this, vertexBufferSize);
+        VkBuffer stagingBuffer = res.first;
+        VkDeviceMemory stagingBufferMemory = res.second;
+        // copy over data from cpu memory to gpu memory(staging buffer)
         void* data;
-        // map the buffer memory into CPU accessible memory
-        vkMapMemory(_logicalDevice, _stagingBufferMemory, 0, vertexBufferSize, 0, &data);
+        vkMapMemory(_logicalDevice, stagingBufferMemory, 0, vertexBufferSize, 0, &data);
         memcpy(data, _vertices.data(), (size_t)vertexBufferSize); // copy the data
-        vkUnmapMemory(_logicalDevice, _stagingBufferMemory);
+        vkUnmapMemory(_logicalDevice, stagingBufferMemory);
 
+        // create vertex buffer
         createBuffer(
                 _physicalDevice,
                 _logicalDevice,
                 vertexBufferSize,
                 VK_BUFFER_USAGE_TRANSFER_DST_BIT // can be used as destination in a memory transfer operation
-                | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                        | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, // local to the GPU for faster access
                 _vertexBuffer,
-                _vertexBufferMemory);
+                _vertexBufferMemory
+        );
 
-        copyBuffer(_logicalDevice, _commandPool, _graphicsQueue, _stagingBuffer, _vertexBuffer, vertexBufferSize);
+        copyBuffer(_logicalDevice, _commandPool, _graphicsQueue, stagingBuffer, _vertexBuffer, vertexBufferSize);
 
         // get rid of staging buffer, it is very much temproary
-        // TODO: make staging buffer a temporary variable instead of a field.
-        vkDestroyBuffer(_logicalDevice, _stagingBuffer, nullptr);
-        vkFreeMemory(_logicalDevice, _stagingBufferMemory, nullptr);
+        vkDestroyBuffer(_logicalDevice, stagingBuffer, nullptr);
+        vkFreeMemory(_logicalDevice, stagingBufferMemory, nullptr);
+}
+
+void TriangleApp::createIndexBuffer() {
+        INFO("Creating index buffer...");
+        VkDeviceSize indexBufferSize = sizeof(_indices[0]) * _indices.size();
+
+        std::pair<VkBuffer, VkDeviceMemory> res = createStagingBuffer(this, indexBufferSize);
+        VkBuffer stagingBuffer = res.first;
+        VkDeviceMemory stagingBufferMemory = res.second;
+        // copy over data from cpu memory to gpu memory(staging buffer)
+        void* data;
+        vkMapMemory(_logicalDevice, stagingBufferMemory, 0, indexBufferSize, 0, &data);
+        memcpy(data, _indices.data(), (size_t)indexBufferSize); // copy the data
+        vkUnmapMemory(_logicalDevice, stagingBufferMemory);
+
+        // create index buffer
+        createBuffer(
+                _physicalDevice,
+                _logicalDevice,
+                indexBufferSize,
+                VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                _indexBuffer,
+                _indexBufferMemory
+        );
+
+        copyBuffer(_logicalDevice, _commandPool, _graphicsQueue, stagingBuffer, _indexBuffer, indexBufferSize);
+
+        vkDestroyBuffer(_logicalDevice, stagingBuffer, nullptr);
+        vkFreeMemory(_logicalDevice, stagingBufferMemory, nullptr);
 }
 
 void TriangleApp::drawFrame() {
@@ -385,7 +411,8 @@ void TriangleApp::drawFrame() {
         //  Acquire an image from the swap chain
         uint32_t imageIndex;
         VkResult result = vkAcquireNextImageKHR(
-                this->_logicalDevice, _swapChain, UINT64_MAX, _semaImageAvailable[this->_currentFrame], VK_NULL_HANDLE, &imageIndex);
+                this->_logicalDevice, _swapChain, UINT64_MAX, _semaImageAvailable[this->_currentFrame], VK_NULL_HANDLE, &imageIndex
+        );
         if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
                 this->recreateSwapChain();
                 return;
