@@ -73,12 +73,17 @@ class VulkanApplication {
 
         virtual void createVertexBuffer();
         virtual void createIndexBuffer();
+        virtual void createDescriptorSetLayout();
         virtual void createGraphicsPipeline();
         virtual void createRenderPass();
         virtual void createFramebuffers();
         virtual void createCommandPool();
         virtual void createCommandBuffer();
         virtual void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
+
+        virtual void setKeyCallback();
+
+        static  void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
 
         void createSynchronizationObjects();
 
@@ -178,6 +183,8 @@ class VulkanApplication {
 
         std::vector<VkImageView> _swapChainImageViews;
 
+        VkDescriptorSetLayout _descriptorSetLayout = VK_NULL_HANDLE;
+
         VkPipelineLayout _pipelineLayout = VK_NULL_HANDLE;
         VkRenderPass _renderPass = VK_NULL_HANDLE;
 
@@ -187,7 +194,7 @@ class VulkanApplication {
 
         VkBuffer _vertexBuffer = VK_NULL_HANDLE;
         VkDeviceMemory _vertexBufferMemory = VK_NULL_HANDLE;
-        
+
         VkBuffer _indexBuffer = VK_NULL_HANDLE;
         VkDeviceMemory _indexBufferMemory = VK_NULL_HANDLE;
 

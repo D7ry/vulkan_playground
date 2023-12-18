@@ -20,6 +20,18 @@ void VulkanApplication::Run() {
         this->cleanup();
 }
 
+void VulkanApplication::keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+        INFO("{} {} {} {}", key, scancode, action, mods);
+        if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
+                glfwSetWindowShouldClose(window, GLFW_TRUE);
+        }
+}
+
+void VulkanApplication::setKeyCallback() {
+        INFO("Setting up key callback...");
+        glfwSetKeyCallback(_window, this->keyCallback);
+}
+
 void VulkanApplication::initWindow() {
         INFO("Initializing GLFW...");
         glfwInit();
@@ -28,9 +40,11 @@ void VulkanApplication::initWindow() {
         this->_window = glfwCreateWindow(800, 600, "Vulkan", nullptr, nullptr);
         glfwSetWindowUserPointer(_window, this);
         glfwSetFramebufferSizeCallback(_window, this->framebufferResizeCallback);
+        // set up glfw input callbacks
         if (this->_window == nullptr) {
                 ERROR("Failed to create GLFW window.");
         }
+        this->setKeyCallback();
         INFO("GLFW initialized; window created.");
 }
 
@@ -66,6 +80,7 @@ void VulkanApplication::initVulkan() {
         this->createSwapChain();
         this->createImageViews();
         this->createRenderPass();
+        this->createDescriptorSetLayout();
         this->createGraphicsPipeline();
         this->createFramebuffers();
         this->createCommandPool();
@@ -491,6 +506,8 @@ void VulkanApplication::createVertexBuffer() { ERROR("Base vulkan application do
 
 void VulkanApplication::createIndexBuffer() { ERROR("Base vulkan application does not have an index buffer."); }
 
+void VulkanApplication::createDescriptorSetLayout() { ERROR("Base vulkan application does not have a descriptor set layout."); }
+
 void VulkanApplication::createGraphicsPipeline() { ERROR("Base vulkan application does not have a graphics pipeline."); }
 
 // https://vulkan-tutorial.com/Drawing_a_triangle/Graphics_pipeline_basics/Render_passes
@@ -539,6 +556,9 @@ void VulkanApplication::cleanup() {
         }
         if (_indexBufferMemory != VK_NULL_HANDLE) {
                 vkFreeMemory(this->_logicalDevice, _indexBufferMemory, nullptr);
+        }
+        if (_descriptorSetLayout != VK_NULL_HANDLE) {
+                vkDestroyDescriptorSetLayout(this->_logicalDevice, _descriptorSetLayout, nullptr);
         }
 
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {

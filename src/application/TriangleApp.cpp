@@ -1,7 +1,18 @@
 #include "TriangleApp.h"
 #include "utils/ShaderUtils.h"
+#include <GLFW/glfw3.h>
 #include <cstdint>
 #include <vulkan/vulkan_core.h>
+void TriangleApp::keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+        if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
+                glfwSetWindowShouldClose(window, GLFW_TRUE);
+        }
+        INFO("here");
+}
+
+void TriangleApp::setKeyCallback() {
+        glfwSetKeyCallback(this->_window, TriangleApp::keyCallback);
+}
 
 void TriangleApp::createGraphicsPipeline() {
         INFO("Creating TriangleAPP Graphics Pipeline...");
@@ -141,8 +152,8 @@ void TriangleApp::createGraphicsPipeline() {
         // pipeline layout - controlling uniform values
         VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
         pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        pipelineLayoutInfo.setLayoutCount = 0;            // Optional
-        pipelineLayoutInfo.pSetLayouts = nullptr;         // Optional
+        pipelineLayoutInfo.setLayoutCount = 1;
+        pipelineLayoutInfo.pSetLayouts = &_descriptorSetLayout; // Optional
         pipelineLayoutInfo.pushConstantRangeCount = 0;    // Optional
         pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
 
@@ -402,6 +413,25 @@ void TriangleApp::createIndexBuffer() {
 
         vkDestroyBuffer(_logicalDevice, stagingBuffer, nullptr);
         vkFreeMemory(_logicalDevice, stagingBufferMemory, nullptr);
+}
+
+void TriangleApp::createDescriptorSetLayout() {
+        VkDescriptorSetLayoutBinding uboLayoutBinding{};
+        uboLayoutBinding.binding = 0; // binding = 0 in shader
+        uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        uboLayoutBinding.descriptorCount = 1; // number of values in the array
+
+        uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT; // only used in vertex shader
+        uboLayoutBinding.pImmutableSamplers = nullptr;            // Optional
+
+        VkDescriptorSetLayoutCreateInfo layoutInfo{};
+        layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        layoutInfo.bindingCount = 1; // number of bindings
+        layoutInfo.pBindings = &uboLayoutBinding;
+
+        if (vkCreateDescriptorSetLayout(_logicalDevice, &layoutInfo, nullptr, &_descriptorSetLayout) != VK_SUCCESS) {
+                FATAL("Failed to create descriptor set layout!");
+        }
 }
 
 void TriangleApp::drawFrame() {

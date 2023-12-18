@@ -12,8 +12,11 @@ class TriangleApp : public VulkanApplication {
         virtual void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) override;
         virtual void createVertexBuffer() override;
         virtual void createIndexBuffer() override;
-
+        virtual void createDescriptorSetLayout() override;
+        virtual void setKeyCallback() override;
         virtual void drawFrame() override;
+
+        static void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
 
         // Vertices, for demonstration purposes
         const std::vector<Vertex> _vertices
