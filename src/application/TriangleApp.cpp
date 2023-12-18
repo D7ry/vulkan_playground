@@ -1,18 +1,17 @@
 #include "TriangleApp.h"
+#include "structs/UniformBuffer.h"
 #include "utils/ShaderUtils.h"
 #include <GLFW/glfw3.h>
 #include <cstdint>
 #include <vulkan/vulkan_core.h>
 void TriangleApp::keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
         if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
+                INFO("Esc key pressed, closing window...");
                 glfwSetWindowShouldClose(window, GLFW_TRUE);
         }
-        INFO("here");
 }
 
-void TriangleApp::setKeyCallback() {
-        glfwSetKeyCallback(this->_window, TriangleApp::keyCallback);
-}
+void TriangleApp::setKeyCallback() { glfwSetKeyCallback(this->_window, TriangleApp::keyCallback); }
 
 void TriangleApp::createGraphicsPipeline() {
         INFO("Creating TriangleAPP Graphics Pipeline...");
@@ -153,9 +152,9 @@ void TriangleApp::createGraphicsPipeline() {
         VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
         pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
         pipelineLayoutInfo.setLayoutCount = 1;
-        pipelineLayoutInfo.pSetLayouts = &_descriptorSetLayout; // Optional
-        pipelineLayoutInfo.pushConstantRangeCount = 0;    // Optional
-        pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
+        pipelineLayoutInfo.pSetLayouts = &_descriptorSetLayout; // bind our own layout
+        pipelineLayoutInfo.pushConstantRangeCount = 0;          // Optional
+        pipelineLayoutInfo.pPushConstantRanges = nullptr;       // Optional
 
         if (vkCreatePipelineLayout(_logicalDevice, &pipelineLayoutInfo, nullptr, &this->_pipelineLayout) != VK_SUCCESS) {
                 FATAL("Failed to create pipeline layout!");
@@ -342,7 +341,7 @@ void TriangleApp::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t im
         vkCmdBindIndexBuffer(commandBuffer, this->_indexBuffer, 0, VK_INDEX_TYPE_UINT16);
 
         // issue the draw command
-        //vkCmdDraw(commandBuffer, 3, 1, 0, 0);
+        // vkCmdDraw(commandBuffer, 3, 1, 0, 0);
         vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(_indices.size()), 1, 0, 0, 0);
         vkCmdEndRenderPass(commandBuffer);
 
@@ -413,6 +412,29 @@ void TriangleApp::createIndexBuffer() {
 
         vkDestroyBuffer(_logicalDevice, stagingBuffer, nullptr);
         vkFreeMemory(_logicalDevice, stagingBufferMemory, nullptr);
+}
+
+void TriangleApp::createUniformBuffers() {
+        INFO("Creating uniform buffers...");
+        VkDeviceSize uniformBufferSize = sizeof(UniformBuffer);
+
+        _uniformBuffers.resize(MAX_FRAMES_IN_FLIGHT);
+        _uniformBuffersMemory.resize(MAX_FRAMES_IN_FLIGHT);
+        _uniformBuffersData.resize(MAX_FRAMES_IN_FLIGHT);
+
+        for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+                createBuffer(
+                        _physicalDevice,
+                        _logicalDevice,
+                        uniformBufferSize,
+                        VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT // uniform buffer is visible to the CPU since it's replaced every frame.
+                                | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+                        _uniformBuffers[i],
+                        _uniformBuffersMemory[i]
+                );
+                vkMapMemory(_logicalDevice, _uniformBuffersMemory[i], 0, uniformBufferSize, 0, &_uniformBuffersData[i]);
+        }
 }
 
 void TriangleApp::createDescriptorSetLayout() {

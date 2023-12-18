@@ -86,6 +86,7 @@ void VulkanApplication::initVulkan() {
         this->createCommandPool();
         this->createVertexBuffer();
         this->createIndexBuffer();
+        this->createUniformBuffers();
         this->createCommandBuffer();
         this->createSynchronizationObjects();
         INFO("Vulkan initialized.");
@@ -187,7 +188,7 @@ VkResult VulkanApplication::CreateDebugUtilsMessengerEXT(
         const VkAllocationCallbacks* pAllocator,
         VkDebugUtilsMessengerEXT* pDebugMessenger
 ) {
-        INFO("setting up debug messenger .... \n");
+        INFO("setting up debug messenger .... ");
         auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
 
         if (func != nullptr) {
@@ -285,7 +286,7 @@ bool VulkanApplication::isDeviceSuitable(VkPhysicalDevice device) {
         }
 }
 void VulkanApplication::pickPhysicalDevice() {
-        INFO("Picking physical device \n");
+        INFO("Picking physical device ");
         VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
         uint32_t deviceCount = 0;
         vkEnumeratePhysicalDevices(this->_instance, &deviceCount, nullptr);
@@ -340,7 +341,7 @@ void VulkanApplication::createLogicalDevice() {
         INFO("Logical device created.");
 }
 void VulkanApplication::createSwapChain() {
-        INFO("creating swapchain...\n");
+        INFO("creating swapchain...");
         SwapChainSupportDetails swapChainSupport = querySwapChainSupport(_physicalDevice);
         VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
         VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
@@ -351,7 +352,7 @@ void VulkanApplication::createSwapChain() {
                 imageCount = swapChainSupport.capabilities.maxImageCount;
         }
 
-        INFO("Populating swapchain create info...\n");
+        INFO("Populating swapchain create info...");
         VkSwapchainCreateInfoKHR createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
         createInfo.surface = _surface;
@@ -506,6 +507,8 @@ void VulkanApplication::createVertexBuffer() { ERROR("Base vulkan application do
 
 void VulkanApplication::createIndexBuffer() { ERROR("Base vulkan application does not have an index buffer."); }
 
+void VulkanApplication::createUniformBuffers() { ERROR("Base vulkan application does not have a uniform buffer."); }
+
 void VulkanApplication::createDescriptorSetLayout() { ERROR("Base vulkan application does not have a descriptor set layout."); }
 
 void VulkanApplication::createGraphicsPipeline() { ERROR("Base vulkan application does not have a graphics pipeline."); }
@@ -545,6 +548,16 @@ void VulkanApplication::createSynchronizationObjects() {
 void VulkanApplication::cleanup() {
         INFO("Cleaning up...");
         cleanupSwapChain();
+        for (auto& buffer : _uniformBuffers) {
+                if (buffer) {
+                        vkDestroyBuffer(this->_logicalDevice, buffer, nullptr);
+                }
+        }
+        for (auto& memory : _uniformBuffersMemory) {
+                if (memory) {
+                        vkFreeMemory(this->_logicalDevice, memory, nullptr);
+                }
+        }
         if (_vertexBuffer != VK_NULL_HANDLE) {
                 vkDestroyBuffer(this->_logicalDevice, _vertexBuffer, nullptr);
         }
@@ -579,7 +592,6 @@ void VulkanApplication::cleanup() {
                         // vkDestroyDebugUtilsMessengerEXT(_instance, _debugMessenger, nullptr);
                 }
         }
-
         vkDestroySurfaceKHR(this->_instance, this->_surface, nullptr);
         vkDestroyInstance(this->_instance, nullptr);
         glfwDestroyWindow(this->_window);

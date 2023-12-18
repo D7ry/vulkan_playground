@@ -73,6 +73,7 @@ class VulkanApplication {
 
         virtual void createVertexBuffer();
         virtual void createIndexBuffer();
+        virtual void createUniformBuffers();
         virtual void createDescriptorSetLayout();
         virtual void createGraphicsPipeline();
         virtual void createRenderPass();
@@ -197,6 +198,12 @@ class VulkanApplication {
 
         VkBuffer _indexBuffer = VK_NULL_HANDLE;
         VkDeviceMemory _indexBufferMemory = VK_NULL_HANDLE;
+
+        // Uniform buffers are stored in vectors because they are per-frame.
+        // for each in flight frame, there is a uniform buffer.
+        std::vector<VkBuffer> _uniformBuffers;
+        std::vector<VkDeviceMemory> _uniformBuffersMemory;
+        std::vector<void*> _uniformBuffersData;
 
         std::vector<VkCommandBuffer> _commandBuffers;
         std::vector<VkSemaphore> _semaImageAvailable;
