@@ -1,3 +1,4 @@
+#include <chrono>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -517,12 +518,13 @@ void TriangleApp::createDescriptorSets() {
 }
 
 void TriangleApp::updateUniformBufferData(uint32_t frameIndex) {
-        static Animation::StopWatch timer;
+        static Animation::StopWatchSeconds timer;
         float time = timer.elapsed();
+        INFO("{}", time);
         UniformBuffer ubo{};
         ubo.model = glm::rotate(glm::mat4(1.f), time * glm::radians(90.f), glm::vec3(0.f, 0.f, 1.f));
         ubo.view = glm::lookAt(glm::vec3(2.f, 2.f, 2.f), glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 0.f, 1.f));
-        ubo.proj = glm::perspective(glm::radians(45.f), _swapChainExtent.width / (float)_swapChainExtent.height, 0.1f, 10.f);
+        ubo.proj = glm::perspective(glm::radians(30.f), _swapChainExtent.width / (float)_swapChainExtent.height, 0.1f, 10.f);
 
         ubo.proj[1][1] *= -1; // flip y coordinate
         // TODO: use push constants for small data update

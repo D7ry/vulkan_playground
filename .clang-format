@@ -19,3 +19,5 @@ BreakBeforeTernaryOperators: true
 BreakConstructorInitializersBeforeComma: false
 ConstructorInitializerAllOnOneLineOrOnePerLine: true
 MaxEmptyLinesToKeep: 1
+
+AlwaysBreakTemplateDeclarations: Yes
