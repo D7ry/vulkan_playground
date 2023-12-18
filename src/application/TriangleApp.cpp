@@ -1,4 +1,4 @@
-#include <chrono>
+#include <glm/fwd.hpp>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -14,6 +14,9 @@ void TriangleApp::keyCallback(GLFWwindow* window, int key, int scancode, int act
         if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
                 INFO("Esc key pressed, closing window...");
                 glfwSetWindowShouldClose(window, GLFW_TRUE);
+        }
+        switch (key) {
+
         }
 }
 
@@ -103,7 +106,8 @@ void TriangleApp::createGraphicsPipeline() {
                 = VK_FALSE; // if true, geometry never passes through the rasterizer stage(nothing it put into the frame buffer)
         rasterizer.polygonMode = VK_POLYGON_MODE_FILL;  // fill the area of the polygon with fragments
         rasterizer.lineWidth = 1.0f;                    // thickness of lines in terms of number of fragments
-        rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;    // cull back faces
+        //rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;    // cull back faces
+        rasterizer.cullMode = VK_CULL_MODE_NONE; // don't cull any faces
         rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
         rasterizer.depthBiasEnable = VK_FALSE;          // depth biasing
         rasterizer.depthBiasConstantFactor = 0.0f;      // optional
@@ -505,7 +509,7 @@ void TriangleApp::createDescriptorSets() {
                 VkWriteDescriptorSet descriptorWrite{};
                 descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
                 descriptorWrite.dstSet = _descriptorSets[i];
-                descriptorWrite.dstBinding = 0; // binding = 0 in shader
+                descriptorWrite.dstBinding = 0; // zbinding = 0 in shader
                 descriptorWrite.dstArrayElement = 0;
                 descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
                 descriptorWrite.descriptorCount = 1;
@@ -520,9 +524,11 @@ void TriangleApp::createDescriptorSets() {
 void TriangleApp::updateUniformBufferData(uint32_t frameIndex) {
         static Animation::StopWatchSeconds timer;
         float time = timer.elapsed();
-        INFO("{}", time);
         UniformBuffer ubo{};
-        ubo.model = glm::rotate(glm::mat4(1.f), time * glm::radians(90.f), glm::vec3(0.f, 0.f, 1.f));
+        auto initialPos = glm::mat4(1.f);
+        ubo.model = initialPos;
+        ubo.model = glm::rotate(ubo.model, time * glm::radians(90.f), glm::vec3(0.f, 0.f, 1.f));
+        //ubo.model = glm::translate(ubo.model, glm::vec3(0.f, 0.f, time - int(time)));
         ubo.view = glm::lookAt(glm::vec3(2.f, 2.f, 2.f), glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 0.f, 1.f));
         ubo.proj = glm::perspective(glm::radians(30.f), _swapChainExtent.width / (float)_swapChainExtent.height, 0.1f, 10.f);
 
