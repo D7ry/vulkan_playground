@@ -19,6 +19,7 @@ add_executable(vulkan_playground
         src/application/TriangleApp.cpp
         src/utils/Logging.cpp
         src/utils/ShaderUtils.cpp
+        src/utils/Animation.cpp
         src/structs/Vertex.cpp
 )
 target_include_directories(vulkan_playground PUBLIC src)

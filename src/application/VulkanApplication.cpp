@@ -32,6 +32,10 @@ void VulkanApplication::setKeyCallback() {
         glfwSetKeyCallback(_window, this->keyCallback);
 }
 
+void VulkanApplication::updateUniformBufferData(uint32_t frameIndex) {
+        ERROR("Base vulkan application does not have a uniform buffer.");
+}
+
 void VulkanApplication::initWindow() {
         INFO("Initializing GLFW...");
         glfwInit();
@@ -87,6 +91,8 @@ void VulkanApplication::initVulkan() {
         this->createVertexBuffer();
         this->createIndexBuffer();
         this->createUniformBuffers();
+        this->createDescriptorPool();
+        this->createDescriptorSets();
         this->createCommandBuffer();
         this->createSynchronizationObjects();
         INFO("Vulkan initialized.");
@@ -522,6 +528,10 @@ void VulkanApplication::createCommandPool() { ERROR("Base vulkan application doe
 
 void VulkanApplication::createCommandBuffer() { ERROR("Base vulkan application does not have a command buffer."); }
 
+void VulkanApplication::createDescriptorPool() {}
+
+void VulkanApplication::createDescriptorSets() {}
+
 void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
         ERROR("Base vulkan application does not have a command buffer.");
 }
@@ -569,6 +579,9 @@ void VulkanApplication::cleanup() {
         }
         if (_indexBufferMemory != VK_NULL_HANDLE) {
                 vkFreeMemory(this->_logicalDevice, _indexBufferMemory, nullptr);
+        }
+        if (_descriptorPool != VK_NULL_HANDLE) {
+                vkDestroyDescriptorPool(this->_logicalDevice, _descriptorPool, nullptr);
         }
         if (_descriptorSetLayout != VK_NULL_HANDLE) {
                 vkDestroyDescriptorSetLayout(this->_logicalDevice, _descriptorSetLayout, nullptr);

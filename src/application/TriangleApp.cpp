@@ -1,8 +1,13 @@
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+
 #include "TriangleApp.h"
 #include "structs/UniformBuffer.h"
+#include "utils/Animation.h"
 #include "utils/ShaderUtils.h"
 #include <GLFW/glfw3.h>
 #include <cstdint>
+#include <glm/trigonometric.hpp>
 #include <vulkan/vulkan_core.h>
 void TriangleApp::keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
         if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
@@ -98,7 +103,7 @@ void TriangleApp::createGraphicsPipeline() {
         rasterizer.polygonMode = VK_POLYGON_MODE_FILL;  // fill the area of the polygon with fragments
         rasterizer.lineWidth = 1.0f;                    // thickness of lines in terms of number of fragments
         rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;    // cull back faces
-        rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE; // vertex order for faces to be considered front-facing
+        rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
         rasterizer.depthBiasEnable = VK_FALSE;          // depth biasing
         rasterizer.depthBiasConstantFactor = 0.0f;      // optional
         rasterizer.depthBiasClamp = 0.0f;               // optional
@@ -340,6 +345,8 @@ void TriangleApp::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t im
 
         vkCmdBindIndexBuffer(commandBuffer, this->_indexBuffer, 0, VK_INDEX_TYPE_UINT16);
 
+        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelineLayout, 0, 1, &_descriptorSets[_currentFrame], 0, nullptr);
+
         // issue the draw command
         // vkCmdDraw(commandBuffer, 3, 1, 0, 0);
         vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(_indices.size()), 1, 0, 0, 0);
@@ -429,7 +436,7 @@ void TriangleApp::createUniformBuffers() {
                         uniformBufferSize,
                         VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT // uniform buffer is visible to the CPU since it's replaced every frame.
-                                | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+                                | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
                         _uniformBuffers[i],
                         _uniformBuffersMemory[i]
                 );
@@ -456,6 +463,72 @@ void TriangleApp::createDescriptorSetLayout() {
         }
 }
 
+void TriangleApp::createDescriptorPool() {
+        // create a pool that will allocate to actual descriptor sets
+        int descriptorSetCount = static_cast<int>(MAX_FRAMES_IN_FLIGHT);
+        VkDescriptorPoolSize poolSize{};
+        poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        poolSize.descriptorCount = descriptorSetCount; // each frame has a uniform buffer
+
+        VkDescriptorPoolCreateInfo poolInfo{};
+        poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        poolInfo.poolSizeCount = 1; // number of pool sizes
+        poolInfo.pPoolSizes = &poolSize;
+        poolInfo.maxSets = descriptorSetCount; // number of descriptor sets, set to the number of frames in flight
+
+        if (vkCreateDescriptorPool(_logicalDevice, &poolInfo, nullptr, &_descriptorPool) != VK_SUCCESS) {
+                FATAL("Failed to create descriptor pool!");
+        }
+}
+
+void TriangleApp::createDescriptorSets() {
+        int numDescriptorSets = static_cast<int>(MAX_FRAMES_IN_FLIGHT);
+        std::vector<VkDescriptorSetLayout> layouts(numDescriptorSets, _descriptorSetLayout);
+        VkDescriptorSetAllocateInfo allocInfo{};
+        allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        allocInfo.descriptorPool = _descriptorPool;
+        allocInfo.descriptorSetCount = numDescriptorSets;
+        allocInfo.pSetLayouts = layouts.data();
+
+        _descriptorSets.resize(numDescriptorSets);
+        if (vkAllocateDescriptorSets(_logicalDevice, &allocInfo, _descriptorSets.data()) != VK_SUCCESS) {
+                FATAL("Failed to allocate descriptor sets!");
+        }
+
+        for (size_t i = 0; i < numDescriptorSets; i++) {
+                VkDescriptorBufferInfo descriptorBufferInfo{};
+                descriptorBufferInfo.buffer = _uniformBuffers[i];
+                descriptorBufferInfo.offset = 0;
+                descriptorBufferInfo.range = sizeof(UniformBuffer);
+
+                VkWriteDescriptorSet descriptorWrite{};
+                descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+                descriptorWrite.dstSet = _descriptorSets[i];
+                descriptorWrite.dstBinding = 0; // binding = 0 in shader
+                descriptorWrite.dstArrayElement = 0;
+                descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+                descriptorWrite.descriptorCount = 1;
+                descriptorWrite.pBufferInfo = &descriptorBufferInfo;
+                descriptorWrite.pImageInfo = nullptr;       // Optional
+                descriptorWrite.pTexelBufferView = nullptr; // Optional
+
+                vkUpdateDescriptorSets(_logicalDevice, 1, &descriptorWrite, 0, nullptr);
+        }
+}
+
+void TriangleApp::updateUniformBufferData(uint32_t frameIndex) {
+        static Animation::StopWatch timer;
+        float time = timer.elapsed();
+        UniformBuffer ubo{};
+        ubo.model = glm::rotate(glm::mat4(1.f), time * glm::radians(90.f), glm::vec3(0.f, 0.f, 1.f));
+        ubo.view = glm::lookAt(glm::vec3(2.f, 2.f, 2.f), glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 0.f, 1.f));
+        ubo.proj = glm::perspective(glm::radians(45.f), _swapChainExtent.width / (float)_swapChainExtent.height, 0.1f, 10.f);
+
+        ubo.proj[1][1] *= -1; // flip y coordinate
+        // TODO: use push constants for small data update
+        memcpy(_uniformBuffersData[frameIndex], &ubo, sizeof(ubo));
+}
+
 void TriangleApp::drawFrame() {
         //  Wait for the previous frame to finish
         vkWaitForFences(this->_logicalDevice, 1, &this->_fenceInFlight[this->_currentFrame], VK_TRUE, UINT64_MAX);
@@ -478,6 +551,9 @@ void TriangleApp::drawFrame() {
         //  Record a command buffer which draws the scene onto that image
         vkResetCommandBuffer(this->_commandBuffers[this->_currentFrame], 0);
         this->recordCommandBuffer(this->_commandBuffers[this->_currentFrame], imageIndex);
+
+        this->updateUniformBufferData(_currentFrame);
+
         //  Submit the recorded command buffer
         VkSubmitInfo submitInfo{};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;

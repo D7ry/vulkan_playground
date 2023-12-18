@@ -14,8 +14,11 @@ class TriangleApp : public VulkanApplication {
         virtual void createIndexBuffer() override;
         virtual void createUniformBuffers() override;
         virtual void createDescriptorSetLayout() override;
+        virtual void createDescriptorPool() override;
+        virtual void createDescriptorSets() override;
         virtual void setKeyCallback() override;
         virtual void drawFrame() override;
+        virtual void updateUniformBufferData(uint32_t frameIndex) override;
 
         static void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
 

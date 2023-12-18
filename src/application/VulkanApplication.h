@@ -71,6 +71,12 @@ class VulkanApplication {
 
         void createImageViews();
 
+        virtual void createDescriptorPool();
+        /**
+         * @brief Initialize and configure descriptor sets.
+         * Before calling this, a descripto pool must be created, as well as a descriptor set layout.
+         */
+        virtual void createDescriptorSets();
         virtual void createVertexBuffer();
         virtual void createIndexBuffer();
         virtual void createUniformBuffers();
@@ -83,6 +89,8 @@ class VulkanApplication {
         virtual void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
 
         virtual void setKeyCallback();
+
+        virtual void updateUniformBufferData(uint32_t frameIndex);
 
         static  void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
 
@@ -192,6 +200,9 @@ class VulkanApplication {
         VkPipeline _graphicsPipeline = VK_NULL_HANDLE;
 
         VkCommandPool _commandPool = VK_NULL_HANDLE;
+        
+        VkDescriptorPool _descriptorPool = VK_NULL_HANDLE;
+        std::vector<VkDescriptorSet> _descriptorSets;
 
         VkBuffer _vertexBuffer = VK_NULL_HANDLE;
         VkDeviceMemory _vertexBufferMemory = VK_NULL_HANDLE;
