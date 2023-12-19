@@ -46,6 +46,9 @@ void VulkanApplication::initWindow() {
         glfwInit();
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
         glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
+        if (!glfwVulkanSupported()) {
+                FATAL("Vulkan is not supported on this machine!");
+        }
         this->_window = glfwCreateWindow(800, 600, "Vulkan", nullptr, nullptr);
         glfwSetWindowUserPointer(_window, this);
         glfwSetFramebufferSizeCallback(_window, this->framebufferResizeCallback);
@@ -61,6 +64,7 @@ void VulkanApplication::mainLoop() {
         INFO("Entering main render loop...");
         while (!glfwWindowShouldClose(this->_window)) {
                 glfwPollEvents();
+                _imguiManager.RenderFrame();
                 drawFrame();
                 _deltaTimer.Update();
         }
@@ -92,6 +96,8 @@ void VulkanApplication::initVulkan() {
         this->createRenderPass();
         this->createDescriptorSetLayout();
         this->createGraphicsPipeline();
+        this->_imguiManager.InitializeImgui();
+        this->_imguiManager.InitializeRenderPass(_logicalDevice, _swapChainImageFormat);
         this->createFramebuffers();
         this->createCommandPool();
         this->createVertexBuffer();
@@ -101,6 +107,15 @@ void VulkanApplication::initVulkan() {
         this->createDescriptorSets();
         this->createCommandBuffer();
         this->createSynchronizationObjects();
+
+        INFO("Begin initializing ImGui...");
+        auto indices = this->findQueueFamilies(_physicalDevice);
+        this->_imguiManager.InitializeDescriptorPool(MAX_FRAMES_IN_FLIGHT, _logicalDevice);
+        this->_imguiManager.BindVulkanResources(
+                _window, _instance, _physicalDevice, _logicalDevice, indices.graphicsFamily.value(), _graphicsQueue, _swapChainFrameBuffers.size()
+        );
+        this->_imguiManager.InitializeCommandPoolAndBuffers(MAX_FRAMES_IN_FLIGHT, _logicalDevice, indices.graphicsFamily.value());
+        //this->_imguiManager.InitializeFrameBuffer(_swapChainFrameBuffers.size(), _logicalDevice, _swapChainImageViews, _swapChainExtent);
         INFO("Vulkan initialized.");
 }
 
@@ -408,6 +423,7 @@ void VulkanApplication::createSwapChain() {
 }
 void VulkanApplication::cleanupSwapChain() {
         INFO("Cleaning up swap chain...");
+        _imguiManager.DestroyFrameBuffers(_logicalDevice);
         for (VkFramebuffer framebuffer : this->_swapChainFrameBuffers) {
                 vkDestroyFramebuffer(this->_logicalDevice, framebuffer, nullptr);
         }

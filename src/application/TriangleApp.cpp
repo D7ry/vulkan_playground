@@ -25,16 +25,22 @@ void TriangleApp::keyCallback(GLFWwindow* window, int key, int scancode, int act
                         _camera.ModPosition(-0.1, 0, 0);
                         break;
                 case GLFW_KEY_A:
-                        _camera.ModPosition(0, -0.1, 0);
-                        break;
-                case GLFW_KEY_D:
                         _camera.ModPosition(0, 0.1, 0);
                         break;
+                case GLFW_KEY_D:
+                        _camera.ModPosition(0, -0.1, 0);
+                        break;
+                case GLFW_KEY_LEFT_CONTROL:
+                        _camera.ModPosition(0, 0, -0.1);
+                        break;
+                case GLFW_KEY_SPACE:
+                        _camera.ModPosition(0, 0, 0.1);
+                        break;
                 case GLFW_KEY_I:
-                        _camera.ModRotation(0, -1, 0);
+                        _camera.ModRotation(0, 1, 0);
                         break;
                 case GLFW_KEY_K:
-                        _camera.ModRotation(0, 1, 0);
+                        _camera.ModRotation(0, -1, 0);
                         break;
                 case GLFW_KEY_J:
                         _camera.ModRotation(1, 0, 0);
@@ -248,7 +254,8 @@ void TriangleApp::createRenderPass() {
         colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 
         colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        //colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        colorAttachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL; // for imgui
 
         // set up subpass
         VkAttachmentReference colorAttachmentRef{};
@@ -286,6 +293,9 @@ void TriangleApp::createFramebuffers() {
         INFO("Creating {} framebuffers...", this->_swapChainImageViews.size());
         this->_swapChainFrameBuffers.resize(this->_swapChainImageViews.size());
         // iterate through image views and create framebuffers
+        if (_renderPass == VK_NULL_HANDLE) {
+                FATAL("Render pass is null!");
+        }
         for (size_t i = 0; i < _swapChainImageViews.size(); i++) {
                 VkImageView atachments[] = {_swapChainImageViews[i]};
                 VkFramebufferCreateInfo framebufferInfo{};
@@ -301,6 +311,7 @@ void TriangleApp::createFramebuffers() {
                         FATAL("Failed to create framebuffer!");
                 }
         }
+        _imguiManager.InitializeFrameBuffer(this->_swapChainImageViews.size(), _logicalDevice, _swapChainImageViews, _swapChainExtent);
         INFO("Framebuffers created.");
 }
 
@@ -505,14 +516,16 @@ void TriangleApp::createDescriptorSetLayout() {
 void TriangleApp::createDescriptorPool() {
         // create a pool that will allocate to actual descriptor sets
         int descriptorSetCount = static_cast<int>(MAX_FRAMES_IN_FLIGHT);
-        VkDescriptorPoolSize poolSize{};
-        poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        poolSize.descriptorCount = descriptorSetCount; // each frame has a uniform buffer
+        VkDescriptorPoolSize poolSizes[] = {
+                {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, static_cast<uint32_t>(descriptorSetCount)}, // number of uniform buffers
+                //{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1} // image sampler for imgui
+        };
+
 
         VkDescriptorPoolCreateInfo poolInfo{};
         poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-        poolInfo.poolSizeCount = 1; // number of pool sizes
-        poolInfo.pPoolSizes = &poolSize;
+        poolInfo.poolSizeCount = sizeof(poolSizes) / sizeof(VkDescriptorPoolSize); // number of pool sizes
+        poolInfo.pPoolSizes = poolSizes;
         poolInfo.maxSets = descriptorSetCount; // number of descriptor sets, set to the number of frames in flight
 
         if (vkCreateDescriptorPool(_logicalDevice, &poolInfo, nullptr, &_descriptorPool) != VK_SUCCESS) {
@@ -594,6 +607,7 @@ void TriangleApp::drawFrame() {
         //  Record a command buffer which draws the scene onto that image
         vkResetCommandBuffer(this->_commandBuffers[this->_currentFrame], 0);
         this->recordCommandBuffer(this->_commandBuffers[this->_currentFrame], imageIndex);
+        _imguiManager.RecordCommandBuffer(this->_currentFrame, imageIndex, _swapChainExtent);
 
         this->updateUniformBufferData(_currentFrame);
 
@@ -604,16 +618,19 @@ void TriangleApp::drawFrame() {
         VkSemaphore waitSemaphores[]
                 = {_semaImageAvailable[_currentFrame]}; // use imageAvailable semaphore to make sure that the image is available before drawing
         VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+        std::array<VkCommandBuffer, 2> submitCommandBuffers = {_commandBuffers[_currentFrame], _imguiManager.GetCommandBuffer(_currentFrame)};
+
         submitInfo.waitSemaphoreCount = 1;
         submitInfo.pWaitSemaphores = waitSemaphores;
         submitInfo.pWaitDstStageMask = waitStages;
-        submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &_commandBuffers[_currentFrame];
+        submitInfo.commandBufferCount = static_cast<uint32_t>(submitCommandBuffers.size());
+        submitInfo.pCommandBuffers = submitCommandBuffers.data();
 
         VkSemaphore signalSemaphores[] = {_semaRenderFinished[_currentFrame]};
         submitInfo.signalSemaphoreCount = 1;
         submitInfo.pSignalSemaphores = signalSemaphores;
 
+        // the submission does not start until vkAcquireNextImageKHR returns, and downs the corresponding _semaRenderFinished semapohre once it's done.
         if (vkQueueSubmit(_graphicsQueue, 1, &submitInfo, _fenceInFlight[_currentFrame]) != VK_SUCCESS) {
                 FATAL("Failed to submit draw command buffer!");
         }
@@ -622,6 +639,7 @@ void TriangleApp::drawFrame() {
         VkPresentInfoKHR presentInfo{};
         presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 
+        // set up semaphore, so that  after submitting to the queue, we wait  for the 
         presentInfo.waitSemaphoreCount = 1;
         presentInfo.pWaitSemaphores = signalSemaphores; // wait for render to finish before presenting
 
@@ -631,6 +649,7 @@ void TriangleApp::drawFrame() {
         presentInfo.pImageIndices = &imageIndex; // specify which image to present
         presentInfo.pResults = nullptr;          // Optional: can be used to check if presentation was successful
 
+        // the present doesn't happen until the render is finished, and the semaphore is signaled(result of vkQueueSubimt)
         result = vkQueuePresentKHR(_presentationQueue, &presentInfo);
         if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || this->_framebufferResized) {
                 this->recreateSwapChain();

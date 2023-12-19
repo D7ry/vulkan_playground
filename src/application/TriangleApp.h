@@ -2,6 +2,7 @@
 #include "VulkanApplication.h"
 #include "structs/Vertex.h"
 #include "components/Camera.h"
+#include "components/ImGuiManager.h"
 
 class TriangleApp : public VulkanApplication {
       protected:
@@ -29,7 +30,7 @@ class TriangleApp : public VulkanApplication {
                    {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
                    {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}};
 
-        const std::vector<uint16_t> _indices = {0, 1, 2, 2, 3, 0};
+        const std::vector<uint16_t> _indices = {0, 1, 2, 2, 3, 0}; // indice buffer
 
-        Camera _camera = Camera(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(-155, 45, 0));
+        Camera _camera = Camera(glm::vec3(-2.0f, 0.0f, 2.0f), glm::vec3(-45, 0, 0));
 };

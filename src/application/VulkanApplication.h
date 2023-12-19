@@ -9,6 +9,7 @@
 
 #include <vector>
 #include "components/DeltaTimer.h"
+#include "components/ImGuiManager.h"
 // TODO: create a serialization scheme for tweakable settings.
 
 /**
@@ -230,4 +231,7 @@ class VulkanApplication {
         uint32_t _currentFrame = 0;
 
         DeltaTimer _deltaTimer;
+
+        ImGuiManager _imguiManager;
+
 };
