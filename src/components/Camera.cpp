@@ -13,17 +13,30 @@ void Camera::ModRotation(float yaw, float pitch, float roll) {
         this->_rotation.z = fmod(this->_rotation.z + roll, 360.0f);
 };
 
+#define INDEPENDENT_Z 1
 void Camera::ModPosition(float x, float y, float z) {
         // Convert angles from degrees to radians
-        glm::vec3 anglesRad = glm::radians(_rotation);
+        glm::vec3 rotationRad = glm::radians(_rotation);
 
+#if INDEPENDENT_Z == 0
         // linera algebra mystery
-        glm::vec3 xyz = glm::rotate(glm::mat4(1.0f), anglesRad.y, glm::vec3(0, 0, 1))
-                * glm::rotate(glm::mat4(1.0f), anglesRad.x, glm::vec3(0, -1, 0)) // y axis is flipped in Vulkan
-                * glm::rotate(glm::mat4(1.0f), anglesRad.z, glm::vec3(1, 0, 0))
+        glm::vec3 xyz = glm::rotate(glm::mat4(1.0f), rotationRad.y, glm::vec3(0, 0, 1))
+                * glm::rotate(glm::mat4(1.0f), rotationRad.x, glm::vec3(0, -1, 0)) // y axis is flipped in Vulkan
+                * glm::rotate(glm::mat4(1.0f), rotationRad.z, glm::vec3(1, 0, 0))
                 * glm::vec4(x, y, z, 0);
         
         this->_position += xyz;
+#else
+    glm::vec3 xy = glm::rotate(glm::mat4(1.0f), rotationRad.y, glm::vec3(0, 0, 1))
+            * glm::rotate(glm::mat4(1.0f), rotationRad.x, glm::vec3(0, -1, 0)) // y axis is flipped in Vulkan
+            * glm::vec4(x, y, 0, 0);
+
+    // Z motion is independent of X rotation (pitch)
+    glm::vec3 zOnly = glm::vec3(0, 0, z);
+
+    // Combine XY and Z movements
+    this->_position += xy + zOnly;
+#endif
 };
 
 glm::mat4 Camera::GetViewMatrix() {
