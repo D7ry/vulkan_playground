@@ -1,4 +1,5 @@
 #include "Camera.h"
+#include <algorithm>
 #include <glm/gtc/matrix_transform.hpp>
 
 Camera::Camera(glm::vec3 position, glm::vec3 rotation) {
@@ -8,10 +9,16 @@ Camera::Camera(glm::vec3 position, glm::vec3 rotation) {
 
 void Camera::ModRotation(float yaw, float pitch, float roll) {
         // TODO: current rotation does not take into account roll angles when modifying yaw and pitch
-        this->_rotation.y = fmod(this->_rotation.y + yaw, 180.0f);
-        this->_rotation.x = fmod(this->_rotation.x + pitch, 180.0f);
+        this->_rotation.y += yaw;
+        // wrap yaw between -180 and 180
+        if (this->_rotation.y < -180.0f) {
+                this->_rotation.y += 360.0f;
+        } else if (this->_rotation.y > 180.0f) {
+                this->_rotation.y -= 360.0f;
+        }
+        this->_rotation.x = std::clamp(this->_rotation.x + pitch, -89.0f, 89.0f);
         this->_rotation.z = fmod(this->_rotation.z + roll, 180.0f);
-        INFO("Camera rotation: ({}, {}, {})", _rotation.x, _rotation.y, _rotation.z);
+        INFO("Yaw: {}, Pitch: {}, Roll: {}", this->_rotation.y, this->_rotation.x, this->_rotation.z);
 };
 
 #define INDEPENDENT_Z 1
