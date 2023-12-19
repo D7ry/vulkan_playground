@@ -8,9 +8,10 @@ Camera::Camera(glm::vec3 position, glm::vec3 rotation) {
 
 void Camera::ModRotation(float yaw, float pitch, float roll) {
         // TODO: current rotation does not take into account roll angles when modifying yaw and pitch
-        this->_rotation.y = fmod(this->_rotation.y + yaw, 360.0f);
-        this->_rotation.x = fmod(this->_rotation.x + pitch, 360.0f);
-        this->_rotation.z = fmod(this->_rotation.z + roll, 360.0f);
+        this->_rotation.y = fmod(this->_rotation.y + yaw, 180.0f);
+        this->_rotation.x = fmod(this->_rotation.x + pitch, 180.0f);
+        this->_rotation.z = fmod(this->_rotation.z + roll, 180.0f);
+        INFO("Camera rotation: ({}, {}, {})", _rotation.x, _rotation.y, _rotation.z);
 };
 
 #define INDEPENDENT_Z 1
@@ -62,8 +63,8 @@ glm::mat4 Camera::GetViewMatrix() {
         up = glm::vec3(rollMatrix * glm::vec4(up, 0.0f));
 
 
-        INFO("Camera position: ({}, {}, {})", _position.x, _position.y, _position.z);
-        INFO("Camera direction: ({}, {}, {})", direction.x, direction.y, direction.z);
+        //INFO("Camera position: ({}, {}, {})", _position.x, _position.y, _position.z);
+        //INFO("Camera direction: ({}, {}, {})", direction.x, direction.y, direction.z);
 
         // Create view matrix
         return glm::lookAt(_position, _position + direction, up);
