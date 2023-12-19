@@ -17,11 +17,11 @@ add_executable(vulkan_playground
         src/main.cpp
         src/application/VulkanApplication.cpp
         src/application/TriangleApp.cpp
-        src/utils/Logging.cpp
-        src/utils/ShaderUtils.cpp
-        src/utils/Animation.cpp
-        src/utils/DeltaTimer.cpp
-        src/utils/Camera.cpp
+        src/components/Logging.cpp
+        src/components/ShaderUtils.cpp
+        src/components/Animation.cpp
+        src/components/DeltaTimer.cpp
+        src/components/Camera.cpp
         src/structs/Vertex.cpp
 )
 target_include_directories(vulkan_playground PUBLIC src)

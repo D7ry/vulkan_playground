@@ -1,7 +1,7 @@
 #pragma once
 #include "VulkanApplication.h"
 #include "structs/Vertex.h"
-#include "utils/Camera.h"
+#include "components/Camera.h"
 
 class TriangleApp : public VulkanApplication {
       protected:

@@ -4,12 +4,13 @@
 
 #include "TriangleApp.h"
 #include "structs/UniformBuffer.h"
-#include "utils/Animation.h"
-#include "utils/ShaderUtils.h"
+#include "components/Animation.h"
+#include "components/ShaderUtils.h"
 #include <GLFW/glfw3.h>
 #include <cstdint>
 #include <glm/trigonometric.hpp>
 #include <vulkan/vulkan_core.h>
+static const bool ALLOW_MODIFY_ROLL = false;
 void TriangleApp::keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
         if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
                 INFO("Esc key pressed, closing window...");
@@ -18,22 +19,38 @@ void TriangleApp::keyCallback(GLFWwindow* window, int key, int scancode, int act
         if (action == GLFW_PRESS || action == GLFW_REPEAT) {
                 switch (key) {
                 case GLFW_KEY_W:
-                        _camera.ModRotation(0, -1, 0);
+                        _camera.ModPosition(0.1, 0, 0);
                         break;
                 case GLFW_KEY_S:
-                        _camera.ModRotation(0, 1, 0);
+                        _camera.ModPosition(-0.1, 0, 0);
                         break;
                 case GLFW_KEY_A:
-                        _camera.ModRotation(1, 0, 0);
+                        _camera.ModPosition(0, -0.1, 0);
                         break;
                 case GLFW_KEY_D:
+                        _camera.ModPosition(0, 0.1, 0);
+                        break;
+                case GLFW_KEY_I:
+                        _camera.ModRotation(0, -1, 0);
+                        break;
+                case GLFW_KEY_K:
+                        _camera.ModRotation(0, 1, 0);
+                        break;
+                case GLFW_KEY_J:
+                        _camera.ModRotation(1, 0, 0);
+                        break;
+                case GLFW_KEY_L:
                         _camera.ModRotation(-1, 0, 0);
                         break;
-                case GLFW_KEY_Q:
-                        _camera.ModRotation(0, 0, -1);
+                case GLFW_KEY_U:
+                        if (ALLOW_MODIFY_ROLL) {
+                                _camera.ModRotation(0, 0, -1);
+                        }
                         break;
-                case GLFW_KEY_E:
-                        _camera.ModRotation(0, 0, 1);
+                case GLFW_KEY_O:
+                        if (ALLOW_MODIFY_ROLL) {
+                                _camera.ModRotation(0, 0, 1);
+                        }
                         break;
                 }
         }
