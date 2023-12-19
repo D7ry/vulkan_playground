@@ -15,12 +15,32 @@ void TriangleApp::keyCallback(GLFWwindow* window, int key, int scancode, int act
                 INFO("Esc key pressed, closing window...");
                 glfwSetWindowShouldClose(window, GLFW_TRUE);
         }
-        switch (key) {
-
+        if (action == GLFW_PRESS || action == GLFW_REPEAT) {
+                switch (key) {
+                case GLFW_KEY_UP:
+                        _camera.ModRotation(0, -1, 0);
+                        break;
+                case GLFW_KEY_DOWN:
+                        _camera.ModRotation(0, 1, 0);
+                        break;
+                case GLFW_KEY_LEFT:
+                        _camera.ModRotation(1, 0, 0);
+                        break;
+                case GLFW_KEY_RIGHT:
+                        _camera.ModRotation(-1, 0, 0);
+                        break;
+                }
         }
 }
 
-void TriangleApp::setKeyCallback() { glfwSetKeyCallback(this->_window, TriangleApp::keyCallback); }
+void TriangleApp::setKeyCallback() {
+        auto keyCallback = [](GLFWwindow* window, int key, int scancode, int action, int mods) {
+                auto app = reinterpret_cast<TriangleApp*>(glfwGetWindowUserPointer(window));
+                app->keyCallback(window, key, scancode, action, mods);
+        };
+
+        glfwSetKeyCallback(this->_window, keyCallback);
+}
 
 void TriangleApp::createGraphicsPipeline() {
         INFO("Creating TriangleAPP Graphics Pipeline...");
@@ -104,15 +124,15 @@ void TriangleApp::createGraphicsPipeline() {
         rasterizer.depthClampEnable = VK_FALSE; // if true, fragments beyond the near and far planes are clamped instead of discarded
         rasterizer.rasterizerDiscardEnable
                 = VK_FALSE; // if true, geometry never passes through the rasterizer stage(nothing it put into the frame buffer)
-        rasterizer.polygonMode = VK_POLYGON_MODE_FILL;  // fill the area of the polygon with fragments
-        rasterizer.lineWidth = 1.0f;                    // thickness of lines in terms of number of fragments
-        //rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;    // cull back faces
+        rasterizer.polygonMode = VK_POLYGON_MODE_FILL; // fill the area of the polygon with fragments
+        rasterizer.lineWidth = 1.0f;                   // thickness of lines in terms of number of fragments
+        // rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;    // cull back faces
         rasterizer.cullMode = VK_CULL_MODE_NONE; // don't cull any faces
         rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-        rasterizer.depthBiasEnable = VK_FALSE;          // depth biasing
-        rasterizer.depthBiasConstantFactor = 0.0f;      // optional
-        rasterizer.depthBiasClamp = 0.0f;               // optional
-        rasterizer.depthBiasSlopeFactor = 0.0f;         // optional
+        rasterizer.depthBiasEnable = VK_FALSE;     // depth biasing
+        rasterizer.depthBiasConstantFactor = 0.0f; // optional
+        rasterizer.depthBiasClamp = 0.0f;          // optional
+        rasterizer.depthBiasSlopeFactor = 0.0f;    // optional
 
         INFO("setting up multisampling...");
         // Multi-sampling
@@ -527,10 +547,11 @@ void TriangleApp::updateUniformBufferData(uint32_t frameIndex) {
         UniformBuffer ubo{};
         auto initialPos = glm::mat4(1.f);
         ubo.model = initialPos;
-        ubo.model = glm::rotate(ubo.model, time * glm::radians(90.f), glm::vec3(0.f, 0.f, 1.f));
-        //ubo.model = glm::translate(ubo.model, glm::vec3(0.f, 0.f, time - int(time)));
-        ubo.view = glm::lookAt(glm::vec3(2.f, 2.f, 2.f), glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 0.f, 1.f));
-        ubo.proj = glm::perspective(glm::radians(30.f), _swapChainExtent.width / (float)_swapChainExtent.height, 0.1f, 10.f);
+        //ubo.model = glm::rotate(ubo.model, time * glm::radians(90.f), glm::vec3(0.f, 0.f, 1.f));
+        // ubo.model = glm::translate(ubo.model, glm::vec3(0.f, 0.f, time - int(time)));
+        ubo.view = this->_camera.GetViewMatrix();
+        // ubo.view = glm::lookAt(glm::vec3(2.f, 2.f, 2.f), glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 0.f, 1.f));
+        ubo.proj = glm::perspective(glm::radians(70.f), _swapChainExtent.width / (float)_swapChainExtent.height, 0.1f, 10.f);
 
         ubo.proj[1][1] *= -1; // flip y coordinate
         // TODO: use push constants for small data update

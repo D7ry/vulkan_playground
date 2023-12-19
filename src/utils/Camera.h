@@ -7,13 +7,11 @@
  */
 class Camera {
       public:
-        Camera(){
+        Camera(glm::vec3 position, glm::vec3 rotation);
+        glm::mat4 GetViewMatrix();  
+        void ModRotation(float yaw, float pitch, float roll);
 
-        };
-        glm::vec4 GetViewMatrix() {
-
-        };
       private:
-        glm::mat4 _position; // world position of the camera
+        glm::vec3 _position; // world position of the camera
         glm::vec3 _rotation; // yaw, pitch, roll
 };

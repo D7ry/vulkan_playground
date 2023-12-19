@@ -1,6 +1,7 @@
 #pragma once
 #include "VulkanApplication.h"
 #include "structs/Vertex.h"
+#include "utils/Camera.h"
 
 class TriangleApp : public VulkanApplication {
       protected:
@@ -20,7 +21,7 @@ class TriangleApp : public VulkanApplication {
         virtual void drawFrame() override;
         virtual void updateUniformBufferData(uint32_t frameIndex) override;
 
-        static void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
+        void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
 
         // Vertices, for demonstration purposes
         const std::vector<Vertex> _vertices
@@ -30,4 +31,6 @@ class TriangleApp : public VulkanApplication {
                    {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}};
 
         const std::vector<uint16_t> _indices = {0, 1, 2, 2, 3, 0};
+
+        Camera _camera = Camera(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(-155, 45, 0));
 };

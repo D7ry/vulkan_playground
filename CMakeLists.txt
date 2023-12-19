@@ -21,6 +21,7 @@ add_executable(vulkan_playground
         src/utils/ShaderUtils.cpp
         src/utils/Animation.cpp
         src/utils/DeltaTimer.cpp
+        src/utils/Camera.cpp
         src/structs/Vertex.cpp
 )
 target_include_directories(vulkan_playground PUBLIC src)
