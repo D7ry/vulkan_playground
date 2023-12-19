@@ -89,11 +89,14 @@ class VulkanApplication {
         virtual void createCommandBuffer();
         virtual void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
 
-        virtual void setKeyCallback();
+        void setKeyCallback();
+        /**
+         * @brief Override this method to handle key events.
+         */
+        virtual  void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
 
         virtual void updateUniformBufferData(uint32_t frameIndex);
 
-        static  void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
 
         void createSynchronizationObjects();
 

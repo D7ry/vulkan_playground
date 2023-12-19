@@ -17,11 +17,10 @@ class TriangleApp : public VulkanApplication {
         virtual void createDescriptorSetLayout() override;
         virtual void createDescriptorPool() override;
         virtual void createDescriptorSets() override;
-        virtual void setKeyCallback() override;
         virtual void drawFrame() override;
         virtual void updateUniformBufferData(uint32_t frameIndex) override;
 
-        void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
+        virtual void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) override;
 
         // Vertices, for demonstration purposes
         const std::vector<Vertex> _vertices

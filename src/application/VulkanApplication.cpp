@@ -29,7 +29,12 @@ void VulkanApplication::keyCallback(GLFWwindow* window, int key, int scancode, i
 
 void VulkanApplication::setKeyCallback() {
         INFO("Setting up key callback...");
-        glfwSetKeyCallback(_window, this->keyCallback);
+        auto keyCallback = [](GLFWwindow* window, int key, int scancode, int action, int mods) {
+                auto app = reinterpret_cast<VulkanApplication*>(glfwGetWindowUserPointer(window));
+                app->keyCallback(window, key, scancode, action, mods);
+        };
+
+        glfwSetKeyCallback(this->_window, keyCallback);
 }
 
 void VulkanApplication::updateUniformBufferData(uint32_t frameIndex) {

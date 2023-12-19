@@ -27,14 +27,19 @@ glm::mat4 Camera::GetViewMatrix() {
         direction = glm::normalize(direction);
 
         // Calculate right and up vectors
-        glm::vec3 worldUp = glm::vec3(0, 0, 1);
+        const glm::vec3 worldUp = glm::vec3(0, 0, 1);
         glm::vec3 right = glm::normalize(glm::cross(worldUp, direction));
         glm::vec3 up = glm::cross(direction, right);
+
+            // Include roll in the up vector calculation
+        glm::mat4 rollMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(_rotation.z), direction);
+        up = glm::vec3(rollMatrix * glm::vec4(up, 0.0f));
+
 
         INFO("Camera position: ({}, {}, {})", _position.x, _position.y, _position.z);
         INFO("Camera direction: ({}, {}, {})", direction.x, direction.y, direction.z);
 
         // Create view matrix
-        return glm::lookAt(_position, _position + direction, glm::vec3(0, 0, 1));
+        return glm::lookAt(_position, _position + direction, up);
 
  };

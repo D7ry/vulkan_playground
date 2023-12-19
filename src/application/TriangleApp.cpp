@@ -17,29 +17,26 @@ void TriangleApp::keyCallback(GLFWwindow* window, int key, int scancode, int act
         }
         if (action == GLFW_PRESS || action == GLFW_REPEAT) {
                 switch (key) {
-                case GLFW_KEY_UP:
+                case GLFW_KEY_W:
                         _camera.ModRotation(0, -1, 0);
                         break;
-                case GLFW_KEY_DOWN:
+                case GLFW_KEY_S:
                         _camera.ModRotation(0, 1, 0);
                         break;
-                case GLFW_KEY_LEFT:
+                case GLFW_KEY_A:
                         _camera.ModRotation(1, 0, 0);
                         break;
-                case GLFW_KEY_RIGHT:
+                case GLFW_KEY_D:
                         _camera.ModRotation(-1, 0, 0);
+                        break;
+                case GLFW_KEY_Q:
+                        _camera.ModRotation(0, 0, -1);
+                        break;
+                case GLFW_KEY_E:
+                        _camera.ModRotation(0, 0, 1);
                         break;
                 }
         }
-}
-
-void TriangleApp::setKeyCallback() {
-        auto keyCallback = [](GLFWwindow* window, int key, int scancode, int action, int mods) {
-                auto app = reinterpret_cast<TriangleApp*>(glfwGetWindowUserPointer(window));
-                app->keyCallback(window, key, scancode, action, mods);
-        };
-
-        glfwSetKeyCallback(this->_window, keyCallback);
 }
 
 void TriangleApp::createGraphicsPipeline() {
