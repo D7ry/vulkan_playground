@@ -1,6 +1,6 @@
 #include "ImGuiManager.h"
 #include "imgui.h"
-
+#include "imgui_impl_glfw.h"
 void ImGuiManager::InitializeImgui() {
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
@@ -130,6 +130,7 @@ void ImGuiManager::InitializeDescriptorPool(int frames_in_flight, VkDevice logic
         poolInfo.poolSizeCount = sizeof(poolSizes) / sizeof(VkDescriptorPoolSize); // number of pool sizes
         poolInfo.pPoolSizes = poolSizes;
         poolInfo.maxSets = descriptorSetCount; // number of descriptor sets, set to the number of frames in flight
+        poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
 
         if (vkCreateDescriptorPool(logicalDevice, &poolInfo, nullptr, &_imguiDescriptorPool) != VK_SUCCESS) {
                 FATAL("Failed to create descriptor pool!");
@@ -139,7 +140,10 @@ void ImGuiManager::RenderFrame() {
         ImGui_ImplVulkan_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
-        ImGui::ShowDemoWindow();
+        ImGui::Begin("dEngine");
+        ImGui::Text("FPS: %f", ImGui::GetIO().Framerate);
+        ImGui::End();
+        //ImGui::ShowDemoWindow();
         ImGui::Render();
 }
 void ImGuiManager::RecordCommandBuffer(int currentFrameInFlight, int imageIndex, VkExtent2D swapChainExtent) {

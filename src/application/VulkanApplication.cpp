@@ -579,6 +579,7 @@ void VulkanApplication::createSynchronizationObjects() {
 }
 void VulkanApplication::cleanup() {
         INFO("Cleaning up...");
+        _imguiManager.Cleanup(_logicalDevice);
         cleanupSwapChain();
         for (auto& buffer : _uniformBuffers) {
                 if (buffer) {

@@ -574,7 +574,7 @@ void TriangleApp::updateUniformBufferData(uint32_t frameIndex) {
         UniformBuffer ubo{};
         auto initialPos = glm::mat4(1.f);
         ubo.model = initialPos;
-        //ubo.model = glm::rotate(ubo.model, time * glm::radians(90.f), glm::vec3(0.f, 0.f, 1.f));
+        ubo.model = glm::rotate(ubo.model, time * glm::radians(90.f), glm::vec3(0.f, 0.f, 1.f));
         // ubo.model = glm::translate(ubo.model, glm::vec3(0.f, 0.f, time - int(time)));
         ubo.view = this->_camera.GetViewMatrix();
         // ubo.view = glm::lookAt(glm::vec3(2.f, 2.f, 2.f), glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 0.f, 1.f));
