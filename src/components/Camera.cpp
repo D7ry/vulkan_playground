@@ -18,7 +18,7 @@ void Camera::ModRotation(float yaw, float pitch, float roll) {
         }
         this->_rotation.x = std::clamp(this->_rotation.x + pitch, -89.0f, 89.0f);
         this->_rotation.z = fmod(this->_rotation.z + roll, 180.0f);
-        INFO("Yaw: {}, Pitch: {}, Roll: {}", this->_rotation.y, this->_rotation.x, this->_rotation.z);
+        //INFO("Yaw: {}, Pitch: {}, Roll: {}", this->_rotation.y, this->_rotation.x, this->_rotation.z);
 };
 
 #define INDEPENDENT_Z 1

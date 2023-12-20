@@ -65,7 +65,16 @@ void TriangleApp::keyCallback(GLFWwindow* window, int key, int scancode, int act
 
 void TriangleApp::renderImGui() {
         if (ImGui::Begin("Triangle App Debug Window")) {
+                ImGui::SetWindowPos(ImVec2(0, 0), ImGuiCond_Once);
+                ImGui::SetWindowSize(ImVec2(400, 400), ImGuiCond_Once);
                 ImGui::Text("Hello World!");
+                ImGui::Separator();
+                ImGui::Text("Camera");
+                if (ImGui::BeginChild("Camera")) {
+                        ImGui::Text("Position: (%f, %f, %f)", _camera.GetPosition().x, _camera.GetPosition().y, _camera.GetPosition().z);
+                        ImGui::Text("Yaw: %f Pitch: %f Roll: %f", _camera.GetRotation().y, _camera.GetRotation().x, _camera.GetRotation().z);
+                        ImGui::EndChild();
+                }
         }
         ImGui::End();
 }

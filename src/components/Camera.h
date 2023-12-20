@@ -11,6 +11,8 @@ class Camera {
         glm::mat4 GetViewMatrix();  
         void ModRotation(float yaw, float pitch, float roll);
         void ModPosition(float x, float y, float z);
+        inline const glm::vec3& GetPosition() { return _position; };
+        inline const glm::vec3& GetRotation() { return _rotation; };
 
       private:
         glm::vec3 _position; // world position of the camera
