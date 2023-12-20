@@ -10,8 +10,6 @@ find_package(Vulkan REQUIRED)
 set(spdlog_repo /home/d7ry/lib/linux_x86_64/spdlog)
 set(spdlog_DIR ${spdlog_repo}/build)
 find_package(spdlog REQUIRED)
-# spdlog headers
-set(spdlog_headers ${spdlog_repo}/include/spdlog)
 
 #imgui
 set(IMGUI_DIR /home/d7ry/lib/linux_x86_64/imgui)
@@ -41,7 +39,6 @@ add_executable(vulkan_playground
         src/components/ImGuiManager.cpp
 )
 target_include_directories(vulkan_playground PUBLIC src)
-target_include_directories(vulkan_playground PRIVATE spdlog_headers)
 
 
 target_precompile_headers(vulkan_playground PUBLIC src/PCH.h)

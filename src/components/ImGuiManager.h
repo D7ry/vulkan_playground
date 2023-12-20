@@ -38,16 +38,8 @@ class ImGuiManager {
 
         void RecordCommandBuffer(int currentFrameInFlight, int imageIndex, VkExtent2D swapChainExtent);
 
-        void Cleanup(VkDevice logicalDevice) {
-                ImGui_ImplVulkan_Shutdown();
-                ImGui_ImplGlfw_Shutdown();
-                ImGui::DestroyContext();
+        void Cleanup(VkDevice logicalDevice);
 
-                vkDestroyRenderPass(logicalDevice, _imGuiRenderPass, nullptr);
-                vkDestroyDescriptorPool(logicalDevice, _imguiDescriptorPool, nullptr);
-                vkDestroyCommandPool(logicalDevice, _imGuiCommandPool, nullptr);
-                //DestroyFrameBuffers(logicalDevice);
-        }
         VkCommandBuffer GetCommandBuffer(uint32_t currentFrame);
 
       private:

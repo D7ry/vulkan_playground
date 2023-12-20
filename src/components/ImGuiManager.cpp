@@ -143,7 +143,7 @@ void ImGuiManager::RenderFrame() {
         ImGui::Begin("dEngine");
         ImGui::Text("FPS: %f", ImGui::GetIO().Framerate);
         ImGui::End();
-        //ImGui::ShowDemoWindow();
+        // ImGui::ShowDemoWindow();
         ImGui::Render();
 }
 void ImGuiManager::RecordCommandBuffer(int currentFrameInFlight, int imageIndex, VkExtent2D swapChainExtent) {
@@ -181,3 +181,13 @@ void ImGuiManager::RecordCommandBuffer(int currentFrameInFlight, int imageIndex,
         vkEndCommandBuffer(commandBuffer);
 }
 VkCommandBuffer ImGuiManager::GetCommandBuffer(uint32_t currentFrame) { return _imGuiCommandBuffers[currentFrame]; }
+
+void ImGuiManager::Cleanup(VkDevice logicalDevice) {
+        ImGui_ImplVulkan_Shutdown();
+        ImGui_ImplGlfw_Shutdown();
+        ImGui::DestroyContext();
+
+        vkDestroyRenderPass(logicalDevice, _imGuiRenderPass, nullptr);
+        vkDestroyDescriptorPool(logicalDevice, _imguiDescriptorPool, nullptr);
+        vkDestroyCommandPool(logicalDevice, _imGuiCommandPool, nullptr);
+}

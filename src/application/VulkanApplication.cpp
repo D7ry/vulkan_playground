@@ -49,7 +49,7 @@ void VulkanApplication::initWindow() {
         if (!glfwVulkanSupported()) {
                 FATAL("Vulkan is not supported on this machine!");
         }
-        this->_window = glfwCreateWindow(800, 600, "Vulkan", nullptr, nullptr);
+        this->_window = glfwCreateWindow(1280, 720, "Vulkan", nullptr, nullptr);
         glfwSetWindowUserPointer(_window, this);
         glfwSetFramebufferSizeCallback(_window, this->framebufferResizeCallback);
         // set up glfw input callbacks
@@ -64,9 +64,9 @@ void VulkanApplication::mainLoop() {
         INFO("Entering main render loop...");
         while (!glfwWindowShouldClose(this->_window)) {
                 glfwPollEvents();
+                _deltaTimer.Update();
                 _imguiManager.RenderFrame();
                 drawFrame();
-                _deltaTimer.Update();
         }
         vkDeviceWaitIdle(this->_logicalDevice);
         INFO("Main loop exited.");
