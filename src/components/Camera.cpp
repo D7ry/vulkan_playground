@@ -9,6 +9,7 @@ Camera::Camera(glm::vec3 position, glm::vec3 rotation) {
 
 void Camera::ModRotation(float yaw, float pitch, float roll) {
         // TODO: current rotation does not take into account roll angles when modifying yaw and pitch
+        //TODO: adapt to different configurations of yaw, pitch, and roll dependency
         this->_rotation.y += yaw;
         // wrap yaw between -180 and 180
         if (this->_rotation.y < -180.0f) {
@@ -36,7 +37,7 @@ void Camera::ModPosition(float x, float y, float z) {
         this->_position += xyz;
 #else
     glm::vec3 xy = glm::rotate(glm::mat4(1.0f), rotationRad.y, glm::vec3(0, 0, 1))
-            * glm::rotate(glm::mat4(1.0f), rotationRad.x, glm::vec3(0, -1, 0)) // y axis is flipped in Vulkan
+            //* glm::rotate(glm::mat4(1.0f), rotationRad.x, glm::vec3(0, -1, 0)) // y axis is flipped in Vulkan // uncomment this line for pitch to affect XY motion
             * glm::vec4(x, y, 0, 0);
 
     // Z motion is independent of X rotation (pitch)
