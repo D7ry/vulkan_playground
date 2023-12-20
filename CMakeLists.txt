@@ -1,18 +1,18 @@
 cmake_minimum_required(VERSION 3.22)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+set(spdlog_DIR /home/d7ry/lib/linux_x86_64/spdlog/build)
+set(IMGUI_DIR /home/d7ry/lib/linux_x86_64/imgui)
+
 project(vulkan_playground)
 set(CMAKE_CXX_STANDARD 17)
 
 find_package(Vulkan REQUIRED)
 
 # spdlog
-set(spdlog_repo /home/d7ry/lib/linux_x86_64/spdlog)
-set(spdlog_DIR ${spdlog_repo}/build)
 find_package(spdlog REQUIRED)
 
 #imgui
-set(IMGUI_DIR /home/d7ry/lib/linux_x86_64/imgui)
 add_library(
         imgui
         ${IMGUI_DIR}/imgui.cpp
