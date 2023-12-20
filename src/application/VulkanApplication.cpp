@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <functional>
 #include <iostream>
 #include <limits>
 #include <set>
@@ -25,6 +26,10 @@ void VulkanApplication::keyCallback(GLFWwindow* window, int key, int scancode, i
         if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
                 glfwSetWindowShouldClose(window, GLFW_TRUE);
         }
+}
+
+void VulkanApplication::renderImGui() {
+        // do nothing
 }
 
 void VulkanApplication::setKeyCallback() {
@@ -115,8 +120,11 @@ void VulkanApplication::initVulkan() {
                 _window, _instance, _physicalDevice, _logicalDevice, indices.graphicsFamily.value(), _graphicsQueue, _swapChainFrameBuffers.size()
         );
         this->_imguiManager.InitializeCommandPoolAndBuffers(MAX_FRAMES_IN_FLIGHT, _logicalDevice, indices.graphicsFamily.value());
+        this->_imguiManager.BindRenderCallback(std::bind(&VulkanApplication::renderImGui, this));
         //this->_imguiManager.InitializeFrameBuffer(_swapChainFrameBuffers.size(), _logicalDevice, _swapChainImageViews, _swapChainExtent);
         INFO("Vulkan initialized.");
+        
+        this->postInit();
 }
 
 bool VulkanApplication::checkValidationLayerSupport() {
@@ -752,4 +760,7 @@ std::pair<VkBuffer, VkDeviceMemory> VulkanApplication::createStagingBuffer(Vulka
                 stagingBufferMemory
         );
         return {stagingBuffer, stagingBufferMemory};
+}
+void VulkanApplication::postInit() {
+        // override this method to do post initialization
 }

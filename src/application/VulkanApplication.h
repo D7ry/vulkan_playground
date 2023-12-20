@@ -73,6 +73,7 @@ class VulkanApplication {
 
         void createImageViews();
 
+        virtual void postInit();
         virtual void createDescriptorPool();
         /**
          * @brief Initialize and configure descriptor sets.
@@ -95,6 +96,8 @@ class VulkanApplication {
          * @brief Override this method to handle key events.
          */
         virtual  void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
+
+        virtual void renderImGui();
 
         virtual void updateUniformBufferData(uint32_t frameIndex);
 

@@ -139,11 +139,13 @@ void ImGuiManager::InitializeDescriptorPool(int frames_in_flight, VkDevice logic
 void ImGuiManager::RenderFrame() {
         ImGui_ImplVulkan_NewFrame();
         ImGui_ImplGlfw_NewFrame();
+
         ImGui::NewFrame();
-        ImGui::Begin("dEngine");
-        ImGui::Text("FPS: %f", ImGui::GetIO().Framerate);
-        ImGui::End();
-        // ImGui::ShowDemoWindow();
+        if (this->_imguiRenderCallback != nullptr) {
+                this->_imguiRenderCallback();
+        } else {
+                ImGui::ShowDemoWindow();
+        }
         ImGui::Render();
 }
 void ImGuiManager::RecordCommandBuffer(int currentFrameInFlight, int imageIndex, VkExtent2D swapChainExtent) {
@@ -191,3 +193,4 @@ void ImGuiManager::Cleanup(VkDevice logicalDevice) {
         vkDestroyDescriptorPool(logicalDevice, _imguiDescriptorPool, nullptr);
         vkDestroyCommandPool(logicalDevice, _imGuiCommandPool, nullptr);
 }
+void ImGuiManager::BindRenderCallback(std::function<void(void)> callback) { this->_imguiRenderCallback = callback; }

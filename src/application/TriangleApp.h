@@ -22,6 +22,8 @@ class TriangleApp : public VulkanApplication {
         virtual void updateUniformBufferData(uint32_t frameIndex) override;
 
         virtual void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) override;
+        virtual void renderImGui() override;
+        virtual void postInit() override;
 
         // Vertices, for demonstration purposes
         const std::vector<Vertex> _vertices

@@ -3,6 +3,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "TriangleApp.h"
+#include "imgui.h"
 #include "structs/UniformBuffer.h"
 #include "components/Animation.h"
 #include "components/ShaderUtils.h"
@@ -60,6 +61,17 @@ void TriangleApp::keyCallback(GLFWwindow* window, int key, int scancode, int act
                         break;
                 }
         }
+}
+
+void TriangleApp::renderImGui() {
+        if (ImGui::Begin("Triangle App Debug Window")) {
+                ImGui::Text("Hello World!");
+        }
+        ImGui::End();
+}
+
+void TriangleApp::postInit() {
+        INFO("Performing post init...");
 }
 
 void TriangleApp::createGraphicsPipeline() {
