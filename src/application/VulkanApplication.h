@@ -92,10 +92,12 @@ class VulkanApplication {
         virtual void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
 
         void setKeyCallback();
+        void setCursorPosCallback();
         /**
          * @brief Override this method to handle key events.
          */
         virtual  void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
+        virtual void cursorPosCallback(GLFWwindow* window, double xpos, double ypos);
 
         virtual void renderImGui();
 

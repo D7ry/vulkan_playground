@@ -28,6 +28,11 @@ void VulkanApplication::keyCallback(GLFWwindow* window, int key, int scancode, i
         }
 }
 
+void VulkanApplication::cursorPosCallback(GLFWwindow* window, double xpos, double ypos) {
+        // do nothing
+        //INFO("{} {}", xpos, ypos);
+}
+
 void VulkanApplication::renderImGui() {
         // do nothing
 }
@@ -40,6 +45,15 @@ void VulkanApplication::setKeyCallback() {
         };
 
         glfwSetKeyCallback(this->_window, keyCallback);
+}
+
+void VulkanApplication::setCursorPosCallback() {
+        INFO("Setting up cursor position callback...");
+        auto cursorPosCallback = [](GLFWwindow* window, double xpos, double ypos) {
+                auto app = reinterpret_cast<VulkanApplication*>(glfwGetWindowUserPointer(window));
+                app->cursorPosCallback(window, xpos, ypos);
+        };
+        glfwSetCursorPosCallback(this->_window, cursorPosCallback);
 }
 
 void VulkanApplication::updateUniformBufferData(uint32_t frameIndex) {
@@ -62,6 +76,7 @@ void VulkanApplication::initWindow() {
                 ERROR("Failed to create GLFW window.");
         }
         this->setKeyCallback();
+        this->setCursorPosCallback();
         INFO("GLFW initialized; window created.");
 }
 

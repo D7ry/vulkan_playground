@@ -64,10 +64,10 @@ void TriangleApp::keyCallback(GLFWwindow* window, int key, int scancode, int act
 }
 
 void TriangleApp::renderImGui() {
-        if (ImGui::Begin("Triangle App Debug Window")) {
+        if (ImGui::Begin("Debug")) {
                 ImGui::SetWindowPos(ImVec2(0, 0), ImGuiCond_Once);
                 ImGui::SetWindowSize(ImVec2(400, 400), ImGuiCond_Once);
-                ImGui::Text("Hello World!");
+                ImGui::Text("Framerate: %f", ImGui::GetIO().Framerate);
                 ImGui::Separator();
                 ImGui::Text("Camera");
                 if (ImGui::BeginChild("Camera")) {

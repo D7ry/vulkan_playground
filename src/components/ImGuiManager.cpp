@@ -2,6 +2,7 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 void ImGuiManager::InitializeImgui() {
+        INFO("Initializing imgui...");
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
         ImGuiIO& io = ImGui::GetIO();
@@ -9,6 +10,7 @@ void ImGuiManager::InitializeImgui() {
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;  // Enable Gamepad Controls
 
         ImGui::StyleColorsDark();
+        INFO("ImGui initialized.");
 }
 void ImGuiManager::BindVulkanResources(
         GLFWwindow* window,
@@ -92,11 +94,14 @@ void ImGuiManager::InitializeCommandPoolAndBuffers(int bufferCount, VkDevice dev
         VulkanUtils::createCommandBuffers(_imGuiCommandBuffers, bufferCount, _imGuiCommandPool, device);
 }
 void ImGuiManager::DestroyFrameBuffers(VkDevice device) {
+        INFO("Destroying imgui frame buffers...");
         for (auto framebuffer : _imGuiFramebuffers) {
                 vkDestroyFramebuffer(device, framebuffer, nullptr);
         }
+        INFO("Imgui frame buffers destroyed.");
 }
 void ImGuiManager::InitializeFrameBuffer(int bufferCount, VkDevice device, std::vector<VkImageView>& swapChainImageViews, VkExtent2D extent) {
+        INFO("Creating imgui frame buffers...");
         if (swapChainImageViews.size() != bufferCount) {
                 FATAL("Swap chain image views must be the same size as the number of buffers!");
         }
@@ -117,6 +122,7 @@ void ImGuiManager::InitializeFrameBuffer(int bufferCount, VkDevice device, std::
                 attachment[0] = swapChainImageViews[i];
                 vkCreateFramebuffer(device, &info, nullptr, &_imGuiFramebuffers[i]);
         }
+        INFO("Imgui frame buffers created.");
 }
 void ImGuiManager::InitializeDescriptorPool(int frames_in_flight, VkDevice logicalDevice) {
         // create a pool that will allocate to actual descriptor sets
@@ -185,6 +191,7 @@ void ImGuiManager::RecordCommandBuffer(int currentFrameInFlight, int imageIndex,
 VkCommandBuffer ImGuiManager::GetCommandBuffer(uint32_t currentFrame) { return _imGuiCommandBuffers[currentFrame]; }
 
 void ImGuiManager::Cleanup(VkDevice logicalDevice) {
+        INFO("Cleaning up imgui...");
         ImGui_ImplVulkan_Shutdown();
         ImGui_ImplGlfw_Shutdown();
         ImGui::DestroyContext();
