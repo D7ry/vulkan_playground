@@ -41,7 +41,12 @@ void VulkanUtils::createCommandBuffers(VkCommandBuffer* commandBuffer, uint32_t 
                 FATAL("Could not allocate command buffers");
         }
 }
-void VulkanUtils::createCommandBuffers(std::vector<VkCommandBuffer>& commandBuffers, uint32_t commandBufferCount, VkCommandPool commandPool, VkDevice device) {
+void VulkanUtils::createCommandBuffers(
+        std::vector<VkCommandBuffer>& commandBuffers,
+        uint32_t commandBufferCount,
+        VkCommandPool commandPool,
+        VkDevice device
+) {
         commandBuffers.resize(commandBufferCount);
         createCommandBuffers(commandBuffers.data(), commandBufferCount, commandPool, device);
 }
@@ -65,4 +70,65 @@ void VulkanUtils::createCommandPoolAndBuffers(
 ) {
         createCommandPool(&commandPool, flags, queueFamilyIndex, device);
         createCommandBuffers(&commandBuffer, commandBufferCount, commandPool, device);
+}
+
+uint32_t VulkanUtils::findMemoryType(VkPhysicalDevice physicalDevice, uint32_t typeFilter, VkMemoryPropertyFlags properties) {
+        VkPhysicalDeviceMemoryProperties memProperties;
+        vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
+
+        for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
+                if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+                        return i;
+                }
+        }
+
+        FATAL("Failed to find suitable memory type!");
+}
+void VulkanUtils::createBuffer(
+        VkPhysicalDevice physicalDevice,
+        VkDevice device,
+        VkDeviceSize size,
+        VkBufferUsageFlags usage,
+        VkMemoryPropertyFlags properties,
+        VkBuffer& buffer,
+        VkDeviceMemory& bufferMemory
+) {
+        VkBufferCreateInfo bufferInfo{};
+        bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        bufferInfo.size = size;
+        bufferInfo.usage = usage;
+        bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+        if (vkCreateBuffer(device, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
+                FATAL("Failed to create VK buffer!");
+        }
+
+        VkMemoryRequirements memRequirements;
+        vkGetBufferMemoryRequirements(device, buffer, &memRequirements);
+
+        VkMemoryAllocateInfo allocInfo{};
+        allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        allocInfo.allocationSize = memRequirements.size;
+        allocInfo.memoryTypeIndex = findMemoryType(physicalDevice, memRequirements.memoryTypeBits, properties);
+
+        if (vkAllocateMemory(device, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
+                FATAL("Failed to allocate device memory for buffer creation!");
+        }
+
+        vkBindBufferMemory(device, buffer, bufferMemory, 0);
+}
+void VulkanUtils::vkMemCopy(void* src, VkDeviceMemory dstMemory, VkDeviceSize size, VkDevice dstDevice) {
+        void* data;
+        vkMapMemory(dstDevice, dstMemory, 0, size, 0, &data);
+        memcpy(data, src, static_cast<size_t>(size));
+        vkUnmapMemory(dstDevice, dstMemory);
+}
+void VulkanUtils::copyBuffer(VkDevice device, VkCommandPool commandPool, VkQueue queue, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
+        VkCommandBuffer commandBuffer = beginSingleTimeCommands(device, commandPool);
+
+        VkBufferCopy copyRegion{};
+        copyRegion.size = size;
+        vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
+
+        endSingleTimeCommands(commandBuffer, device, queue, commandPool);
 }

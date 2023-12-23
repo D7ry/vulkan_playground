@@ -2,7 +2,7 @@ BasedOnStyle: LLVM
 IndentWidth: 8
 ContinuationIndentWidth: 8
 PointerAlignment: Left
-ColumnLimit: 150
+ColumnLimit: 120
 
 
 # Function declaration and definition

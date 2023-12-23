@@ -702,66 +702,6 @@ void VulkanApplication::createBuffer(
 
         vkBindBufferMemory(device, buffer, bufferMemory, 0);
 }
-void VulkanApplication::copyBuffer(
-        VkDevice device,
-        VkCommandPool commandPool,
-        VkQueue queue,
-        VkBuffer srcBuffer,
-        VkBuffer dstBuffer,
-        VkDeviceSize size
-) {
-        VkCommandBufferAllocateInfo allocInfo{};
-        allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        allocInfo.commandPool = commandPool;
-        allocInfo.commandBufferCount = 1;
-
-        // make a new command buffer for copying commands
-        VkCommandBuffer commandBuffer;
-        if (vkAllocateCommandBuffers(device, &allocInfo, &commandBuffer) != VK_SUCCESS) {
-                FATAL("Failed to allocate command buffer for buffer copy!");
-        }
-
-        VkCommandBufferBeginInfo beginInfo{};
-        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT; // only used once
-
-        if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
-                FATAL("Failed to begin recording command buffer for buffer copy!");
-        }
-
-        VkBufferCopy copyRegion{};
-        copyRegion.srcOffset = 0;
-        copyRegion.dstOffset = 0;
-        copyRegion.size = size;
-        vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
-
-        if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
-                FATAL("Failed to record command buffer for buffer copy!");
-        }
-
-        // execute the command buffer to finish copying
-        VkSubmitInfo submitInfo{};
-        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &commandBuffer;
-
-        // createa fence and wait for it to finish
-        VkFenceCreateInfo fenceInfo{};
-        fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-        VkFence fence;
-        if (vkCreateFence(device, &fenceInfo, nullptr, &fence) != VK_SUCCESS) {
-                FATAL("Failed to create fence for buffer copy!");
-        }
-
-        if (vkQueueSubmit(queue, 1, &submitInfo, fence) != VK_SUCCESS) {
-                FATAL("Failed to submit command buffer for buffer copy!");
-        }
-
-        vkWaitForFences(device, 1, &fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
-        vkDestroyFence(device, fence, nullptr);
-        vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer);
-}
 std::pair<VkBuffer, VkDeviceMemory> VulkanApplication::createStagingBuffer(VulkanApplication* app, VkDeviceSize bufferSize) {
         VkBuffer stagingBuffer;
         VkDeviceMemory stagingBufferMemory;

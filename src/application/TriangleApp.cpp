@@ -11,6 +11,7 @@
 #include <cstdint>
 #include <glm/trigonometric.hpp>
 #include <vulkan/vulkan_core.h>
+#include "components/VulkanUtils.h"
 static const bool ALLOW_MODIFY_ROLL = false;
 void TriangleApp::keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
         if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
@@ -455,7 +456,7 @@ void TriangleApp::createVertexBuffer() {
                 _vertexBufferMemory
         );
 
-        copyBuffer(_logicalDevice, _commandPool, _graphicsQueue, stagingBuffer, _vertexBuffer, vertexBufferSize);
+        VulkanUtils::copyBuffer(_logicalDevice, _commandPool, _graphicsQueue, stagingBuffer, _vertexBuffer, vertexBufferSize);
 
         // get rid of staging buffer, it is very much temproary
         vkDestroyBuffer(_logicalDevice, stagingBuffer, nullptr);
@@ -486,7 +487,8 @@ void TriangleApp::createIndexBuffer() {
                 _indexBufferMemory
         );
 
-        copyBuffer(_logicalDevice, _commandPool, _graphicsQueue, stagingBuffer, _indexBuffer, indexBufferSize);
+        
+        VulkanUtils::copyBuffer(_logicalDevice, _commandPool, _graphicsQueue, stagingBuffer, _indexBuffer, indexBufferSize);
 
         vkDestroyBuffer(_logicalDevice, stagingBuffer, nullptr);
         vkFreeMemory(_logicalDevice, stagingBufferMemory, nullptr);

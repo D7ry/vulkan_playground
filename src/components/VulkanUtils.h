@@ -21,4 +21,28 @@ void createCommandPoolAndBuffers(
         VkDevice device
 );
 
+/**
+ * @brief Look for the memory flag that suits TYPEFILTER purposes.
+ *
+ * @param physicalDevice
+ * @param typeFilter
+ * @param properties
+ * @return uint32_t
+ */
+uint32_t findMemoryType(VkPhysicalDevice physicalDevice, uint32_t typeFilter, VkMemoryPropertyFlags properties);
+
+void createBuffer(
+        VkPhysicalDevice physicalDevice,
+        VkDevice device,
+        VkDeviceSize size,
+        VkBufferUsageFlags usage,
+        VkMemoryPropertyFlags properties,
+        VkBuffer& buffer,
+        VkDeviceMemory& bufferMemory
+);
+
+void vkMemCopy(void* src, VkDeviceMemory dstMemory, VkDeviceSize size, VkDevice dstDevice);
+
+void copyBuffer(VkDevice device, VkCommandPool commandPool, VkQueue queue, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
+
 } // namespace VulkanUtils

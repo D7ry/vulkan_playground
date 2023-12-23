@@ -142,7 +142,6 @@ class VulkanApplication {
 
         static std::pair<VkBuffer, VkDeviceMemory> createStagingBuffer(VulkanApplication* app, VkDeviceSize bufferSize);
 
-        static void copyBuffer(VkDevice device, VkCommandPool commandPool, VkQueue queue, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 
         // validation layers, enable under debug mode only
 #ifdef NDEBUG
