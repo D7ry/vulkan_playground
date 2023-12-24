@@ -16,7 +16,7 @@ std::unique_ptr<std::vector<VkVertexInputAttributeDescription>> Vertex::GetAttri
         // pos
         attributeDescriptions->at(0).binding = 0;
         attributeDescriptions->at(0).location = 0;                     // location directive of the input in the vertex shader
-        attributeDescriptions->at(0).format = VK_FORMAT_R32G32_SFLOAT; // vec2
+        attributeDescriptions->at(0).format = VK_FORMAT_R32G32B32_SFLOAT; // vec3
         attributeDescriptions->at(0).offset = offsetof(Vertex, pos);   // byte offset of the data from the start of the per-vertex data
 
         // color

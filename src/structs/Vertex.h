@@ -7,7 +7,7 @@ struct Vertex {
          * 
          */
         // 8 bytes
-        glm::vec2 pos;
+        glm::vec3 pos;
         // 12 bytes 
         glm::vec3 color;
         glm::vec2 texCoord;
