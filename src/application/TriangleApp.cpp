@@ -3,6 +3,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "TriangleApp.h"
+#include "components/TextureManager.h"
 #include "imgui.h"
 #include "structs/UniformBuffer.h"
 #include "components/Animation.h"
@@ -12,6 +13,8 @@
 #include <glm/trigonometric.hpp>
 #include <vulkan/vulkan_core.h>
 #include "components/VulkanUtils.h"
+const std::string SAMPLE_TEXTURE_PATH = "../textures/statue.jpg";
+
 static const bool ALLOW_MODIFY_ROLL = false;
 void TriangleApp::keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
         if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
@@ -80,8 +83,13 @@ void TriangleApp::renderImGui() {
         ImGui::End();
 }
 
+void TriangleApp::middleInit() {
+        _textureManager = std::make_unique<TextureManager>(_physicalDevice, _logicalDevice, _commandPool, _graphicsQueue);
+        _textureManager->LoadTexture(SAMPLE_TEXTURE_PATH);
+}
+
 void TriangleApp::postInit() {
-        INFO("Performing post init...");
+
 }
 
 void TriangleApp::createGraphicsPipeline() {
@@ -518,6 +526,7 @@ void TriangleApp::createUniformBuffers() {
 }
 
 void TriangleApp::createDescriptorSetLayout() {
+        // UBO
         VkDescriptorSetLayoutBinding uboLayoutBinding{};
         uboLayoutBinding.binding = 0; // binding = 0 in shader
         uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -526,10 +535,21 @@ void TriangleApp::createDescriptorSetLayout() {
         uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT; // only used in vertex shader
         uboLayoutBinding.pImmutableSamplers = nullptr;            // Optional
 
+        // image sampler
+        VkDescriptorSetLayoutBinding samplerLayoutBinding{};
+        samplerLayoutBinding.binding = 1;
+        samplerLayoutBinding.descriptorCount = 1;
+        samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT; // only used on fragment shader; (may use for vertex shader for height mapping)
+        samplerLayoutBinding.pImmutableSamplers = nullptr;
+
+        std::array<VkDescriptorSetLayoutBinding, 2> bindings = {uboLayoutBinding, samplerLayoutBinding};
+
         VkDescriptorSetLayoutCreateInfo layoutInfo{};
         layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        layoutInfo.bindingCount = 1; // number of bindings
-        layoutInfo.pBindings = &uboLayoutBinding;
+        layoutInfo.bindingCount = bindings.size(); // number of bindings
+        layoutInfo.pBindings = bindings.data();
+
 
         if (vkCreateDescriptorSetLayout(_logicalDevice, &layoutInfo, nullptr, &_descriptorSetLayout) != VK_SUCCESS) {
                 FATAL("Failed to create descriptor set layout!");
@@ -541,6 +561,7 @@ void TriangleApp::createDescriptorPool() {
         int descriptorSetCount = static_cast<int>(MAX_FRAMES_IN_FLIGHT);
         VkDescriptorPoolSize poolSizes[] = {
                 {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, static_cast<uint32_t>(descriptorSetCount)}, // number of uniform buffers
+                {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(descriptorSetCount)}
                 //{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1} // image sampler for imgui
         };
 
@@ -576,18 +597,29 @@ void TriangleApp::createDescriptorSets() {
                 descriptorBufferInfo.offset = 0;
                 descriptorBufferInfo.range = sizeof(UniformBuffer);
 
-                VkWriteDescriptorSet descriptorWrite{};
-                descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-                descriptorWrite.dstSet = _descriptorSets[i];
-                descriptorWrite.dstBinding = 0; // zbinding = 0 in shader
-                descriptorWrite.dstArrayElement = 0;
-                descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-                descriptorWrite.descriptorCount = 1;
-                descriptorWrite.pBufferInfo = &descriptorBufferInfo;
-                descriptorWrite.pImageInfo = nullptr;       // Optional
-                descriptorWrite.pTexelBufferView = nullptr; // Optional
+                VkDescriptorImageInfo descriptorImageInfo{};
+                _textureManager->GetDescriptorImageInfo(SAMPLE_TEXTURE_PATH, descriptorImageInfo);
 
-                vkUpdateDescriptorSets(_logicalDevice, 1, &descriptorWrite, 0, nullptr);
+
+                std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
+
+                descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+                descriptorWrites[0].dstSet = _descriptorSets[i];
+                descriptorWrites[0].dstBinding = 0;
+                descriptorWrites[0].dstArrayElement = 0;
+                descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+                descriptorWrites[0].descriptorCount = 1;
+                descriptorWrites[0].pBufferInfo = &descriptorBufferInfo;
+
+                descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+                descriptorWrites[1].dstSet = _descriptorSets[i];
+                descriptorWrites[1].dstBinding = 1;
+                descriptorWrites[1].dstArrayElement = 0;
+                descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+                descriptorWrites[1].descriptorCount = 1;
+                descriptorWrites[1].pImageInfo = &descriptorImageInfo;
+
+                vkUpdateDescriptorSets(_logicalDevice, descriptorWrites.size(), descriptorWrites.data(), 0, nullptr);
         }
 }
 
@@ -682,4 +714,8 @@ void TriangleApp::drawFrame() {
         }
         //  Advance to the next frame
         _currentFrame = (_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+}
+
+void TriangleApp::preCleanup() {
+        _textureManager->Cleanup();
 }

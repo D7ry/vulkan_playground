@@ -120,6 +120,7 @@ void VulkanApplication::initVulkan() {
         this->_imguiManager.InitializeRenderPass(_logicalDevice, _swapChainImageFormat);
         this->createFramebuffers();
         this->createCommandPool();
+        this->middleInit();
         this->createVertexBuffer();
         this->createIndexBuffer();
         this->createUniformBuffers();
@@ -128,7 +129,6 @@ void VulkanApplication::initVulkan() {
         this->createCommandBuffer();
         this->createSynchronizationObjects();
 
-        INFO("Begin initializing ImGui...");
         auto indices = this->findQueueFamilies(_physicalDevice);
         this->_imguiManager.InitializeDescriptorPool(MAX_FRAMES_IN_FLIGHT, _logicalDevice);
         this->_imguiManager.BindVulkanResources(
@@ -602,6 +602,7 @@ void VulkanApplication::createSynchronizationObjects() {
 }
 void VulkanApplication::cleanup() {
         INFO("Cleaning up...");
+        preCleanup();
         _imguiManager.Cleanup(_logicalDevice);
         cleanupSwapChain();
         for (auto& buffer : _uniformBuffers) {
@@ -655,6 +656,7 @@ void VulkanApplication::cleanup() {
         vkDestroyInstance(this->_instance, nullptr);
         glfwDestroyWindow(this->_window);
         glfwTerminate();
+        postCleanup();
         INFO("Resource cleaned up.");
 }
 uint32_t VulkanApplication::findMemoryType(VkPhysicalDevice physicalDevice, uint32_t typeFilter, VkMemoryPropertyFlags properties) {
@@ -715,6 +717,9 @@ std::pair<VkBuffer, VkDeviceMemory> VulkanApplication::createStagingBuffer(Vulka
                 stagingBufferMemory
         );
         return {stagingBuffer, stagingBufferMemory};
+}
+void VulkanApplication::middleInit() {
+
 }
 void VulkanApplication::postInit() {
         // override this method to do post initialization

@@ -38,12 +38,11 @@ add_executable(vulkan_playground
         src/structs/Vertex.cpp
         src/components/VulkanUtils.cpp
         src/components/ImGuiManager.cpp
+        src/components/TextureManager.cpp
 )
-target_include_directories(vulkan_playground PUBLIC src)
-
-
 # std directory
 target_include_directories(vulkan_playground PUBLIC ${STB_DIR})
+target_include_directories(vulkan_playground PUBLIC src)
 
 
 target_precompile_headers(vulkan_playground PUBLIC src/PCH.h)

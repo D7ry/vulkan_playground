@@ -1,8 +1,10 @@
 #pragma once
 #include "VulkanApplication.h"
+#include "components/TextureManager.h"
 #include "structs/Vertex.h"
 #include "components/Camera.h"
 #include "components/ImGuiManager.h"
+#include <memory>
 
 class TriangleApp : public VulkanApplication {
       protected:
@@ -23,16 +25,20 @@ class TriangleApp : public VulkanApplication {
 
         virtual void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) override;
         virtual void renderImGui() override;
+        virtual void middleInit() override;
         virtual void postInit() override;
+
+        virtual void preCleanup() override;
 
         // Vertices, for demonstration purposes
         const std::vector<Vertex> _vertices
-                = {{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-                   {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
-                   {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
-                   {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}};
+                = {{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
+                   {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
+                   {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
+                   {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}};
 
         const std::vector<uint16_t> _indices = {0, 1, 2, 2, 3, 0}; // indice buffer
 
         Camera _camera = Camera(glm::vec3(-2.0f, 0.0f, 2.0f), glm::vec3(-45, 0, 0));
+        std::unique_ptr<TextureManager> _textureManager = nullptr;
 };

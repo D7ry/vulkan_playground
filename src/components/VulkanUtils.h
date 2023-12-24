@@ -45,4 +45,6 @@ void vkMemCopy(void* src, VkDeviceMemory dstMemory, VkDeviceSize size, VkDevice 
 
 void copyBuffer(VkDevice device, VkCommandPool commandPool, VkQueue queue, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 
+VkImageView createImageView(VkImage& textureImage, VkDevice& logicalDevice);
+
 } // namespace VulkanUtils

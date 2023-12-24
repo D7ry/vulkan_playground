@@ -11,7 +11,7 @@ VkVertexInputBindingDescription Vertex::GetBindingDescription() {
 }
 std::unique_ptr<std::vector<VkVertexInputAttributeDescription>> Vertex::GetAttributeDescriptions() {
         // specifies how to extract a vertex attribute from a chunk of vertex data originating from a binding description
-        std::unique_ptr<std::vector<VkVertexInputAttributeDescription>> attributeDescriptions = std::make_unique<std::vector<VkVertexInputAttributeDescription>>(2);
+        std::unique_ptr<std::vector<VkVertexInputAttributeDescription>> attributeDescriptions = std::make_unique<std::vector<VkVertexInputAttributeDescription>>(3);
 
         // pos
         attributeDescriptions->at(0).binding = 0;
@@ -24,6 +24,12 @@ std::unique_ptr<std::vector<VkVertexInputAttributeDescription>> Vertex::GetAttri
         attributeDescriptions->at(1).location = 1;
         attributeDescriptions->at(1).format = VK_FORMAT_R32G32B32_SFLOAT; // vec3
         attributeDescriptions->at(1).offset = offsetof(Vertex, color);
+
+        // vertex
+        attributeDescriptions->at(2).binding = 0;
+        attributeDescriptions->at(2).location = 2;
+        attributeDescriptions->at(2).format = VK_FORMAT_R32G32_SFLOAT; // vec2
+        attributeDescriptions->at(2).offset = offsetof(Vertex, texCoord);
 
         return std::move(attributeDescriptions);
 }

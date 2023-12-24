@@ -73,6 +73,7 @@ class VulkanApplication {
 
         void createImageViews();
 
+        virtual void middleInit();
         virtual void postInit();
         virtual void createDescriptorPool();
         /**
@@ -119,6 +120,8 @@ class VulkanApplication {
         virtual void drawFrame();
 
         void cleanup();
+        virtual void preCleanup() {};
+        virtual void postCleanup() {};
 
         // utility methods
 
