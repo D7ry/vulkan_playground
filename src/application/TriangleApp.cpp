@@ -453,7 +453,7 @@ void TriangleApp::createVertexBuffer() {
         vkUnmapMemory(_logicalDevice, stagingBufferMemory);
 
         // create vertex buffer
-        createBuffer(
+        VulkanUtils::createBuffer(
                 _physicalDevice,
                 _logicalDevice,
                 vertexBufferSize,
@@ -485,7 +485,7 @@ void TriangleApp::createIndexBuffer() {
         vkUnmapMemory(_logicalDevice, stagingBufferMemory);
 
         // create index buffer
-        createBuffer(
+        VulkanUtils::createBuffer(
                 _physicalDevice,
                 _logicalDevice,
                 indexBufferSize,
@@ -511,7 +511,7 @@ void TriangleApp::createUniformBuffers() {
         _uniformBuffersData.resize(MAX_FRAMES_IN_FLIGHT);
 
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-                createBuffer(
+                VulkanUtils::createBuffer(
                         _physicalDevice,
                         _logicalDevice,
                         uniformBufferSize,

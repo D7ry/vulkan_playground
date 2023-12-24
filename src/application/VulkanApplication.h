@@ -130,18 +130,6 @@ class VulkanApplication {
          * TypeFilter are obtained form vkGetBufferMemoryRequirements().memoryTypeBits
          */
         static uint32_t findMemoryType(VkPhysicalDevice physicalDevice, uint32_t typeFilter, VkMemoryPropertyFlags properties);
-        /**
-         * @brief Allocate buffer on both CPU and GPU memory, and bind them together.
-         */
-        static void createBuffer(
-                VkPhysicalDevice physicalDevice,
-                VkDevice device,
-                VkDeviceSize size,
-                VkBufferUsageFlags usage,
-                VkMemoryPropertyFlags properties,
-                VkBuffer& buffer,
-                VkDeviceMemory& bufferMemory
-        );
 
         static std::pair<VkBuffer, VkDeviceMemory> createStagingBuffer(VulkanApplication* app, VkDeviceSize bufferSize);
 

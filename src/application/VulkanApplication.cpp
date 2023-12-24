@@ -671,43 +671,11 @@ uint32_t VulkanApplication::findMemoryType(VkPhysicalDevice physicalDevice, uint
 
         FATAL("Failed to find suitable memory type!");
 }
-void VulkanApplication::createBuffer(
-        VkPhysicalDevice physicalDevice,
-        VkDevice device,
-        VkDeviceSize size,
-        VkBufferUsageFlags usage,
-        VkMemoryPropertyFlags properties,
-        VkBuffer& buffer,
-        VkDeviceMemory& bufferMemory
-) {
-        VkBufferCreateInfo bufferInfo{};
-        bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        bufferInfo.size = size;
-        bufferInfo.usage = usage;
-        bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-        if (vkCreateBuffer(device, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
-                FATAL("Failed to create VK buffer!");
-        }
-
-        VkMemoryRequirements memRequirements;
-        vkGetBufferMemoryRequirements(device, buffer, &memRequirements);
-
-        VkMemoryAllocateInfo allocInfo{};
-        allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        allocInfo.allocationSize = memRequirements.size;
-        allocInfo.memoryTypeIndex = findMemoryType(physicalDevice, memRequirements.memoryTypeBits, properties);
-
-        if (vkAllocateMemory(device, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
-                FATAL("Failed to allocate device memory for buffer creation!");
-        }
-
-        vkBindBufferMemory(device, buffer, bufferMemory, 0);
-}
 std::pair<VkBuffer, VkDeviceMemory> VulkanApplication::createStagingBuffer(VulkanApplication* app, VkDeviceSize bufferSize) {
         VkBuffer stagingBuffer;
         VkDeviceMemory stagingBufferMemory;
-        createBuffer(
+        VulkanUtils::createBuffer(
                 app->_physicalDevice,
                 app->_logicalDevice,
                 bufferSize,
