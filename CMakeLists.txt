@@ -1,4 +1,7 @@
 cmake_minimum_required(VERSION 3.22)
+set(CMAKE_C_COMPILER "/usr/bin/clang")
+set(CMAKE_CXX_COMPILER "/usr/bin/clang++")
+
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(spdlog_DIR /home/d7ry/lib/linux_x86_64/spdlog/build)

@@ -16,6 +16,7 @@ class TriangleApp : public VulkanApplication {
         virtual void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) override;
         virtual void createVertexBuffer() override;
         virtual void createIndexBuffer() override;
+        virtual void createDepthBuffer() override;
         virtual void createUniformBuffers() override;
         virtual void createDescriptorSetLayout() override;
         virtual void createDescriptorPool() override;

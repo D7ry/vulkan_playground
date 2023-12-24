@@ -82,6 +82,7 @@ class VulkanApplication {
          */
         virtual void createDescriptorSets();
         virtual void createVertexBuffer();
+        virtual void createDepthBuffer();
         virtual void createIndexBuffer();
         virtual void createUniformBuffers();
         virtual void createDescriptorSetLayout();
@@ -220,6 +221,11 @@ class VulkanApplication {
         std::vector<VkSemaphore> _semaImageAvailable;
         std::vector<VkSemaphore> _semaRenderFinished;
         std::vector<VkFence> _fenceInFlight;
+
+        // depth buffer
+        VkImage _depthImage;
+        VkDeviceMemory _depthImageMemory;
+        VkImageView _depthImageView;
 
         bool _framebufferResized = false;
 

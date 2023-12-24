@@ -4,13 +4,33 @@
 namespace VulkanUtils {
 
 VkCommandBuffer beginSingleTimeCommands(VkDevice device, VkCommandPool commandPool);
-void endSingleTimeCommands(VkCommandBuffer commandBuffer, VkDevice device, VkQueue graphicsQueue, VkCommandPool commandPool);
+void endSingleTimeCommands(
+        VkCommandBuffer commandBuffer,
+        VkDevice device,
+        VkQueue graphicsQueue,
+        VkCommandPool commandPool
+);
 
-void createCommandPool(VkCommandPool* commandPool, VkCommandPoolCreateFlags flags, uint32_t queueFamilyIndex, VkDevice device);
+void createCommandPool(
+        VkCommandPool* commandPool,
+        VkCommandPoolCreateFlags flags,
+        uint32_t queueFamilyIndex,
+        VkDevice device
+);
 
-void createCommandBuffers(VkCommandBuffer* commandBuffer, uint32_t commandBufferCount, VkCommandPool commandPool, VkDevice device);
+void createCommandBuffers(
+        VkCommandBuffer* commandBuffer,
+        uint32_t commandBufferCount,
+        VkCommandPool commandPool,
+        VkDevice device
+);
 
-void createCommandBuffers(std::vector<VkCommandBuffer>& commandBufferes, uint32_t commandBufferCount, VkCommandPool commandPool, VkDevice device);
+void createCommandBuffers(
+        std::vector<VkCommandBuffer>& commandBufferes,
+        uint32_t commandBufferCount,
+        VkCommandPool commandPool,
+        VkDevice device
+);
 
 void createCommandPoolAndBuffers(
         VkCommandPool& commandPool,
@@ -43,8 +63,37 @@ void createBuffer(
 
 void vkMemCopy(void* src, VkDeviceMemory dstMemory, VkDeviceSize size, VkDevice dstDevice);
 
-void copyBuffer(VkDevice device, VkCommandPool commandPool, VkQueue queue, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
+void copyBuffer(
+        VkDevice device,
+        VkCommandPool commandPool,
+        VkQueue queue,
+        VkBuffer srcBuffer,
+        VkBuffer dstBuffer,
+        VkDeviceSize size
+);
 
-VkImageView createImageView(VkImage& textureImage, VkDevice& logicalDevice);
+VkImageView createImageView(VkImage& textureImage, VkDevice& logicalDevice, VkFormat format = VK_FORMAT_R8G8B8A8_SRGB, VkImageAspectFlags flags = VK_IMAGE_ASPECT_COLOR_BIT);
+
+VkFormat findBestFormat(
+        const std::vector<VkFormat>& candidates,
+        VkImageTiling tiling,
+        VkFormatFeatureFlags features,
+        VkPhysicalDevice physicalDevice
+);
+
+VkFormat findDepthFormat(VkPhysicalDevice physicalDevice);
+
+void createImage(
+        uint32_t width,
+        uint32_t height,
+        VkFormat format,
+        VkImageTiling tiling,
+        VkImageUsageFlags usage,
+        VkMemoryPropertyFlags properties,
+        VkImage& image,
+        VkDeviceMemory& imageMemory,
+        VkPhysicalDevice physicalDevice,
+        VkDevice logicalDevice
+);
 
 } // namespace VulkanUtils

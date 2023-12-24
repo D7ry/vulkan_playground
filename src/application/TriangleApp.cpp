@@ -134,6 +134,22 @@ void TriangleApp::createGraphicsPipeline() {
         inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST; // draw triangles
         inputAssembly.primitiveRestartEnable = VK_FALSE;              // don't restart primitives
 
+        // depth and stencil state
+        VkPipelineDepthStencilStateCreateInfo depthStencilCreateInfo{};
+        depthStencilCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+        depthStencilCreateInfo.depthTestEnable = VK_TRUE;
+        depthStencilCreateInfo.depthWriteEnable = VK_TRUE;
+
+        depthStencilCreateInfo.depthCompareOp = VK_COMPARE_OP_LESS; // low depth == closer object -> cull far object
+
+        depthStencilCreateInfo.depthBoundsTestEnable = VK_FALSE;
+        depthStencilCreateInfo.minDepthBounds = 0.0f; // Optional
+        depthStencilCreateInfo.maxDepthBounds = 1.0f; // Optional
+
+        depthStencilCreateInfo.stencilTestEnable = VK_FALSE;
+        depthStencilCreateInfo.front = {}; // Optional
+        depthStencilCreateInfo.back = {}; // Optional
+
         // dynamic states
         // specifying the dynamic states here so that they are not defined during the pipeline creation,
         // they can be changed at draw time.
@@ -253,6 +269,7 @@ void TriangleApp::createGraphicsPipeline() {
         pipelineInfo.pDepthStencilState = nullptr; // Optional
         pipelineInfo.pColorBlendState = &colorBlending;
         pipelineInfo.pDynamicState = &dynamicStateCreateInfo;
+        pipelineInfo.pDepthStencilState = &depthStencilCreateInfo;
         pipelineInfo.layout = this->_pipelineLayout;
         pipelineInfo.renderPass = this->_renderPass;
         pipelineInfo.subpass = 0;
@@ -287,29 +304,48 @@ void TriangleApp::createRenderPass() {
         //colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
         colorAttachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL; // for imgui
 
-        // set up subpass
         VkAttachmentReference colorAttachmentRef{};
         colorAttachmentRef.attachment = 0;
         colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+        VkAttachmentDescription depthAttachment{};
+        depthAttachment.format = VulkanUtils::findDepthFormat(_physicalDevice);
+        depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+        depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+        VkAttachmentReference depthAttachmentRef{};
+        depthAttachmentRef.attachment = 1;
+        depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        // set up subpass
 
         VkSubpassDescription subpass{};
         subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
         subpass.colorAttachmentCount = 1;
         subpass.pColorAttachments = &colorAttachmentRef;
+        subpass.pDepthStencilAttachment = &depthAttachmentRef;
 
         // dependency to make sure that the render pass waits for the image to be available before drawing
         VkSubpassDependency dependency{};
         dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
         dependency.dstSubpass = 0;
-        dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        dependency.srcStageMask
+                = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
         dependency.srcAccessMask = 0;
-        dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        dependency.dstStageMask
+                = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+
+        std::array<VkAttachmentDescription, 2> attachments = {colorAttachment, depthAttachment};
 
         VkRenderPassCreateInfo renderPassInfo{};
         renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-        renderPassInfo.attachmentCount = 1;
-        renderPassInfo.pAttachments = &colorAttachment;
+        renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+        renderPassInfo.pAttachments = attachments.data();
         renderPassInfo.subpassCount = 1;
         renderPassInfo.pSubpasses = &subpass;
         renderPassInfo.dependencyCount = 1;
@@ -327,13 +363,13 @@ void TriangleApp::createFramebuffers() {
                 FATAL("Render pass is null!");
         }
         for (size_t i = 0; i < _swapChainImageViews.size(); i++) {
-                VkImageView atachments[] = {_swapChainImageViews[i]};
+                VkImageView attachments[] = {_swapChainImageViews[i], _depthImageView};
                 VkFramebufferCreateInfo framebufferInfo{};
                 framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
                 framebufferInfo.renderPass = _renderPass; // each framebuffer is associated with a render pass;  they need to be compatible i.e.
                                                           // having same number of attachments and same formats
-                framebufferInfo.attachmentCount = 1;
-                framebufferInfo.pAttachments = atachments;
+                framebufferInfo.attachmentCount = sizeof(attachments) / sizeof(VkImageView); 
+                framebufferInfo.pAttachments = attachments;
                 framebufferInfo.width = _swapChainExtent.width;
                 framebufferInfo.height = _swapChainExtent.height;
                 framebufferInfo.layers = 1; // number of layers in image arrays
@@ -396,9 +432,12 @@ void TriangleApp::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t im
         renderPassInfo.renderArea.offset = {0, 0};
         renderPassInfo.renderArea.extent = this->_swapChainExtent;
 
-        VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}}; // black with 100% opacity
-        renderPassInfo.clearValueCount = 1;
-        renderPassInfo.pClearValues = &clearColor;
+        std::array<VkClearValue, 2> clearValues{};
+        clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
+        clearValues[1].depthStencil = {1.0f, 0};
+
+        renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+        renderPassInfo.pClearValues = clearValues.data();
 
         vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
@@ -500,6 +539,29 @@ void TriangleApp::createIndexBuffer() {
 
         vkDestroyBuffer(_logicalDevice, stagingBuffer, nullptr);
         vkFreeMemory(_logicalDevice, stagingBufferMemory, nullptr);
+}
+
+void TriangleApp::createDepthBuffer() {
+        INFO("Creating depth buffer...");
+        VkFormat depthFormat = VulkanUtils::findBestFormat(
+                {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT},
+                VK_IMAGE_TILING_OPTIMAL,
+                VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT,
+                _physicalDevice
+        );
+        VulkanUtils::createImage(
+                _swapChainExtent.width,
+                _swapChainExtent.height,
+                depthFormat,
+                VK_IMAGE_TILING_OPTIMAL,
+                VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                _depthImage,
+                _depthImageMemory,
+                _physicalDevice,
+                _logicalDevice
+        );
+        _depthImageView = VulkanUtils::createImageView(_depthImage, _logicalDevice, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
 }
 
 void TriangleApp::createUniformBuffers() {

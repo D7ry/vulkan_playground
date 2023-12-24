@@ -123,6 +123,7 @@ void VulkanUtils::vkMemCopy(void* src, VkDeviceMemory dstMemory, VkDeviceSize si
         memcpy(data, src, static_cast<size_t>(size));
         vkUnmapMemory(dstDevice, dstMemory);
 }
+
 void VulkanUtils::copyBuffer(VkDevice device, VkCommandPool commandPool, VkQueue queue, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
         VkCommandBuffer commandBuffer = beginSingleTimeCommands(device, commandPool);
 
@@ -132,17 +133,19 @@ void VulkanUtils::copyBuffer(VkDevice device, VkCommandPool commandPool, VkQueue
 
         endSingleTimeCommands(commandBuffer, device, queue, commandPool);
 }
-VkImageView VulkanUtils::createImageView(VkImage& textureImage, VkDevice& logicalDevice) {
+
+VkImageView VulkanUtils::createImageView(VkImage& textureImage, VkDevice& logicalDevice, VkFormat format, VkImageAspectFlags flags) {
         VkImageViewCreateInfo viewInfo{};
         viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
         viewInfo.image = textureImage;
         viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        viewInfo.format = VK_FORMAT_R8G8B8A8_SRGB;
+        viewInfo.format = format;
         viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         viewInfo.subresourceRange.baseMipLevel = 0;
         viewInfo.subresourceRange.levelCount = 1;
         viewInfo.subresourceRange.baseArrayLayer = 0;
         viewInfo.subresourceRange.layerCount = 1;
+        viewInfo.subresourceRange.aspectMask = flags;
 
         VkImageView imageView;
         if (vkCreateImageView(logicalDevice, &viewInfo, nullptr, &imageView) != VK_SUCCESS) {
@@ -151,3 +154,76 @@ VkImageView VulkanUtils::createImageView(VkImage& textureImage, VkDevice& logica
 
         return imageView;
 }
+void VulkanUtils::createImage(
+        uint32_t width,
+        uint32_t height,
+        VkFormat format,
+        VkImageTiling tiling,
+        VkImageUsageFlags usage,
+        VkMemoryPropertyFlags properties,
+        VkImage& image,
+        VkDeviceMemory& imageMemory,
+        VkPhysicalDevice physicalDevice,
+        VkDevice logicalDevice
+) {
+        VkImageCreateInfo imageInfo{};
+        imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        imageInfo.imageType = VK_IMAGE_TYPE_2D;
+        imageInfo.extent.width = width;
+        imageInfo.extent.height = height;
+        imageInfo.extent.depth = 1;
+        imageInfo.mipLevels = 1;
+        imageInfo.arrayLayers = 1;
+        imageInfo.format = format;
+        imageInfo.tiling = tiling;
+        imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        imageInfo.usage = usage;
+        imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+        imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+        if (vkCreateImage(logicalDevice, &imageInfo, nullptr, &image) != VK_SUCCESS) {
+                throw std::runtime_error("failed to create image!");
+        }
+
+        VkMemoryRequirements memRequirements;
+        vkGetImageMemoryRequirements(logicalDevice, image, &memRequirements);
+
+        VkMemoryAllocateInfo allocInfo{};
+        allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        allocInfo.allocationSize = memRequirements.size;
+        allocInfo.memoryTypeIndex
+                = VulkanUtils::findMemoryType(physicalDevice, memRequirements.memoryTypeBits, properties);
+
+        if (vkAllocateMemory(logicalDevice, &allocInfo, nullptr, &imageMemory) != VK_SUCCESS) {
+                FATAL("Failed to allocate image memory!");
+        }
+
+        vkBindImageMemory(logicalDevice, image, imageMemory, 0);
+}
+VkFormat VulkanUtils::findDepthFormat(VkPhysicalDevice physicalDevice) {
+        return findBestFormat(
+                {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT},
+                VK_IMAGE_TILING_OPTIMAL,
+                VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT,
+                physicalDevice
+        );
+}
+VkFormat VulkanUtils::findBestFormat(
+        const std::vector<VkFormat>& candidates,
+        VkImageTiling tiling,
+        VkFormatFeatureFlags features,
+        VkPhysicalDevice physicalDevice
+) {
+        for (VkFormat format : candidates) {
+                VkFormatProperties formatProperties;
+                vkGetPhysicalDeviceFormatProperties(physicalDevice, format, &formatProperties);
+                if (tiling == VK_IMAGE_TILING_LINEAR
+                    && (formatProperties.linearTilingFeatures & features) == features) {
+                        return format;
+                } else if (tiling == VK_IMAGE_TILING_OPTIMAL && (formatProperties.optimalTilingFeatures & features) == features) {
+                        return format;
+                }
+        }
+        FATAL("Failed tot find format!");
+        return VK_FORMAT_R8G8B8A8_SRGB; // unreacheable
+};

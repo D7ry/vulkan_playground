@@ -33,18 +33,6 @@ class TextureManager {
                 VkSampler textureSampler; // sampler for shaders
         };
 
-        // creates an empty image and allocate device memory for it.
-        void createImage(
-                uint32_t width,
-                uint32_t height,
-                VkFormat format,
-                VkImageTiling tiling,
-                VkImageUsageFlags usage,
-                VkMemoryPropertyFlags properties,
-                VkImage& image,
-                VkDeviceMemory& imageMemory
-        );
-
         void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
 
         // copy over content  in the staging buffer to the actual image

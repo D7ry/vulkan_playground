@@ -118,6 +118,7 @@ void VulkanApplication::initVulkan() {
         this->createGraphicsPipeline();
         this->_imguiManager.InitializeImgui();
         this->_imguiManager.InitializeRenderPass(_logicalDevice, _swapChainImageFormat);
+        this->createDepthBuffer();
         this->createFramebuffers();
         this->createCommandPool();
         this->middleInit();
@@ -446,6 +447,10 @@ void VulkanApplication::createSwapChain() {
 }
 void VulkanApplication::cleanupSwapChain() {
         INFO("Cleaning up swap chain...");
+        vkDestroyImageView(_logicalDevice, _depthImageView, nullptr);
+        vkDestroyImage(_logicalDevice, _depthImage, nullptr);
+        vkFreeMemory(_logicalDevice, _depthImageMemory, nullptr);
+
         _imguiManager.DestroyFrameBuffers(_logicalDevice);
         for (VkFramebuffer framebuffer : this->_swapChainFrameBuffers) {
                 vkDestroyFramebuffer(this->_logicalDevice, framebuffer, nullptr);
@@ -471,6 +476,7 @@ void VulkanApplication::recreateSwapChain() {
 
         this->createSwapChain();
         this->createImageViews();
+        this->createDepthBuffer();
         this->createFramebuffers();
         INFO("Swap chain recreated.");
 }
@@ -554,6 +560,8 @@ void VulkanApplication::createImageViews() {
         }
         INFO("Image views created.");
 }
+void VulkanApplication::createDepthBuffer() { ERROR("Base vulkan application does not have a depth buffer."); }
+
 void VulkanApplication::createVertexBuffer() { ERROR("Base vulkan application does not have a vertex buffer."); }
 
 void VulkanApplication::createIndexBuffer() { ERROR("Base vulkan application does not have an index buffer."); }
