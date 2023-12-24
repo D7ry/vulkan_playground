@@ -97,7 +97,7 @@ class VulkanApplication {
         void loadModel();
 
         void setKeyCallback();
-        void setCursorPosCallback();
+        void setCursorInputCallback();
         /**
          * @brief Override this method to handle key events.
          */

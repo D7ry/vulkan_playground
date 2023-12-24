@@ -15,6 +15,7 @@
 #include "components/VulkanUtils.h"
 const std::string SAMPLE_TEXTURE_PATH = "../textures/viking_room.png";
 
+bool viewMode = false;
 static const bool ALLOW_MODIFY_ROLL = false;
 void TriangleApp::keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
         if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
@@ -63,8 +64,38 @@ void TriangleApp::keyCallback(GLFWwindow* window, int key, int scancode, int act
                                 _camera.ModRotation(0, 0, 1);
                         }
                         break;
+                case GLFW_KEY_TAB:
+                        viewMode = !viewMode;
+                        if (viewMode) {
+                                glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+                        } else {
+                                glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+                        }
+                        break;
                 }
+
         }
+}
+
+static bool updatedCursor = false;
+static int prevX = -1;
+static int prevY = -1;
+void TriangleApp::cursorPosCallback(GLFWwindow* window, double xpos, double ypos) {
+        if (!updatedCursor) {
+                prevX = xpos;
+                prevY = ypos;
+                updatedCursor = true;
+        }
+        double deltaX = prevX - xpos;
+        double deltaY = prevY - ypos;
+        // handle camera movement
+        deltaX *= 0.3;
+        deltaY *= 0.3; // make movement slower
+        if (viewMode) {
+                _camera.ModRotation( deltaX, deltaY, 0);
+        }
+        prevX = xpos;
+        prevY = ypos;
 }
 
 void TriangleApp::renderImGui() {
@@ -75,8 +106,23 @@ void TriangleApp::renderImGui() {
                 ImGui::Separator();
                 ImGui::Text("Camera");
                 if (ImGui::BeginChild("Camera")) {
-                        ImGui::Text("Position: (%f, %f, %f)", _camera.GetPosition().x, _camera.GetPosition().y, _camera.GetPosition().z);
-                        ImGui::Text("Yaw: %f Pitch: %f Roll: %f", _camera.GetRotation().y, _camera.GetRotation().x, _camera.GetRotation().z);
+                        ImGui::Text(
+                                "Position: (%f, %f, %f)",
+                                _camera.GetPosition().x,
+                                _camera.GetPosition().y,
+                                _camera.GetPosition().z
+                        );
+                        ImGui::Text(
+                                "Yaw: %f Pitch: %f Roll: %f",
+                                _camera.GetRotation().y,
+                                _camera.GetRotation().x,
+                                _camera.GetRotation().z
+                        );
+                        if (viewMode) {
+                                ImGui::Text("View Mode: Active");
+                        } else {
+                                ImGui::Text("View Mode: Deactive");
+                        }
                         ImGui::EndChild();
                 }
         }
@@ -691,11 +737,11 @@ void TriangleApp::updateUniformBufferData(uint32_t frameIndex) {
         UniformBuffer ubo{};
         auto initialPos = glm::mat4(1.f);
         ubo.model = initialPos;
-        ubo.model = glm::rotate(ubo.model, time * glm::radians(90.f), glm::vec3(0.f, 0.f, 1.f));
+        //ubo.model = glm::rotate(ubo.model, time * glm::radians(90.f), glm::vec3(0.f, 0.f, 1.f));
         // ubo.model = glm::translate(ubo.model, glm::vec3(0.f, 0.f, time - int(time)));
         ubo.view = this->_camera.GetViewMatrix();
         // ubo.view = glm::lookAt(glm::vec3(2.f, 2.f, 2.f), glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 0.f, 1.f));
-        ubo.proj = glm::perspective(glm::radians(70.f), _swapChainExtent.width / (float)_swapChainExtent.height, 0.1f, 10.f);
+        ubo.proj = glm::perspective(glm::radians(90.f), _swapChainExtent.width / (float)_swapChainExtent.height, 0.1f, 100.f);
 
         ubo.proj[1][1] *= -1; // flip y coordinate
         // TODO: use push constants for small data update

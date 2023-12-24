@@ -26,6 +26,7 @@ class TriangleApp : public VulkanApplication {
         virtual void updateUniformBufferData(uint32_t frameIndex) override;
 
         virtual void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) override;
+        virtual void cursorPosCallback(GLFWwindow* window, double xpos, double ypos) override;
         virtual void renderImGui() override;
         virtual void middleInit() override;
         virtual void postInit() override;
