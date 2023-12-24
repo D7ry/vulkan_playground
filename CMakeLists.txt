@@ -7,6 +7,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(spdlog_DIR /home/d7ry/lib/linux_x86_64/spdlog/build)
 set(IMGUI_DIR /home/d7ry/lib/linux_x86_64/imgui)
 set(STB_DIR /home/d7ry/lib/common/stb)
+set(TinyObjectLoader_DIR /home/d7ry/lib/common/tinyobjloader)
 
 project(vulkan_playground)
 set(CMAKE_CXX_STANDARD 17)
@@ -45,6 +46,7 @@ add_executable(vulkan_playground
 )
 # std directory
 target_include_directories(vulkan_playground PUBLIC ${STB_DIR})
+target_include_directories(vulkan_playground PUBLIC ${TinyObjectLoader_DIR})
 target_include_directories(vulkan_playground PUBLIC src)
 
 

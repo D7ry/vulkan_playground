@@ -13,6 +13,9 @@
 #include <cstddef>
 #include <vulkan/vulkan_core.h>
 
+#define TINYOBJLOADER_IMPLEMENTATION
+#include <tiny_obj_loader.h>
+
 void VulkanApplication::Run() {
         INFO("Initializing Vulkan Application...");
         this->initWindow();
@@ -122,6 +125,7 @@ void VulkanApplication::initVulkan() {
         this->createFramebuffers();
         this->createCommandPool();
         this->middleInit();
+        this->loadModel();
         this->createVertexBuffer();
         this->createIndexBuffer();
         this->createUniformBuffers();
@@ -699,4 +703,33 @@ void VulkanApplication::middleInit() {
 }
 void VulkanApplication::postInit() {
         // override this method to do post initialization
+}
+void VulkanApplication::loadModel() {
+        tinyobj::attrib_t attrib;
+        std::vector<tinyobj::shape_t> shapes;
+        std::vector<tinyobj::material_t> materials;
+        std::string warn, err;
+        _vertices.clear();
+        _indices.clear();
+
+        if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, "../meshes/viking_room.obj")) {
+                throw std::runtime_error(warn + err);
+        }
+        for (const auto& shape : shapes) {
+                for (const auto& index : shape.mesh.indices) {
+                        Vertex vertex{};
+                        vertex.pos = {
+                                attrib.vertices[3 * index.vertex_index + 0],
+                                attrib.vertices[3 * index.vertex_index + 1],
+                                attrib.vertices[3 * index.vertex_index + 2]
+                        };
+                        vertex.texCoord = {
+                                attrib.texcoords[2 * index.texcoord_index + 0],
+                                1.0f - attrib.texcoords[2 * index.texcoord_index + 1] // flip y coordinate for Vulkan
+                        };
+                        vertex.color = {1.0f, 1.0f, 1.0f};
+                        _vertices.push_back(vertex);
+                        _indices.push_back(_indices.size());
+                }
+        }
 }

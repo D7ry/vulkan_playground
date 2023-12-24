@@ -13,7 +13,7 @@
 #include <glm/trigonometric.hpp>
 #include <vulkan/vulkan_core.h>
 #include "components/VulkanUtils.h"
-const std::string SAMPLE_TEXTURE_PATH = "../textures/statue.jpg";
+const std::string SAMPLE_TEXTURE_PATH = "../textures/viking_room.png";
 
 static const bool ALLOW_MODIFY_ROLL = false;
 void TriangleApp::keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
@@ -462,7 +462,7 @@ void TriangleApp::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t im
         VkDeviceSize offsets[] = {0};
         vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
 
-        vkCmdBindIndexBuffer(commandBuffer, this->_indexBuffer, 0, VK_INDEX_TYPE_UINT16);
+        vkCmdBindIndexBuffer(commandBuffer, this->_indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
         vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelineLayout, 0, 1, &_descriptorSets[_currentFrame], 0, nullptr);
 

@@ -10,6 +10,7 @@
 #include <vector>
 #include "components/DeltaTimer.h"
 #include "components/ImGuiManager.h"
+#include "structs/Vertex.h"
 // TODO: create a serialization scheme for tweakable settings.
 
 /**
@@ -92,6 +93,8 @@ class VulkanApplication {
         virtual void createCommandPool();
         virtual void createCommandBuffer();
         virtual void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
+
+        void loadModel();
 
         void setKeyCallback();
         void setCursorPosCallback();
@@ -234,5 +237,19 @@ class VulkanApplication {
         DeltaTimer _deltaTimer;
 
         ImGuiManager _imguiManager;
+
+        // Vertices, for demonstration purposes
+        std::vector<Vertex> _vertices
+                = {{{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
+                   {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
+                   {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
+                   {{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},
+
+                   {{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
+                   {{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
+                   {{0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
+                   {{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}};
+
+        std::vector<uint32_t> _indices = {0, 1, 2, 2, 3, 0, 4, 5, 6, 6, 7, 4};
 
 };
