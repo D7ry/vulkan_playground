@@ -9,7 +9,6 @@
 
 class TriangleApp : public VulkanApplication {
       protected:
-        virtual void createGraphicsPipeline() override;
         virtual void createRenderPass() override;
         virtual void createFramebuffers() override;
         virtual void createCommandPool() override;
@@ -19,9 +18,6 @@ class TriangleApp : public VulkanApplication {
         virtual void createIndexBuffer() override;
         virtual void createDepthBuffer() override;
         virtual void createUniformBuffers() override;
-        virtual void createDescriptorSetLayout() override;
-        virtual void createDescriptorPool() override;
-        virtual void createDescriptorSets() override;
         virtual void drawFrame() override;
         virtual void updateUniformBufferData(uint32_t frameIndex) override;
 

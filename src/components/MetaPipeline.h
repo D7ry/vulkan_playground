@@ -4,7 +4,7 @@
 #include <vulkan/vulkan_core.h>
 /**
  * @brief A graphics pipeline with its own descriptor set layout, descriptor sets, descriptor pool, pipeline layout,
- * shaders, and uniform buffers. This is extremely under-optimized.
+ * shaders. This is extremely under-optimized.
  *
  */
 struct MetaPipeline {

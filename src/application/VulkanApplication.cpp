@@ -117,8 +117,6 @@ void VulkanApplication::initVulkan() {
         this->createSwapChain();
         this->createImageViews();
         this->createRenderPass();
-        //this->createDescriptorSetLayout();
-        //this->createGraphicsPipeline();
         this->_imguiManager.InitializeImgui();
         this->_imguiManager.InitializeRenderPass(_logicalDevice, _swapChainImageFormat);
         this->createDepthBuffer();
@@ -129,8 +127,6 @@ void VulkanApplication::initVulkan() {
         this->createVertexBuffer();
         this->createIndexBuffer();
         this->createUniformBuffers();
-        //this->createDescriptorPool();
-        //this->createDescriptorSets();
         this->createCommandBuffer();
         this->createSynchronizationObjects();
 
@@ -572,9 +568,6 @@ void VulkanApplication::createIndexBuffer() { ERROR("Base vulkan application doe
 
 void VulkanApplication::createUniformBuffers() { ERROR("Base vulkan application does not have a uniform buffer."); }
 
-void VulkanApplication::createDescriptorSetLayout() { ERROR("Base vulkan application does not have a descriptor set layout."); }
-
-void VulkanApplication::createGraphicsPipeline() { ERROR("Base vulkan application does not have a graphics pipeline."); }
 
 // https://vulkan-tutorial.com/Drawing_a_triangle/Graphics_pipeline_basics/Render_passes
 void VulkanApplication::createRenderPass() { ERROR("Base vulkan application does not have a render pass."); }
@@ -585,9 +578,6 @@ void VulkanApplication::createCommandPool() { ERROR("Base vulkan application doe
 
 void VulkanApplication::createCommandBuffer() { ERROR("Base vulkan application does not have a command buffer."); }
 
-void VulkanApplication::createDescriptorPool() {}
-
-void VulkanApplication::createDescriptorSets() {}
 
 void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
         ERROR("Base vulkan application does not have a command buffer.");

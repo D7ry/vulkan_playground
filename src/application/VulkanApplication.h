@@ -76,18 +76,10 @@ class VulkanApplication {
 
         virtual void middleInit();
         virtual void postInit();
-        virtual void createDescriptorPool();
-        /**
-         * @brief Initialize and configure descriptor sets.
-         * Before calling this, a descripto pool must be created, as well as a descriptor set layout.
-         */
-        virtual void createDescriptorSets();
         virtual void createVertexBuffer();
         virtual void createDepthBuffer();
         virtual void createIndexBuffer();
         virtual void createUniformBuffers();
-        virtual void createDescriptorSetLayout();
-        virtual void createGraphicsPipeline();
         virtual void createRenderPass();
         virtual void createFramebuffers();
         virtual void createCommandPool();
