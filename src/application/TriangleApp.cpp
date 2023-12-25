@@ -13,6 +13,12 @@
 #include <glm/trigonometric.hpp>
 #include <vulkan/vulkan_core.h>
 #include "components/VulkanUtils.h"
+
+// for testing only
+#include "components/MetaPipeline.h"
+MetaPipeline metapipeline;
+
+
 const std::string SAMPLE_TEXTURE_PATH = "../textures/viking_room.png";
 
 bool viewMode = false;
@@ -135,7 +141,17 @@ void TriangleApp::middleInit() {
 }
 
 void TriangleApp::postInit() {
-
+        metapipeline = CreateGenericMetaPipeline(
+                _logicalDevice,
+                MAX_FRAMES_IN_FLIGHT,
+                SAMPLE_TEXTURE_PATH,
+                "../shaders/vert_test.vert.spv",
+                "../shaders/frag_test.frag.spv",
+                _swapChainExtent,
+                _textureManager,
+                _uniformBuffers,
+                _renderPass
+        );
 }
 
 void TriangleApp::createGraphicsPipeline() {
@@ -488,7 +504,7 @@ void TriangleApp::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t im
         vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
         // bind graphics pipeline
-        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, this->_graphicsPipeline);
+        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, metapipeline.pipeline);
 
         VkViewport viewport{};
         viewport.x = 0.0f;
@@ -510,7 +526,16 @@ void TriangleApp::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t im
 
         vkCmdBindIndexBuffer(commandBuffer, this->_indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
-        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelineLayout, 0, 1, &_descriptorSets[_currentFrame], 0, nullptr);
+        vkCmdBindDescriptorSets(
+                commandBuffer,
+                VK_PIPELINE_BIND_POINT_GRAPHICS,
+                metapipeline.pipelineLayout,
+                0,
+                1,
+                &metapipeline.descriptorSets[_currentFrame],
+                0,
+                nullptr
+        );
 
         // issue the draw command
         // vkCmdDraw(commandBuffer, 3, 1, 0, 0);

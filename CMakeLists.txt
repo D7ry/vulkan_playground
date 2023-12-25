@@ -43,6 +43,7 @@ add_executable(vulkan_playground
         src/components/VulkanUtils.cpp
         src/components/ImGuiManager.cpp
         src/components/TextureManager.cpp
+        src/components/MetaPipeline.cpp
 )
 # std directory
 target_include_directories(vulkan_playground PUBLIC ${STB_DIR})

@@ -117,8 +117,8 @@ void VulkanApplication::initVulkan() {
         this->createSwapChain();
         this->createImageViews();
         this->createRenderPass();
-        this->createDescriptorSetLayout();
-        this->createGraphicsPipeline();
+        //this->createDescriptorSetLayout();
+        //this->createGraphicsPipeline();
         this->_imguiManager.InitializeImgui();
         this->_imguiManager.InitializeRenderPass(_logicalDevice, _swapChainImageFormat);
         this->createDepthBuffer();
@@ -129,8 +129,8 @@ void VulkanApplication::initVulkan() {
         this->createVertexBuffer();
         this->createIndexBuffer();
         this->createUniformBuffers();
-        this->createDescriptorPool();
-        this->createDescriptorSets();
+        //this->createDescriptorPool();
+        //this->createDescriptorSets();
         this->createCommandBuffer();
         this->createSynchronizationObjects();
 

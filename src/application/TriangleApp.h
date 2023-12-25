@@ -34,6 +34,6 @@ class TriangleApp : public VulkanApplication {
         virtual void preCleanup() override;
 
 
-        Camera _camera = Camera(glm::vec3(-2.0f, 0.0f, 2.0f), glm::vec3(-45, 0, 0));
+        Camera _camera = Camera(glm::vec3(1.0f, 0.5f, 1.0f), glm::vec3(-28, -146, 0));
         std::unique_ptr<TextureManager> _textureManager = nullptr;
 };

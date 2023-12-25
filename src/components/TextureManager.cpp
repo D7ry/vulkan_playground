@@ -31,7 +31,8 @@ void TextureManager::Cleanup() {
 }
 void TextureManager::GetDescriptorImageInfo(const std::string& texturePath, VkDescriptorImageInfo& imageInfo) {
         if (_textures.find(texturePath) == _textures.end()) {
-                FATAL("Texture {} not loaded!", texturePath);
+                INFO("Texture {} not loaded!", texturePath);
+                LoadTexture(texturePath);
         }
         Texture& texture = _textures.at(texturePath);
         imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
