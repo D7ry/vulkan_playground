@@ -41,6 +41,7 @@ struct VQDevice {
         QueueFamilyIndices queueFamilyIndices;
         operator VkDevice() const { return logicalDevice; };
         explicit VQDevice(VkPhysicalDevice physicalDevice);
+        ~VQDevice();
 
         /**
          * @brief Query Vulkan API to find the queue family indices that support graphics and presentation.
@@ -70,4 +71,8 @@ struct VQDevice {
          * @param commandBufferCount    the number of command buffers to create
          */
         void CreateGraphicsCommandBuffer(std::vector<VkCommandBuffer>& commandBuffers, uint32_t commandBufferCount);
+
+        void FreeGraphicsCommandBuffer(const std::vector<VkCommandBuffer>& commandBuffers);
+
+        void Cleanup();
 };

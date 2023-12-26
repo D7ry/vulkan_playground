@@ -89,7 +89,6 @@ void VQDevice::CreateGraphicsCommandBuffer(std::vector<VkCommandBuffer>& command
                 FATAL("Failed to allocate command buffers!");
         }
 }
-
 VQDevice::VQDevice(VkPhysicalDevice physicalDevice) {
         this->physicalDevice = physicalDevice;
         // Store Properties features, limits and properties of the physical device for later use
@@ -118,4 +117,16 @@ VQDevice::VQDevice(VkPhysicalDevice physicalDevice) {
                         }
                 }
         }
+}
+void VQDevice::FreeGraphicsCommandBuffer(const std::vector<VkCommandBuffer>& commandBuffers) {
+        vkFreeCommandBuffers(logicalDevice, graphicsCommandPool, commandBuffers.size(), commandBuffers.data());
+}
+VQDevice::~VQDevice() {
+
+}
+void VQDevice::Cleanup() {        
+        if (graphicsCommandPool != VK_NULL_HANDLE) {
+                vkDestroyCommandPool(logicalDevice, graphicsCommandPool, nullptr);
+        }
+        vkDestroyDevice(logicalDevice, nullptr);
 }

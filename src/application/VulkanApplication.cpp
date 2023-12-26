@@ -618,13 +618,14 @@ void VulkanApplication::cleanup() {
         vkDestroyPipelineLayout(this->_device->logicalDevice, this->_pipelineLayout, nullptr);
 
         vkDestroyRenderPass(this->_device->logicalDevice, this->_renderPass, nullptr);
-        vkDestroyDevice(this->_device->logicalDevice, nullptr);
         if (enableValidationLayers) {
                 if (this->_debugMessenger != nullptr) {
                         // TODO: implement this
                         // vkDestroyDebugUtilsMessengerEXT(_instance, _debugMessenger, nullptr);
                 }
         }
+        _device->FreeGraphicsCommandBuffer(this->_commandBuffers);
+        _device->Cleanup();
         vkDestroySurfaceKHR(this->_instance, this->_surface, nullptr);
         vkDestroyInstance(this->_instance, nullptr);
         glfwDestroyWindow(this->_window);
