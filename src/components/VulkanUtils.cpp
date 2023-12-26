@@ -227,3 +227,95 @@ VkFormat VulkanUtils::findBestFormat(
         FATAL("Failed tot find format!");
         return VK_FORMAT_R8G8B8A8_SRGB; // unreacheable
 };
+std::pair<VkBuffer, VkDeviceMemory>
+VulkanUtils::createStagingBuffer(VkPhysicalDevice physicalDevice, VkDevice device, VkDeviceSize bufferSize) {
+        VkBuffer stagingBuffer;
+        VkDeviceMemory stagingBufferMemory;
+        VulkanUtils::createBuffer(
+                physicalDevice,
+                device,
+                bufferSize,
+                VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                stagingBuffer,
+                stagingBufferMemory
+        );
+        return {stagingBuffer, stagingBufferMemory};
+}
+void VulkanUtils::createVertexBuffer(
+        VkPhysicalDevice physicalDevice,
+        VkDevice device,
+        std::vector<Vertex>& vertices,
+        MetaBuffer& metaBuffer,
+        VkCommandPool pool,
+        VkQueue queue
+) {
+        VkDeviceSize vertexBufferSize = sizeof(vertices[0]) * vertices.size();
+
+        std::pair<VkBuffer, VkDeviceMemory> res = createStagingBuffer(physicalDevice, device, vertexBufferSize);
+        VkBuffer stagingBuffer = res.first;
+        VkDeviceMemory stagingBufferMemory = res.second;
+        // copy over data from cpu memory to gpu memory(staging buffer)
+        void* data;
+        vkMapMemory(device, stagingBufferMemory, 0, vertexBufferSize, 0, &data);
+        memcpy(data, vertices.data(), (size_t)vertexBufferSize); // copy the data
+        vkUnmapMemory(device, stagingBufferMemory);
+
+        // create vertex buffer
+        VulkanUtils::createBuffer(
+                physicalDevice,
+                device,
+                vertexBufferSize,
+                VK_BUFFER_USAGE_TRANSFER_DST_BIT // can be used as destination in a memory transfer operation
+                        | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, // local to the GPU for faster access
+                metaBuffer.buffer,
+                metaBuffer.bufferMemory
+        );
+
+        VulkanUtils::copyBuffer(device, pool, queue, stagingBuffer, metaBuffer.buffer, vertexBufferSize);
+
+        metaBuffer.size = vertexBufferSize;
+
+        // get rid of staging buffer, it is very much temproary
+        vkDestroyBuffer(device, stagingBuffer, nullptr);
+        vkFreeMemory(device, stagingBufferMemory, nullptr);
+}
+void VulkanUtils::createIndexBuffer(
+        MetaBuffer& metaBuffer,
+        std::vector<uint32_t> indices,
+        VkDevice device,
+        VkPhysicalDevice physicalDevice,
+        VkCommandPool pool,
+        VkQueue queue
+) {
+        INFO("Creating index buffer...");
+        VkDeviceSize indexBufferSize = sizeof(indices[0]) * indices.size();
+
+        std::pair<VkBuffer, VkDeviceMemory> res = createStagingBuffer(physicalDevice, device, indexBufferSize);
+        VkBuffer stagingBuffer = res.first;
+        VkDeviceMemory stagingBufferMemory = res.second;
+        // copy over data from cpu memory to gpu memory(staging buffer)
+        void* data;
+        vkMapMemory(device, stagingBufferMemory, 0, indexBufferSize, 0, &data);
+        memcpy(data, indices.data(), (size_t)indexBufferSize); // copy the data
+        vkUnmapMemory(device, stagingBufferMemory);
+
+        // create index buffer
+        VulkanUtils::createBuffer(
+                physicalDevice,
+                device,
+                indexBufferSize,
+                VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                metaBuffer.buffer,
+                metaBuffer.bufferMemory
+        );
+
+        VulkanUtils::copyBuffer(device, pool, queue, stagingBuffer, metaBuffer.buffer, indexBufferSize);
+
+        metaBuffer.size = indexBufferSize;
+
+        vkDestroyBuffer(device, stagingBuffer, nullptr);
+        vkFreeMemory(device, stagingBufferMemory, nullptr);
+}

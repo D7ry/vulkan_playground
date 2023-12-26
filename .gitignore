@@ -1,3 +1,4 @@
 # everything under build
 build/
+build_ninja/
 .cache/

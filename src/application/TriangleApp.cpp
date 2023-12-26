@@ -16,8 +16,11 @@
 
 // for testing only
 #include "components/MetaPipeline.h"
-MetaPipeline metapipeline;
 
+#include "components/MeshRenderManager.h"
+#include "components/MeshRenderer.h"
+
+static MeshRenderManager renderManager;
 
 const std::string SAMPLE_TEXTURE_PATH = "../textures/viking_room.png";
 
@@ -141,17 +144,21 @@ void TriangleApp::middleInit() {
 }
 
 void TriangleApp::postInit() {
-        metapipeline = CreateGenericMetaPipeline(
-                _logicalDevice,
-                MAX_FRAMES_IN_FLIGHT,
-                SAMPLE_TEXTURE_PATH,
-                "../shaders/vert_test.vert.spv",
-                "../shaders/frag_test.frag.spv",
-                _swapChainExtent,
-                _textureManager,
-                _uniformBuffers,
-                _renderPass
-        );
+        MeshRenderer* render = new MeshRenderer();
+        render->LoadModel("../meshes/viking_room.obj");
+        render->RegisterRenderManager(&renderManager);
+
+        MeshRenderer* render2 = new MeshRenderer();
+        render2->LoadModel("../meshes/viking_room.obj");
+        render2->RegisterRenderManager(&renderManager);
+        render2->transform.position = glm::vec3(0, 0, 2);
+
+        MeshRenderer* render3 = new MeshRenderer();
+        render3->LoadModel("../meshes/viking_room.obj");
+        render3->RegisterRenderManager(&renderManager);
+        render3->transform.position = glm::vec3(0, 2, 2);
+
+        renderManager.PrepareRendering(_physicalDevice, _logicalDevice, MAX_FRAMES_IN_FLIGHT, _textureManager, _swapChainExtent, _renderPass, _commandPool, _graphicsQueue);
 }
 
 
@@ -323,29 +330,7 @@ void TriangleApp::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t im
         scissor.extent = _swapChainExtent;
         vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-        // bind graphics pipeline
-        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, metapipeline.pipeline);
-
-        VkBuffer vertexBuffers[] = {this->_vertexBuffer};
-        VkDeviceSize offsets[] = {0};
-        vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
-
-        vkCmdBindIndexBuffer(commandBuffer, this->_indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-
-        vkCmdBindDescriptorSets(
-                commandBuffer,
-                VK_PIPELINE_BIND_POINT_GRAPHICS,
-                metapipeline.pipelineLayout,
-                0,
-                1,
-                &metapipeline.descriptorSets[_currentFrame],
-                0,
-                nullptr
-        );
-
-        // issue the draw command
-        // vkCmdDraw(commandBuffer, 3, 1, 0, 0);
-        vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(_indices.size()), 1, 0, 0, 0);
+        renderManager.RecordRenderCommands(commandBuffer, _currentFrame);
         vkCmdEndRenderPass(commandBuffer);
 
         if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
@@ -467,20 +452,21 @@ void TriangleApp::createUniformBuffers() {
 
 
 void TriangleApp::updateUniformBufferData(uint32_t frameIndex) {
-        static Animation::StopWatchSeconds timer;
-        float time = timer.elapsed();
-        UniformBuffer ubo{};
-        auto initialPos = glm::mat4(1.f);
-        ubo.model = initialPos;
-        //ubo.model = glm::rotate(ubo.model, time * glm::radians(90.f), glm::vec3(0.f, 0.f, 1.f));
-        // ubo.model = glm::translate(ubo.model, glm::vec3(0.f, 0.f, time - int(time)));
-        ubo.view = this->_camera.GetViewMatrix();
-        // ubo.view = glm::lookAt(glm::vec3(2.f, 2.f, 2.f), glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 0.f, 1.f));
-        ubo.proj = glm::perspective(glm::radians(90.f), _swapChainExtent.width / (float)_swapChainExtent.height, 0.1f, 100.f);
+        renderManager.UpdateUniformBuffers(frameIndex, this->_camera.GetViewMatrix(), glm::perspective(glm::radians(90.f), _swapChainExtent.width / (float)_swapChainExtent.height, 0.1f, 100.f));
+        // static Animation::StopWatchSeconds timer;
+        // float time = timer.elapsed();
+        // UniformBuffer ubo{};
+        // auto initialPos = glm::mat4(1.f);
+        // ubo.model = initialPos;
+        // ubo.model = glm::rotate(ubo.model, time * glm::radians(15.f), glm::vec3(0.f, 0.f, 1.f));
+        // // ubo.model = glm::translate(ubo.model, glm::vec3(0.f, 0.f, time - int(time)));
+        // ubo.view = this->_camera.GetViewMatrix();
+        // // ubo.view = glm::lookAt(glm::vec3(2.f, 2.f, 2.f), glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 0.f, 1.f));
+        // ubo.proj = glm::perspective(glm::radians(90.f), _swapChainExtent.width / (float)_swapChainExtent.height, 0.1f, 100.f);
 
-        ubo.proj[1][1] *= -1; // flip y coordinate
-        // TODO: use push constants for small data update
-        memcpy(_uniformBuffersData[frameIndex], &ubo, sizeof(ubo));
+        // ubo.proj[1][1] *= -1; // flip y coordinate
+        // // TODO: use push constants for small data update
+        // memcpy(_uniformBuffersData[frameIndex], &ubo, sizeof(ubo));
 }
 
 void TriangleApp::drawFrame() {
@@ -561,4 +547,5 @@ void TriangleApp::drawFrame() {
 
 void TriangleApp::preCleanup() {
         _textureManager->Cleanup();
+        //metapipeline.Cleanup(_logicalDevice);
 }

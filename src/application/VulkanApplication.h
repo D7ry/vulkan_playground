@@ -86,7 +86,7 @@ class VulkanApplication {
         virtual void createCommandBuffer();
         virtual void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
 
-        void loadModel();
+        //void loadModel();
 
         void setKeyCallback();
         void setCursorInputCallback();

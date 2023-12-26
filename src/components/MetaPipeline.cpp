@@ -3,6 +3,7 @@
 #include "VulkanUtils.h"
 #include "structs/Vertex.h"
 #include "structs/UniformBuffer.h"
+#include <vulkan/vulkan_core.h>
 MetaPipeline CreateGenericMetaPipeline(
         VkDevice logicalDevice,
         uint32_t numDescriptorSets,
@@ -11,7 +12,10 @@ MetaPipeline CreateGenericMetaPipeline(
         std::string fragShaderPath,
         VkExtent2D swapchainExtent,
         const std::unique_ptr<TextureManager>& textureManager,
-        std::vector<VkBuffer>& uniformBuffers,
+        std::vector<GenerticMetaPipelineUniformBuffer>& uniformBuffers,
+        uint32_t numDynamicUniformBuffer,
+        uint32_t staticUboRange,
+        uint32_t dynamicUboRange,
         VkRenderPass renderPass
 ) {
         INFO("Creating genertic meta pipeline...");
@@ -19,18 +23,27 @@ MetaPipeline CreateGenericMetaPipeline(
 
         // descriptor set layout
         {
-                // UBO
-                VkDescriptorSetLayoutBinding uboLayoutBinding{};
-                uboLayoutBinding.binding = 0; // binding = 0 in shader
-                uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-                uboLayoutBinding.descriptorCount = 1; // number of values in the array
+                // UBO static
+                VkDescriptorSetLayoutBinding uboStaticBinding{};
+                uboStaticBinding.binding = 0; // binding = 0 in shader
+                uboStaticBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+                uboStaticBinding.descriptorCount = 1; // number of values in the array
 
-                uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT; // only used in vertex shader
-                uboLayoutBinding.pImmutableSamplers = nullptr;            // Optional
+                uboStaticBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT; // only used in vertex shader
+                uboStaticBinding.pImmutableSamplers = nullptr;            // Optional
+
+                // UBO Dynamic
+                VkDescriptorSetLayoutBinding uboDynamicBinding{};
+                uboDynamicBinding.binding = 1; // binding = 0 in shader
+                uboDynamicBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+                uboDynamicBinding.descriptorCount = 1; // number of values in the array
+
+                uboDynamicBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT; // only used in vertex shader
+                uboDynamicBinding.pImmutableSamplers = nullptr;            // Optional
 
                 // image sampler
                 VkDescriptorSetLayoutBinding samplerLayoutBinding{};
-                samplerLayoutBinding.binding = 1;
+                samplerLayoutBinding.binding = 2;
                 samplerLayoutBinding.descriptorCount = 1;
                 samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
                 samplerLayoutBinding.stageFlags
@@ -38,7 +51,7 @@ MetaPipeline CreateGenericMetaPipeline(
                                                         // height mapping)
                 samplerLayoutBinding.pImmutableSamplers = nullptr;
 
-                std::array<VkDescriptorSetLayoutBinding, 2> bindings = {uboLayoutBinding, samplerLayoutBinding};
+                std::array<VkDescriptorSetLayoutBinding, 3> bindings = {uboStaticBinding, uboDynamicBinding, samplerLayoutBinding};
 
                 VkDescriptorSetLayoutCreateInfo layoutInfo{};
                 layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -53,7 +66,8 @@ MetaPipeline CreateGenericMetaPipeline(
         // descriptor pool
         {
                 VkDescriptorPoolSize poolSizes[]
-                        = {{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, static_cast<uint32_t>(numDescriptorSets)},
+                        = { {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, static_cast<uint32_t>(numDescriptorSets)},
+                        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, static_cast<uint32_t>(numDescriptorSets)},
                            {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(numDescriptorSets)}};
 
                 VkDescriptorPoolCreateInfo poolInfo{};
@@ -85,15 +99,20 @@ MetaPipeline CreateGenericMetaPipeline(
                 }
 
                 for (size_t i = 0; i < numDescriptorSets; i++) {
-                        VkDescriptorBufferInfo descriptorBufferInfo{};
-                        descriptorBufferInfo.buffer = uniformBuffers[i];
-                        descriptorBufferInfo.offset = 0;
-                        descriptorBufferInfo.range = sizeof(UniformBuffer);
+                        VkDescriptorBufferInfo descriptorBufferInfo_static{};
+                        descriptorBufferInfo_static.buffer = uniformBuffers[i].staticUniformBuffer.buffer;
+                        descriptorBufferInfo_static.offset = 0;
+                        descriptorBufferInfo_static.range = staticUboRange;
 
+                        VkDescriptorBufferInfo descriptorBufferInfo_dynamic{};
+                        descriptorBufferInfo_dynamic.buffer = uniformBuffers[i].dynamicUniformBuffer.buffer;
+                        descriptorBufferInfo_dynamic.offset = 0;
+                        descriptorBufferInfo_dynamic.range = numDynamicUniformBuffer * dynamicUboRange;
+                        //TODO: make a more fool-proof abstraction
                         VkDescriptorImageInfo descriptorImageInfo{};
                         textureManager->GetDescriptorImageInfo(texturePath, descriptorImageInfo);
 
-                        std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
+                        std::array<VkWriteDescriptorSet, 3> descriptorWrites{};
 
                         descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
                         descriptorWrites[0].dstSet = m.descriptorSets[i];
@@ -101,15 +120,23 @@ MetaPipeline CreateGenericMetaPipeline(
                         descriptorWrites[0].dstArrayElement = 0;
                         descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
                         descriptorWrites[0].descriptorCount = 1;
-                        descriptorWrites[0].pBufferInfo = &descriptorBufferInfo;
+                        descriptorWrites[0].pBufferInfo = &descriptorBufferInfo_static;
 
                         descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
                         descriptorWrites[1].dstSet = m.descriptorSets[i];
                         descriptorWrites[1].dstBinding = 1;
                         descriptorWrites[1].dstArrayElement = 0;
-                        descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+                        descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
                         descriptorWrites[1].descriptorCount = 1;
-                        descriptorWrites[1].pImageInfo = &descriptorImageInfo;
+                        descriptorWrites[1].pBufferInfo = &descriptorBufferInfo_dynamic;
+
+                        descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+                        descriptorWrites[2].dstSet = m.descriptorSets[i];
+                        descriptorWrites[2].dstBinding = 2;
+                        descriptorWrites[2].dstArrayElement = 0;
+                        descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+                        descriptorWrites[2].descriptorCount = 1;
+                        descriptorWrites[2].pImageInfo = &descriptorImageInfo;
 
                         vkUpdateDescriptorSets(
                                 logicalDevice, descriptorWrites.size(), descriptorWrites.data(), 0, nullptr

@@ -98,7 +98,6 @@ void ImGuiManager::DestroyFrameBuffers(VkDevice device) {
         for (auto framebuffer : _imGuiFramebuffers) {
                 vkDestroyFramebuffer(device, framebuffer, nullptr);
         }
-        INFO("Imgui frame buffers destroyed.");
 }
 void ImGuiManager::InitializeFrameBuffer(int bufferCount, VkDevice device, std::vector<VkImageView>& swapChainImageViews, VkExtent2D extent) {
         INFO("Creating imgui frame buffers...");
