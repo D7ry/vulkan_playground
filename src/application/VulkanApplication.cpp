@@ -612,10 +612,6 @@ void VulkanApplication::cleanup() {
                 vkDestroySemaphore(this->_device->logicalDevice, this->_semaImageAvailable[i], nullptr);
                 vkDestroyFence(this->_device->logicalDevice, this->_fenceInFlight[i], nullptr);
         }
-        //vkDestroyCommandPool(this->_device->logicalDevice, this->_commandPool, nullptr);
-
-        vkDestroyPipeline(this->_device->logicalDevice, this->_graphicsPipeline, nullptr);
-        vkDestroyPipelineLayout(this->_device->logicalDevice, this->_pipelineLayout, nullptr);
 
         vkDestroyRenderPass(this->_device->logicalDevice, this->_renderPass, nullptr);
         if (enableValidationLayers) {

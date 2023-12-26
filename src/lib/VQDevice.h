@@ -7,7 +7,7 @@ struct QueueFamilyIndices {
         std::optional<uint32_t> presentationFamily;
         inline bool isComplete() { return graphicsFamily.has_value() && presentationFamily.has_value(); }
 };
-
+struct VQBuffer;
 /**
  * @brief Vulkan device representation.Call InitQueueFamilyIndices() with the right surface, then call
  * CreateLogicalDeviceAndQueue() with the right extensions.

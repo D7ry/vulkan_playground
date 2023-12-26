@@ -181,11 +181,7 @@ class VulkanApplication {
 
         std::vector<VkImageView> _swapChainImageViews;
 
-        VkPipelineLayout _pipelineLayout = VK_NULL_HANDLE;
         VkRenderPass _renderPass = VK_NULL_HANDLE;
-
-        VkPipeline _graphicsPipeline = VK_NULL_HANDLE;
-
 
         std::vector<VkCommandBuffer> _commandBuffers;
         std::vector<VkSemaphore> _semaImageAvailable;

@@ -318,6 +318,7 @@ void TriangleApp::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t im
 
         vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
+        // TODO: this doesn't need to update every frame
         VkViewport viewport{};
         viewport.x = 0.0f;
         viewport.y = 0.0f;

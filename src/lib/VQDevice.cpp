@@ -2,6 +2,8 @@
 #include <cstdint>
 #include <set>
 #include <vulkan/vulkan_core.h>
+#include "lib/VQBuffer.h"
+
 void VQDevice::CreateLogicalDeviceAndQueue(const std::vector<const char*>& extensions) {
         if (!this->queueFamilyIndices.isComplete()) {
                 FATAL("Queue family indices incomplete! Call InitQueueFamilyIndices().");
