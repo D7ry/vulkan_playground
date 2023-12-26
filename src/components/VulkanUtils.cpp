@@ -84,6 +84,7 @@ uint32_t VulkanUtils::findMemoryType(VkPhysicalDevice physicalDevice, uint32_t t
 
         FATAL("Failed to find suitable memory type!");
 }
+// TODO: abstract them into VQDevice
 void VulkanUtils::createBuffer(
         VkPhysicalDevice physicalDevice,
         VkDevice device,

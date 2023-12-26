@@ -1,18 +1,13 @@
 #pragma once
-#include "components/VulkanUtils.h"
-#include <cstring>
 #include <vulkan/vulkan_core.h>
-
+class VQDevice;
 // TODO: use a single command buffe for higher throughput; may implement our own command buffer "buffer".
 class TextureManager {
 
       public:
         TextureManager() = delete;
         TextureManager(
-                VkPhysicalDevice physicalDevice,
-                VkDevice logicalDevice,
-                VkCommandPool commandPool,
-                VkQueue graphicsQueue
+                std::shared_ptr<VQDevice> device
         );
 
         ~TextureManager();
@@ -39,8 +34,5 @@ class TextureManager {
         void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
 
         std::unordered_map<std::string, Texture> _textures; // image path -> texture obj
-        VkPhysicalDevice _physicalDevice;
-        VkDevice _logicalDevice;
-        VkCommandPool _commandPool;
-        VkQueue _graphicsQueue;
+        std::shared_ptr<VQDevice> _device;
 };

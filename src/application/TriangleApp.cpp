@@ -143,7 +143,7 @@ void TriangleApp::renderImGui() {
 }
 
 void TriangleApp::middleInit() {
-        _textureManager = std::make_unique<TextureManager>(_physicalDevice, _logicalDevice, _commandPool, _graphicsQueue);
+        _textureManager = std::make_unique<TextureManager>(_device);
         _textureManager->LoadTexture(SAMPLE_TEXTURE_PATH);
 }
 
@@ -160,7 +160,7 @@ void TriangleApp::postInit() {
         render3->RegisterRenderManager(&renderManager);
         render3->transform.position = glm::vec3(0, 2, 2);
 
-        renderManager.PrepareRendering(_physicalDevice, _logicalDevice, MAX_FRAMES_IN_FLIGHT, _textureManager, _swapChainExtent, _renderPass, _commandPool, _graphicsQueue);
+        renderManager.PrepareRendering(MAX_FRAMES_IN_FLIGHT, _textureManager, _swapChainExtent, _renderPass, _device);
 }
 
 
@@ -186,7 +186,7 @@ void TriangleApp::createRenderPass() {
         colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
         VkAttachmentDescription depthAttachment{};
-        depthAttachment.format = VulkanUtils::findDepthFormat(_physicalDevice);
+        depthAttachment.format = VulkanUtils::findDepthFormat(_device->physicalDevice);
         depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
         depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
         depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -228,7 +228,7 @@ void TriangleApp::createRenderPass() {
         renderPassInfo.dependencyCount = 1;
         renderPassInfo.pDependencies = &dependency;
 
-        if (vkCreateRenderPass(this->_logicalDevice, &renderPassInfo, nullptr, &this->_renderPass) != VK_SUCCESS) {
+        if (vkCreateRenderPass(_device->logicalDevice, &renderPassInfo, nullptr, &this->_renderPass) != VK_SUCCESS) {
                 FATAL("Failed to create render pass!");
         }
 }
@@ -250,45 +250,45 @@ void TriangleApp::createFramebuffers() {
                 framebufferInfo.width = _swapChainExtent.width;
                 framebufferInfo.height = _swapChainExtent.height;
                 framebufferInfo.layers = 1; // number of layers in image arrays
-                if (vkCreateFramebuffer(_logicalDevice, &framebufferInfo, nullptr, &_swapChainFrameBuffers[i]) != VK_SUCCESS) {
+                if (vkCreateFramebuffer(_device->logicalDevice, &framebufferInfo, nullptr, &_swapChainFrameBuffers[i]) != VK_SUCCESS) {
                         FATAL("Failed to create framebuffer!");
                 }
         }
-        _imguiManager.InitializeFrameBuffer(this->_swapChainImageViews.size(), _logicalDevice, _swapChainImageViews, _swapChainExtent);
+        _imguiManager.InitializeFrameBuffer(this->_swapChainImageViews.size(), _device->logicalDevice, _swapChainImageViews, _swapChainExtent);
         INFO("Framebuffers created.");
 }
 
-void TriangleApp::createCommandPool() {
-        INFO("Creating command pool...");
-        QueueFamilyIndices queueFamilyIndices = findQueueFamilies(this->_physicalDevice);
+// void TriangleApp::createCommandPool() {
+//         INFO("Creating command pool...");
+//         QueueFamilyIndices queueFamilyIndices = findQueueFamilies(this->_physicalDevice);
 
-        VkCommandPoolCreateInfo poolInfo{};
-        poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-        poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT; // ALlow command buffers to be re-recorded individually
-        // we want to re-record the command buffer every single frame.
-        poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
+//         VkCommandPoolCreateInfo poolInfo{};
+//         poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+//         poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT; // ALlow command buffers to be re-recorded individually
+//         // we want to re-record the command buffer every single frame.
+//         poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
 
-        if (vkCreateCommandPool(this->_logicalDevice, &poolInfo, nullptr, &this->_commandPool) != VK_SUCCESS) {
-                FATAL("Failed to create command pool!");
-        }
-        INFO("Command pool created.");
-}
+//         if (vkCreateCommandPool(this->_logicalDevice, &poolInfo, nullptr, &this->_commandPool) != VK_SUCCESS) {
+//                 FATAL("Failed to create command pool!");
+//         }
+//         INFO("Command pool created.");
+// }
 
-void TriangleApp::createCommandBuffer() {
-        INFO("Creating command buffer");
+// void TriangleApp::createCommandBuffer() {
+//         INFO("Creating command buffer");
 
-        this->_commandBuffers.resize(this->MAX_FRAMES_IN_FLIGHT);
+//         this->_commandBuffers.resize(this->MAX_FRAMES_IN_FLIGHT);
 
-        VkCommandBufferAllocateInfo allocInfo{};
-        allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        allocInfo.commandPool = this->_commandPool;
-        allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        allocInfo.commandBufferCount = (uint32_t)this->_commandBuffers.size();
+//         VkCommandBufferAllocateInfo allocInfo{};
+//         allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+//         allocInfo.commandPool = this->_commandPool;
+//         allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+//         allocInfo.commandBufferCount = (uint32_t)this->_commandBuffers.size();
 
-        if (vkAllocateCommandBuffers(this->_logicalDevice, &allocInfo, this->_commandBuffers.data()) != VK_SUCCESS) {
-                FATAL("Failed to allocate command buffers!");
-        }
-}
+//         if (vkAllocateCommandBuffers(this->_logicalDevice, &allocInfo, this->_commandBuffers.data()) != VK_SUCCESS) {
+//                 FATAL("Failed to allocate command buffers!");
+//         }
+// }
 
 void TriangleApp::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) { // called every frame
         VkCommandBufferBeginInfo beginInfo{};
@@ -340,78 +340,13 @@ void TriangleApp::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t im
         }
 }
 
-// TODO: inreal world scenarios we do not call vkALlocateMemory for every individual buffer(costly).
-//  Instead we should use a custom allocator or use VulkanMemoryAllocator.
-void TriangleApp::createVertexBuffer() {
-        INFO("Creating vertex buffer...");
-        VkDeviceSize vertexBufferSize = sizeof(_vertices[0]) * _vertices.size();
-
-        std::pair<VkBuffer, VkDeviceMemory> res = createStagingBuffer(this, vertexBufferSize);
-        VkBuffer stagingBuffer = res.first;
-        VkDeviceMemory stagingBufferMemory = res.second;
-        // copy over data from cpu memory to gpu memory(staging buffer)
-        void* data;
-        vkMapMemory(_logicalDevice, stagingBufferMemory, 0, vertexBufferSize, 0, &data);
-        memcpy(data, _vertices.data(), (size_t)vertexBufferSize); // copy the data
-        vkUnmapMemory(_logicalDevice, stagingBufferMemory);
-
-        // create vertex buffer
-        VulkanUtils::createBuffer(
-                _physicalDevice,
-                _logicalDevice,
-                vertexBufferSize,
-                VK_BUFFER_USAGE_TRANSFER_DST_BIT // can be used as destination in a memory transfer operation
-                        | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, // local to the GPU for faster access
-                _vertexBuffer,
-                _vertexBufferMemory
-        );
-
-        VulkanUtils::copyBuffer(_logicalDevice, _commandPool, _graphicsQueue, stagingBuffer, _vertexBuffer, vertexBufferSize);
-
-        // get rid of staging buffer, it is very much temproary
-        vkDestroyBuffer(_logicalDevice, stagingBuffer, nullptr);
-        vkFreeMemory(_logicalDevice, stagingBufferMemory, nullptr);
-}
-
-void TriangleApp::createIndexBuffer() {
-        INFO("Creating index buffer...");
-        VkDeviceSize indexBufferSize = sizeof(_indices[0]) * _indices.size();
-
-        std::pair<VkBuffer, VkDeviceMemory> res = createStagingBuffer(this, indexBufferSize);
-        VkBuffer stagingBuffer = res.first;
-        VkDeviceMemory stagingBufferMemory = res.second;
-        // copy over data from cpu memory to gpu memory(staging buffer)
-        void* data;
-        vkMapMemory(_logicalDevice, stagingBufferMemory, 0, indexBufferSize, 0, &data);
-        memcpy(data, _indices.data(), (size_t)indexBufferSize); // copy the data
-        vkUnmapMemory(_logicalDevice, stagingBufferMemory);
-
-        // create index buffer
-        VulkanUtils::createBuffer(
-                _physicalDevice,
-                _logicalDevice,
-                indexBufferSize,
-                VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                _indexBuffer,
-                _indexBufferMemory
-        );
-
-        
-        VulkanUtils::copyBuffer(_logicalDevice, _commandPool, _graphicsQueue, stagingBuffer, _indexBuffer, indexBufferSize);
-
-        vkDestroyBuffer(_logicalDevice, stagingBuffer, nullptr);
-        vkFreeMemory(_logicalDevice, stagingBufferMemory, nullptr);
-}
-
 void TriangleApp::createDepthBuffer() {
         INFO("Creating depth buffer...");
         VkFormat depthFormat = VulkanUtils::findBestFormat(
                 {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT},
                 VK_IMAGE_TILING_OPTIMAL,
                 VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT,
-                _physicalDevice
+                _device->physicalDevice
         );
         VulkanUtils::createImage(
                 _swapChainExtent.width,
@@ -422,36 +357,11 @@ void TriangleApp::createDepthBuffer() {
                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
                 _depthImage,
                 _depthImageMemory,
-                _physicalDevice,
-                _logicalDevice
+                _device->physicalDevice,
+                _device->logicalDevice
         );
-        _depthImageView = VulkanUtils::createImageView(_depthImage, _logicalDevice, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
+        _depthImageView = VulkanUtils::createImageView(_depthImage, _device->logicalDevice, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
 }
-
-void TriangleApp::createUniformBuffers() {
-        INFO("Creating uniform buffers...");
-        VkDeviceSize uniformBufferSize = sizeof(UniformBuffer);
-
-        _uniformBuffers.resize(MAX_FRAMES_IN_FLIGHT);
-        _uniformBuffersMemory.resize(MAX_FRAMES_IN_FLIGHT);
-        _uniformBuffersData.resize(MAX_FRAMES_IN_FLIGHT);
-
-        for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-                VulkanUtils::createBuffer(
-                        _physicalDevice,
-                        _logicalDevice,
-                        uniformBufferSize,
-                        VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT // uniform buffer is visible to the CPU since it's replaced every frame.
-                                | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                        _uniformBuffers[i],
-                        _uniformBuffersMemory[i]
-                );
-                vkMapMemory(_logicalDevice, _uniformBuffersMemory[i], 0, uniformBufferSize, 0, &_uniformBuffersData[i]);
-        }
-}
-
-
 
 void TriangleApp::updateUniformBufferData(uint32_t frameIndex) {
         float deltaTime = _deltaTimer.GetDeltaTime();
@@ -477,12 +387,12 @@ void TriangleApp::updateUniformBufferData(uint32_t frameIndex) {
 
 void TriangleApp::drawFrame() {
         //  Wait for the previous frame to finish
-        vkWaitForFences(this->_logicalDevice, 1, &this->_fenceInFlight[this->_currentFrame], VK_TRUE, UINT64_MAX);
+        vkWaitForFences(_device->logicalDevice, 1, &this->_fenceInFlight[this->_currentFrame], VK_TRUE, UINT64_MAX);
 
         //  Acquire an image from the swap chain
         uint32_t imageIndex;
         VkResult result = vkAcquireNextImageKHR(
-                this->_logicalDevice, _swapChain, UINT64_MAX, _semaImageAvailable[this->_currentFrame], VK_NULL_HANDLE, &imageIndex
+                this->_device->logicalDevice, _swapChain, UINT64_MAX, _semaImageAvailable[this->_currentFrame], VK_NULL_HANDLE, &imageIndex
         );
         if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
                 this->recreateSwapChain();
@@ -492,7 +402,7 @@ void TriangleApp::drawFrame() {
         }
 
         // lock the fence
-        vkResetFences(this->_logicalDevice, 1, &this->_fenceInFlight[this->_currentFrame]);
+        vkResetFences(this->_device->logicalDevice, 1, &this->_fenceInFlight[this->_currentFrame]);
 
         //  Record a command buffer which draws the scene onto that image
         vkResetCommandBuffer(this->_commandBuffers[this->_currentFrame], 0);
@@ -521,7 +431,7 @@ void TriangleApp::drawFrame() {
         submitInfo.pSignalSemaphores = signalSemaphores;
 
         // the submission does not start until vkAcquireNextImageKHR returns, and downs the corresponding _semaRenderFinished semapohre once it's done.
-        if (vkQueueSubmit(_graphicsQueue, 1, &submitInfo, _fenceInFlight[_currentFrame]) != VK_SUCCESS) {
+        if (vkQueueSubmit(_device->graphicsQueue, 1, &submitInfo, _fenceInFlight[_currentFrame]) != VK_SUCCESS) {
                 FATAL("Failed to submit draw command buffer!");
         }
 
@@ -540,7 +450,7 @@ void TriangleApp::drawFrame() {
         presentInfo.pResults = nullptr;          // Optional: can be used to check if presentation was successful
 
         // the present doesn't happen until the render is finished, and the semaphore is signaled(result of vkQueueSubimt)
-        result = vkQueuePresentKHR(_presentationQueue, &presentInfo);
+        result = vkQueuePresentKHR(_device->presentationQueue, &presentInfo);
         if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || this->_framebufferResized) {
                 this->recreateSwapChain();
                 this->_framebufferResized = false;

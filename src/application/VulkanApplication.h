@@ -10,7 +10,7 @@
 #include <vector>
 #include "components/DeltaTimer.h"
 #include "components/ImGuiManager.h"
-#include "structs/Vertex.h"
+#include "lib/VQDevice.h"
 // TODO: create a serialization scheme for tweakable settings.
 
 /**
@@ -56,9 +56,9 @@ class VulkanApplication {
 
         bool isDeviceSuitable(VkPhysicalDevice device);
 
-        void pickPhysicalDevice();
+        VkPhysicalDevice pickPhysicalDevice();
 
-        void createLogicalDevice();
+        //void createLogicalDevice();
 
         SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
 
@@ -76,14 +76,12 @@ class VulkanApplication {
 
         virtual void middleInit();
         virtual void postInit();
-        virtual void createVertexBuffer();
         virtual void createDepthBuffer();
-        virtual void createIndexBuffer();
         virtual void createUniformBuffers();
         virtual void createRenderPass();
         virtual void createFramebuffers();
-        virtual void createCommandPool();
-        virtual void createCommandBuffer();
+        // virtual void createCommandPool();
+        // virtual void createCommandBuffer();
         virtual void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
 
         //void loadModel();
@@ -172,11 +170,6 @@ class VulkanApplication {
         VkDebugUtilsMessengerEXT _debugMessenger;
 
         // devices
-        VkPhysicalDevice _physicalDevice = VK_NULL_HANDLE;
-        VkDevice _logicalDevice = VK_NULL_HANDLE;
-
-        VkQueue _graphicsQueue = VK_NULL_HANDLE;
-        VkQueue _presentationQueue = VK_NULL_HANDLE;
 
         // swapchain
         VkSwapchainKHR _swapChain = VK_NULL_HANDLE;
@@ -188,29 +181,11 @@ class VulkanApplication {
 
         std::vector<VkImageView> _swapChainImageViews;
 
-        VkDescriptorSetLayout _descriptorSetLayout = VK_NULL_HANDLE;
-
         VkPipelineLayout _pipelineLayout = VK_NULL_HANDLE;
         VkRenderPass _renderPass = VK_NULL_HANDLE;
 
         VkPipeline _graphicsPipeline = VK_NULL_HANDLE;
 
-        VkCommandPool _commandPool = VK_NULL_HANDLE;
-        
-        VkDescriptorPool _descriptorPool = VK_NULL_HANDLE;
-        std::vector<VkDescriptorSet> _descriptorSets;
-
-        VkBuffer _vertexBuffer = VK_NULL_HANDLE;
-        VkDeviceMemory _vertexBufferMemory = VK_NULL_HANDLE;
-
-        VkBuffer _indexBuffer = VK_NULL_HANDLE;
-        VkDeviceMemory _indexBufferMemory = VK_NULL_HANDLE;
-
-        // Uniform buffers are stored in vectors because they are per-frame.
-        // for each in flight frame, there is a uniform buffer.
-        std::vector<VkBuffer> _uniformBuffers;
-        std::vector<VkDeviceMemory> _uniformBuffersMemory;
-        std::vector<void*> _uniformBuffersData;
 
         std::vector<VkCommandBuffer> _commandBuffers;
         std::vector<VkSemaphore> _semaImageAvailable;
@@ -230,18 +205,6 @@ class VulkanApplication {
 
         ImGuiManager _imguiManager;
 
-        // Vertices, for demonstration purposes
-        std::vector<Vertex> _vertices
-                = {{{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-                   {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-                   {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-                   {{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},
-
-                   {{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-                   {{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-                   {{0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-                   {{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}};
-
-        std::vector<uint32_t> _indices = {0, 1, 2, 2, 3, 0, 4, 5, 6, 6, 7, 4};
+        std::shared_ptr<VQDevice> _device;
 
 };

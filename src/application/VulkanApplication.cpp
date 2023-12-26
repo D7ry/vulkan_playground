@@ -13,8 +13,6 @@
 #include <cstddef>
 #include <vulkan/vulkan_core.h>
 
-//#define TINYOBJLOADER_IMPLEMENTATION
-//#include <tiny_obj_loader.h>
 
 void VulkanApplication::Run() {
         INFO("Initializing Vulkan Application...");
@@ -91,7 +89,7 @@ void VulkanApplication::mainLoop() {
                 _imguiManager.RenderFrame();
                 drawFrame();
         }
-        vkDeviceWaitIdle(this->_logicalDevice);
+        vkDeviceWaitIdle(this->_device->logicalDevice);
         INFO("Main loop exited.");
 }
 
@@ -112,32 +110,36 @@ void VulkanApplication::initVulkan() {
                 // this->setupDebugMessenger();
         }
         this->createSurface();
-        this->pickPhysicalDevice();
-        this->createLogicalDevice();
+        VkPhysicalDevice physicalDevice = this->pickPhysicalDevice();
+        this->_device = std::make_shared<VQDevice>(physicalDevice);
+        this->_device->InitQueueFamilyIndices(this->_surface);
+        this->_device->CreateLogicalDeviceAndQueue(DEVICE_EXTENSIONS);
+        this->_device->CreateGraphicsCommandPool();
+        this->_device->CreateGraphicsCommandBuffer(this->_commandBuffers, MAX_FRAMES_IN_FLIGHT);
+       // this->createLogicalDevice();
         this->createSwapChain();
         this->createImageViews();
         this->createRenderPass();
         this->_imguiManager.InitializeImgui();
-        this->_imguiManager.InitializeRenderPass(_logicalDevice, _swapChainImageFormat);
+        this->_imguiManager.InitializeRenderPass(this->_device->logicalDevice, _swapChainImageFormat);
         this->createDepthBuffer();
         this->createFramebuffers();
-        this->createCommandPool();
+        //this->createCommandPool();
         this->middleInit();
         //this->loadModel();
         //this->createVertexBuffer();
         //this->createIndexBuffer();
         //this->createUniformBuffers();
-        this->createCommandBuffer();
+        //this->createCommandBuffer();
         this->createSynchronizationObjects();
 
-        auto indices = this->findQueueFamilies(_physicalDevice);
-        this->_imguiManager.InitializeDescriptorPool(MAX_FRAMES_IN_FLIGHT, _logicalDevice);
+        this->_imguiManager.InitializeDescriptorPool(MAX_FRAMES_IN_FLIGHT, _device->logicalDevice);
         this->_imguiManager.BindVulkanResources(
-                _window, _instance, _physicalDevice, _logicalDevice, indices.graphicsFamily.value(), _graphicsQueue, _swapChainFrameBuffers.size()
+                _window, _instance, _device->physicalDevice, _device->logicalDevice, _device->queueFamilyIndices.graphicsFamily.value(), _device->graphicsQueue, _swapChainFrameBuffers.size()
         );
-        this->_imguiManager.InitializeCommandPoolAndBuffers(MAX_FRAMES_IN_FLIGHT, _logicalDevice, indices.graphicsFamily.value());
+        this->_imguiManager.InitializeCommandPoolAndBuffers(MAX_FRAMES_IN_FLIGHT, _device->logicalDevice, _device->queueFamilyIndices.graphicsFamily.value());
         this->_imguiManager.BindRenderCallback(std::bind(&VulkanApplication::renderImGui, this));
-        //this->_imguiManager.InitializeFrameBuffer(_swapChainFrameBuffers.size(), _logicalDevice, _swapChainImageViews, _swapChainExtent);
+        //this->_imguiManager.InitializeFrameBuffer(_swapChainFrameBuffers.size(), _device->logicalDevice, _swapChainImageViews, _swapChainExtent);
         INFO("Vulkan initialized.");
         
         this->postInit();
@@ -336,7 +338,7 @@ bool VulkanApplication::isDeviceSuitable(VkPhysicalDevice device) {
                 return false;
         }
 }
-void VulkanApplication::pickPhysicalDevice() {
+VkPhysicalDevice VulkanApplication::pickPhysicalDevice() {
         INFO("Picking physical device ");
         VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
         uint32_t deviceCount = 0;
@@ -357,43 +359,44 @@ void VulkanApplication::pickPhysicalDevice() {
         }
 
         INFO("Physical device picked.");
-        this->_physicalDevice = physicalDevice; // set current instance's physical device.
+        return physicalDevice;
 }
-void VulkanApplication::createLogicalDevice() {
-        INFO("Creating logical device...");
-        QueueFamilyIndices indices = this->findQueueFamilies(this->_physicalDevice);
-        std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-        std::set<uint32_t> uniqueQueueFamilies = {indices.graphicsFamily.value(), indices.presentationFamily.value()};
+// void VulkanApplication::createLogicalDevice() {
+//         INFO("Creating logical device...");
+//         QueueFamilyIndices indices = this->findQueueFamilies(this->_device.physicalDevice);
+//         std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
+//         std::set<uint32_t> uniqueQueueFamilies = {indices.graphicsFamily.value(), indices.presentationFamily.value()};
 
-        VkPhysicalDeviceFeatures deviceFeatures{}; // no features for no
-        VkDeviceCreateInfo createInfo{};
-        float queuePriority = 1.f;
-        for (uint32_t queueFamily : uniqueQueueFamilies) {
-                VkDeviceQueueCreateInfo queueCreateInfo{};
-                queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-                queueCreateInfo.queueFamilyIndex = queueFamily;
-                queueCreateInfo.queueCount = 1;
-                queueCreateInfo.pQueuePriorities = &queuePriority;
-                queueCreateInfos.push_back(queueCreateInfo);
-        }
-        // populate createInfo
-        createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
-        createInfo.pQueueCreateInfos = queueCreateInfos.data();
-        createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-        createInfo.pEnabledFeatures = &deviceFeatures;
-        createInfo.enabledExtensionCount = static_cast<uint32_t>(this->DEVICE_EXTENSIONS.size());
-        createInfo.ppEnabledExtensionNames = DEVICE_EXTENSIONS.data(); // enable swapchain extension
-        if (vkCreateDevice(this->_physicalDevice, &createInfo, nullptr, &this->_logicalDevice) != VK_SUCCESS) {
-                FATAL("Failed to create logical device!");
-        }
-        vkGetDeviceQueue(this->_logicalDevice, indices.graphicsFamily.value(), 0,
-                         &this->_graphicsQueue); // store graphics queueCreateInfoCount
-        vkGetDeviceQueue(this->_logicalDevice, indices.presentationFamily.value(), 0, &this->_presentationQueue);
-        INFO("Logical device created.");
-}
+//         VkPhysicalDeviceFeatures deviceFeatures{}; // no features for no
+//         VkDeviceCreateInfo createInfo{};
+//         float queuePriority = 1.f;
+//         for (uint32_t queueFamily : uniqueQueueFamilies) {
+//                 VkDeviceQueueCreateInfo queueCreateInfo{};
+//                 queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+//                 queueCreateInfo.queueFamilyIndex = queueFamily;
+//                 queueCreateInfo.queueCount = 1;
+//                 queueCreateInfo.pQueuePriorities = &queuePriority;
+//                 queueCreateInfos.push_back(queueCreateInfo);
+//         }
+//         // populate createInfo
+//         createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
+//         createInfo.pQueueCreateInfos = queueCreateInfos.data();
+//         createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+//         createInfo.pEnabledFeatures = &deviceFeatures;
+//         createInfo.enabledExtensionCount = static_cast<uint32_t>(this->DEVICE_EXTENSIONS.size());
+//         createInfo.ppEnabledExtensionNames = DEVICE_EXTENSIONS.data(); // enable swapchain extension
+//         if (vkCreateDevice(this->_device.physicalDevice, &createInfo, nullptr, &this->_device->logicalDevice) != VK_SUCCESS) {
+//                 FATAL("Failed to create logical device!");
+//         }
+//         eqfjwieojf
+//         vkGetDeviceQueue(this->_device->logicalDevice, indices.graphicsFamily.value(), 0,
+//                          &this->_device.graphicsQueue); // store graphics queueCreateInfoCount
+//         vkGetDeviceQueue(this->_device->logicalDevice, indices.presentationFamily.value(), 0, &this->_presentationQueue);
+//         INFO("Logical device created.");
+// }
 void VulkanApplication::createSwapChain() {
         INFO("creating swapchain...");
-        SwapChainSupportDetails swapChainSupport = querySwapChainSupport(_physicalDevice);
+        SwapChainSupportDetails swapChainSupport = querySwapChainSupport(_device->physicalDevice);
         VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
         VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
         VkExtent2D extent = chooseSwapExtent(swapChainSupport.capabilities);
@@ -415,7 +418,7 @@ void VulkanApplication::createSwapChain() {
         createInfo.imageArrayLayers = 1;
         createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-        QueueFamilyIndices indices = findQueueFamilies(_physicalDevice);
+        QueueFamilyIndices indices = findQueueFamilies(_device->physicalDevice);
         uint32_t queueFamilyIndices[] = {indices.graphicsFamily.value(), indices.presentationFamily.value()};
 
         if (indices.graphicsFamily != indices.presentationFamily) {
@@ -433,13 +436,13 @@ void VulkanApplication::createSwapChain() {
 
         createInfo.oldSwapchain = VK_NULL_HANDLE;
 
-        if (vkCreateSwapchainKHR(this->_logicalDevice, &createInfo, nullptr, &_swapChain) != VK_SUCCESS) {
+        if (vkCreateSwapchainKHR(this->_device->logicalDevice, &createInfo, nullptr, &_swapChain) != VK_SUCCESS) {
                 FATAL("Failed to create swap chain!");
         }
 
-        vkGetSwapchainImagesKHR(this->_logicalDevice, _swapChain, &imageCount, nullptr);
+        vkGetSwapchainImagesKHR(this->_device->logicalDevice, _swapChain, &imageCount, nullptr);
         _swapChainImages.resize(imageCount);
-        vkGetSwapchainImagesKHR(this->_logicalDevice, _swapChain, &imageCount, _swapChainImages.data());
+        vkGetSwapchainImagesKHR(this->_device->logicalDevice, _swapChain, &imageCount, _swapChainImages.data());
 
         _swapChainImageFormat = surfaceFormat.format;
         _swapChainExtent = extent;
@@ -447,18 +450,18 @@ void VulkanApplication::createSwapChain() {
 }
 void VulkanApplication::cleanupSwapChain() {
         INFO("Cleaning up swap chain...");
-        vkDestroyImageView(_logicalDevice, _depthImageView, nullptr);
-        vkDestroyImage(_logicalDevice, _depthImage, nullptr);
-        vkFreeMemory(_logicalDevice, _depthImageMemory, nullptr);
+        vkDestroyImageView(_device->logicalDevice, _depthImageView, nullptr);
+        vkDestroyImage(_device->logicalDevice, _depthImage, nullptr);
+        vkFreeMemory(_device->logicalDevice, _depthImageMemory, nullptr);
 
-        _imguiManager.DestroyFrameBuffers(_logicalDevice);
+        _imguiManager.DestroyFrameBuffers(_device->logicalDevice);
         for (VkFramebuffer framebuffer : this->_swapChainFrameBuffers) {
-                vkDestroyFramebuffer(this->_logicalDevice, framebuffer, nullptr);
+                vkDestroyFramebuffer(this->_device->logicalDevice, framebuffer, nullptr);
         }
         for (VkImageView imageView : this->_swapChainImageViews) {
-                vkDestroyImageView(this->_logicalDevice, imageView, nullptr);
+                vkDestroyImageView(this->_device->logicalDevice, imageView, nullptr);
         }
-        vkDestroySwapchainKHR(this->_logicalDevice, this->_swapChain, nullptr);
+        vkDestroySwapchainKHR(this->_device->logicalDevice, this->_swapChain, nullptr);
 }
 void VulkanApplication::recreateSwapChain() {
         // need to recreate render pass for HDR changing, we're not doing that for now
@@ -471,7 +474,7 @@ void VulkanApplication::recreateSwapChain() {
                 glfwWaitEvents();
         }
         // wait for device to be idle
-        vkDeviceWaitIdle(_logicalDevice);
+        vkDeviceWaitIdle(_device->logicalDevice);
         this->cleanupSwapChain();
 
         this->createSwapChain();
@@ -554,7 +557,7 @@ void VulkanApplication::createImageViews() {
                 createInfo.subresourceRange.levelCount = 1;
                 createInfo.subresourceRange.baseArrayLayer = 0;
                 createInfo.subresourceRange.layerCount = 1;
-                if (vkCreateImageView(this->_logicalDevice, &createInfo, nullptr, &_swapChainImageViews[i]) != VK_SUCCESS) {
+                if (vkCreateImageView(this->_device->logicalDevice, &createInfo, nullptr, &_swapChainImageViews[i]) != VK_SUCCESS) {
                         FATAL("Failed to create image views!");
                 }
         }
@@ -562,9 +565,6 @@ void VulkanApplication::createImageViews() {
 }
 void VulkanApplication::createDepthBuffer() { ERROR("Base vulkan application does not have a depth buffer."); }
 
-void VulkanApplication::createVertexBuffer() { ERROR("Base vulkan application does not have a vertex buffer."); }
-
-void VulkanApplication::createIndexBuffer() { ERROR("Base vulkan application does not have an index buffer."); }
 
 void VulkanApplication::createUniformBuffers() { ERROR("Base vulkan application does not have a uniform buffer."); }
 
@@ -574,9 +574,9 @@ void VulkanApplication::createRenderPass() { ERROR("Base vulkan application does
 
 void VulkanApplication::createFramebuffers() { ERROR("Base vulkan application does not have a frame buffer."); }
 
-void VulkanApplication::createCommandPool() { ERROR("Base vulkan application does not have a command pool."); }
+// void VulkanApplication::createCommandPool() { ERROR("Base vulkan application does not have a command pool."); }
 
-void VulkanApplication::createCommandBuffer() { ERROR("Base vulkan application does not have a command buffer."); }
+//void VulkanApplication::createCommandBuffer() { ERROR("Base vulkan application does not have a command buffer."); }
 
 
 void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
@@ -595,9 +595,9 @@ void VulkanApplication::createSynchronizationObjects() {
         fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
         fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT; // create with a signaled bit so that the 1st frame can start right away
         for (size_t i = 0; i < this->MAX_FRAMES_IN_FLIGHT; i++) {
-                if (vkCreateSemaphore(_logicalDevice, &semaphoreInfo, nullptr, &_semaImageAvailable[i]) != VK_SUCCESS
-                    || vkCreateSemaphore(_logicalDevice, &semaphoreInfo, nullptr, &_semaRenderFinished[i]) != VK_SUCCESS
-                    || vkCreateFence(_logicalDevice, &fenceInfo, nullptr, &_fenceInFlight[i]) != VK_SUCCESS) {
+                if (vkCreateSemaphore(_device->logicalDevice, &semaphoreInfo, nullptr, &_semaImageAvailable[i]) != VK_SUCCESS
+                    || vkCreateSemaphore(_device->logicalDevice, &semaphoreInfo, nullptr, &_semaRenderFinished[i]) != VK_SUCCESS
+                    || vkCreateFence(_device->logicalDevice, &fenceInfo, nullptr, &_fenceInFlight[i]) != VK_SUCCESS) {
                         FATAL("Failed to create synchronization objects for a frame!");
                 }
         }
@@ -605,49 +605,20 @@ void VulkanApplication::createSynchronizationObjects() {
 void VulkanApplication::cleanup() {
         INFO("Cleaning up...");
         preCleanup();
-        _imguiManager.Cleanup(_logicalDevice);
+        _imguiManager.Cleanup(_device->logicalDevice);
         cleanupSwapChain();
-        for (auto& buffer : _uniformBuffers) {
-                if (buffer) {
-                        vkDestroyBuffer(this->_logicalDevice, buffer, nullptr);
-                }
-        }
-        for (auto& memory : _uniformBuffersMemory) {
-                if (memory) {
-                        vkFreeMemory(this->_logicalDevice, memory, nullptr);
-                }
-        }
-        if (_vertexBuffer != VK_NULL_HANDLE) {
-                vkDestroyBuffer(this->_logicalDevice, _vertexBuffer, nullptr);
-        }
-        if (_vertexBufferMemory != VK_NULL_HANDLE) {
-                vkFreeMemory(this->_logicalDevice, _vertexBufferMemory, nullptr);
-        }
-        if (_indexBuffer != VK_NULL_HANDLE) {
-                vkDestroyBuffer(this->_logicalDevice, _indexBuffer, nullptr);
-        }
-        if (_indexBufferMemory != VK_NULL_HANDLE) {
-                vkFreeMemory(this->_logicalDevice, _indexBufferMemory, nullptr);
-        }
-        if (_descriptorPool != VK_NULL_HANDLE) {
-                vkDestroyDescriptorPool(this->_logicalDevice, _descriptorPool, nullptr);
-        }
-        if (_descriptorSetLayout != VK_NULL_HANDLE) {
-                vkDestroyDescriptorSetLayout(this->_logicalDevice, _descriptorSetLayout, nullptr);
-        }
-
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-                vkDestroySemaphore(this->_logicalDevice, this->_semaRenderFinished[i], nullptr);
-                vkDestroySemaphore(this->_logicalDevice, this->_semaImageAvailable[i], nullptr);
-                vkDestroyFence(this->_logicalDevice, this->_fenceInFlight[i], nullptr);
+                vkDestroySemaphore(this->_device->logicalDevice, this->_semaRenderFinished[i], nullptr);
+                vkDestroySemaphore(this->_device->logicalDevice, this->_semaImageAvailable[i], nullptr);
+                vkDestroyFence(this->_device->logicalDevice, this->_fenceInFlight[i], nullptr);
         }
-        vkDestroyCommandPool(this->_logicalDevice, this->_commandPool, nullptr);
+        //vkDestroyCommandPool(this->_device->logicalDevice, this->_commandPool, nullptr);
 
-        vkDestroyPipeline(this->_logicalDevice, this->_graphicsPipeline, nullptr);
-        vkDestroyPipelineLayout(this->_logicalDevice, this->_pipelineLayout, nullptr);
+        vkDestroyPipeline(this->_device->logicalDevice, this->_graphicsPipeline, nullptr);
+        vkDestroyPipelineLayout(this->_device->logicalDevice, this->_pipelineLayout, nullptr);
 
-        vkDestroyRenderPass(this->_logicalDevice, this->_renderPass, nullptr);
-        vkDestroyDevice(this->_logicalDevice, nullptr);
+        vkDestroyRenderPass(this->_device->logicalDevice, this->_renderPass, nullptr);
+        vkDestroyDevice(this->_device->logicalDevice, nullptr);
         if (enableValidationLayers) {
                 if (this->_debugMessenger != nullptr) {
                         // TODO: implement this
@@ -678,8 +649,8 @@ std::pair<VkBuffer, VkDeviceMemory> VulkanApplication::createStagingBuffer(Vulka
         VkBuffer stagingBuffer;
         VkDeviceMemory stagingBufferMemory;
         VulkanUtils::createBuffer(
-                app->_physicalDevice,
-                app->_logicalDevice,
+                app->_device->physicalDevice,
+                app->_device->logicalDevice,
                 bufferSize,
                 VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,

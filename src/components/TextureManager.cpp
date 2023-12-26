@@ -1,18 +1,14 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
-
 #include <vulkan/vulkan_core.h>
 #include "TextureManager.h"
+#include "VulkanUtils.h"
+#include "lib/VQDevice.h"
+
 TextureManager::TextureManager(
-        VkPhysicalDevice physicalDevice,
-        VkDevice logicalDevice,
-        VkCommandPool commandPool,
-        VkQueue graphicsQueue
+        std::shared_ptr<VQDevice> device
 ) {
-        _physicalDevice = physicalDevice;
-        _logicalDevice = logicalDevice;
-        _commandPool = commandPool;
-        _graphicsQueue = graphicsQueue;
+        _device = device;
 }
 TextureManager::~TextureManager() {
         if (!_textures.empty()) {
@@ -22,10 +18,10 @@ TextureManager::~TextureManager() {
 void TextureManager::Cleanup() {
         for (auto& elem : _textures) {
                 Texture& texture = elem.second;
-                vkDestroyImageView(_logicalDevice, texture.textureImageView, nullptr);
-                vkDestroyImage(_logicalDevice, texture.textureImage, nullptr);
-                vkDestroySampler(_logicalDevice, texture.textureSampler,nullptr);
-                vkFreeMemory(_logicalDevice, texture.textureImageMemory, nullptr);
+                vkDestroyImageView(_device->logicalDevice, texture.textureImageView, nullptr);
+                vkDestroyImage(_device->logicalDevice, texture.textureImage, nullptr);
+                vkDestroySampler(_device->logicalDevice, texture.textureSampler,nullptr);
+                vkFreeMemory(_device->logicalDevice, texture.textureImageMemory, nullptr);
         }
         _textures.clear();
 }
@@ -55,8 +51,8 @@ void TextureManager::LoadTexture(const std::string& texturePath) {
         VkDeviceMemory stagingBufferMemory;
 
         VulkanUtils::createBuffer(
-                _physicalDevice,
-                _logicalDevice,
+                _device->physicalDevice,
+                _device->logicalDevice,
                 vkTextureSize,
                 VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
@@ -64,7 +60,7 @@ void TextureManager::LoadTexture(const std::string& texturePath) {
                 stagingBufferMemory
         );
 
-        VulkanUtils::vkMemCopy(pixels, stagingBufferMemory, vkTextureSize, _logicalDevice);
+        VulkanUtils::vkMemCopy(pixels, stagingBufferMemory, vkTextureSize, _device->logicalDevice);
 
         stbi_image_free(pixels);
 
@@ -83,8 +79,8 @@ void TextureManager::LoadTexture(const std::string& texturePath) {
                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
                 textureImage,
                 textureImageMemory,
-                _physicalDevice,
-                _logicalDevice
+                _device->physicalDevice,
+                _device->logicalDevice
         );
 
         transitionImageLayout(
@@ -99,7 +95,7 @@ void TextureManager::LoadTexture(const std::string& texturePath) {
                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
         );
 
-        textureImageView = VulkanUtils::createImageView(textureImage, _logicalDevice);
+        textureImageView = VulkanUtils::createImageView(textureImage, _device->logicalDevice);
 
         // create sampler
         {
@@ -126,7 +122,7 @@ void TextureManager::LoadTexture(const std::string& texturePath) {
                 samplerInfo.minLod = 0.0f;
                 samplerInfo.maxLod = 0.0f;
 
-                if (vkCreateSampler(_logicalDevice, &samplerInfo, nullptr, &textureSampler) != VK_SUCCESS) {
+                if (vkCreateSampler(_device->logicalDevice, &samplerInfo, nullptr, &textureSampler) != VK_SUCCESS) {
                         FATAL("Failed to create texture sampler!");
                 }
         }
@@ -136,8 +132,8 @@ void TextureManager::LoadTexture(const std::string& texturePath) {
         );
 
         // clean up staging buffer
-        vkDestroyBuffer(_logicalDevice, stagingBuffer, nullptr);
-        vkFreeMemory(_logicalDevice, stagingBufferMemory, nullptr);
+        vkDestroyBuffer(_device->logicalDevice, stagingBuffer, nullptr);
+        vkFreeMemory(_device->logicalDevice, stagingBufferMemory, nullptr);
 }
 
 void TextureManager::transitionImageLayout(
@@ -146,7 +142,7 @@ void TextureManager::transitionImageLayout(
         VkImageLayout oldLayout,
         VkImageLayout newLayout
 ) {
-        VkCommandBuffer commandBuffer = VulkanUtils::beginSingleTimeCommands(_logicalDevice, _commandPool);
+        VkCommandBuffer commandBuffer = VulkanUtils::beginSingleTimeCommands(_device->logicalDevice, _device->graphicsCommandPool);
 
         // create a barrier to transition layout
         VkImageMemoryBarrier barrier{};
@@ -188,10 +184,10 @@ void TextureManager::transitionImageLayout(
 
         vkCmdPipelineBarrier(commandBuffer, sourceStage, destinationStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 
-        VulkanUtils::endSingleTimeCommands(commandBuffer, _logicalDevice, _graphicsQueue, _commandPool);
+        VulkanUtils::endSingleTimeCommands(commandBuffer, _device->logicalDevice, _device->graphicsQueue, _device->graphicsCommandPool);
 }
 void TextureManager::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height) {
-        VkCommandBuffer commandBuffer = VulkanUtils::beginSingleTimeCommands(_logicalDevice, _commandPool);
+        VkCommandBuffer commandBuffer = VulkanUtils::beginSingleTimeCommands(_device->logicalDevice, _device->graphicsCommandPool);
 
         VkBufferImageCopy region{};
         region.bufferOffset = 0;
@@ -208,5 +204,5 @@ void TextureManager::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t 
         region.imageExtent = {width, height, 1};
 
         vkCmdCopyBufferToImage(commandBuffer, buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
-        VulkanUtils::endSingleTimeCommands(commandBuffer, _logicalDevice, _graphicsQueue, _commandPool);
+        VulkanUtils::endSingleTimeCommands(commandBuffer, _device->logicalDevice, _device->graphicsQueue, _device->graphicsCommandPool);
 }

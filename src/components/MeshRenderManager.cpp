@@ -1,21 +1,19 @@
 #include "MeshRenderer.h"
 #include <vulkan/vulkan_core.h>
 #include "MeshRenderManager.h"
+#include "lib/VQDevice.h"
 static uint32_t dynamicAlignment; //TODO: fix this hack
 void MeshRenderManager::PrepareRendering(
-        VkPhysicalDevice physicalDevice,
-        VkDevice logicalDevice,
         uint32_t numDescriptorSets,
         const std::unique_ptr<TextureManager>& textureManager,
         VkExtent2D swapchainExtent,
         VkRenderPass renderPass,
-        VkCommandPool pool,
-        VkQueue queue
+        std::shared_ptr<VQDevice> device
 ) {
         // construct meta pipelines
         // TODO: the following should be a part of the loop.
         VkPhysicalDeviceProperties properties;
-        vkGetPhysicalDeviceProperties(physicalDevice, &properties);
+        vkGetPhysicalDeviceProperties(device->physicalDevice, &properties);
         size_t minUboAlignment = properties.limits.minUniformBufferOffsetAlignment;
 
         dynamicAlignment = sizeof(UniformBuffer_Dynamic);
@@ -34,16 +32,16 @@ void MeshRenderManager::PrepareRendering(
         size_t staticBufferSize = staticAlignment;
         for (int i = 0; i < numDescriptorSets; i++) {
                 _uniformBuffers[i].dynamicUniformBuffer = MetaBuffer_Create(
-                        logicalDevice,
-                        physicalDevice,
+                        device->logicalDevice,
+                        device->physicalDevice,
                         dynamicBufferSize,
                         VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
                 );
 
                 _uniformBuffers[i].staticUniformBuffer = MetaBuffer_Create(
-                        logicalDevice,
-                        physicalDevice,
+                        device->logicalDevice,
+                        device->physicalDevice,
                         staticAlignment,
                         VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
@@ -53,7 +51,7 @@ void MeshRenderManager::PrepareRendering(
         auto& meshes = _meshes[RenderPipeline::Generic];
         size_t numMeshes = meshes.size(); // for each mesh renderer of this pipeline, we make a unique dynamic buffer.
         _pipeline = CreateGenericMetaPipeline(
-                logicalDevice,
+                device->logicalDevice,
                 numDescriptorSets,
                 "../textures/viking_room.png",
                 "../shaders/vert_test.vert.spv",
@@ -73,10 +71,10 @@ void MeshRenderManager::PrepareRendering(
                 MeshRenderData renderData;
                 renderData.renderer = meshes[i];
                 VulkanUtils::createVertexBuffer(
-                        physicalDevice, logicalDevice, meshes[i]->vertices, renderData.vertexBuffer, pool, queue
+                        device->physicalDevice, device->logicalDevice, meshes[i]->vertices, renderData.vertexBuffer, device->graphicsCommandPool, device->graphicsQueue
                 );
                 VulkanUtils::createIndexBuffer(
-                        renderData.indexBuffer, meshes[i]->indices, logicalDevice, physicalDevice, pool, queue
+                        renderData.indexBuffer, meshes[i]->indices, device->logicalDevice, device->physicalDevice, device->graphicsCommandPool, device->graphicsQueue
                 );
                 ASSERT(renderData.vertexBuffer.buffer != VK_NULL_HANDLE)
                 ASSERT(renderData.indexBuffer.buffer != VK_NULL_HANDLE)

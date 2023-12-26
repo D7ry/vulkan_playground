@@ -11,6 +11,7 @@
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_core.h>
 
+class VQDevice;
 class MeshRenderer;
 class MeshRenderManager {
       public:
@@ -23,14 +24,11 @@ class MeshRenderManager {
         }
 
         void PrepareRendering(
-                VkPhysicalDevice physicalDevice,
-                VkDevice logicalDevice,
                 uint32_t numDescriptorSets,
                 const std::unique_ptr<TextureManager>& textureManager,
                 VkExtent2D swapchainExtent,
                 VkRenderPass renderPass,
-                VkCommandPool pool,
-                VkQueue queue
+                std::shared_ptr<VQDevice> device
         );
 
         void UpdateUniformBuffers(int32_t frameIndex, glm::mat4 view, glm::mat4 proj);

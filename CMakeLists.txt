@@ -47,6 +47,7 @@ add_executable(vulkan_playground
         src/components/MetaBuffer.cpp
         src/components/MeshRenderer.cpp
         src/components/MeshRenderManager.cpp
+        src/lib/VQDevice.cpp
 )
 # std directory
 target_include_directories(vulkan_playground PUBLIC ${STB_DIR})
