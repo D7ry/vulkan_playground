@@ -107,7 +107,8 @@ MetaPipeline CreateGenericMetaPipeline(
                         VkDescriptorBufferInfo descriptorBufferInfo_dynamic{};
                         descriptorBufferInfo_dynamic.buffer = uniformBuffers[i].dynamicUniformBuffer.buffer;
                         descriptorBufferInfo_dynamic.offset = 0;
-                        descriptorBufferInfo_dynamic.range = numDynamicUniformBuffer * dynamicUboRange;
+                        descriptorBufferInfo_dynamic.range = dynamicUboRange;
+                        INFO("Dynamic descriptor range: {}", descriptorBufferInfo_dynamic.range );
                         //TODO: make a more fool-proof abstraction
                         VkDescriptorImageInfo descriptorImageInfo{};
                         textureManager->GetDescriptorImageInfo(texturePath, descriptorImageInfo);

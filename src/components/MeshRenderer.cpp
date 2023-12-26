@@ -46,3 +46,8 @@ void MeshRenderer::LoadModel(const char* meshFilePath) {
                 }
         }
 }
+void MeshRenderer::Rotate(float x, float y, float z) {
+        transform.rotation.x += x;
+        transform.rotation.y += y;
+        transform.rotation.z += z;
+}

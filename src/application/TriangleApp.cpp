@@ -23,7 +23,11 @@
 static MeshRenderManager renderManager;
 
 const std::string SAMPLE_TEXTURE_PATH = "../textures/viking_room.png";
+MeshRenderer* render = new MeshRenderer();
+MeshRenderer* render2 = new MeshRenderer();
+MeshRenderer* render3 = new MeshRenderer();
 
+        
 bool viewMode = false;
 static const bool ALLOW_MODIFY_ROLL = false;
 void TriangleApp::keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
@@ -144,16 +148,14 @@ void TriangleApp::middleInit() {
 }
 
 void TriangleApp::postInit() {
-        MeshRenderer* render = new MeshRenderer();
+
         render->LoadModel("../meshes/viking_room.obj");
         render->RegisterRenderManager(&renderManager);
 
-        MeshRenderer* render2 = new MeshRenderer();
         render2->LoadModel("../meshes/viking_room.obj");
         render2->RegisterRenderManager(&renderManager);
         render2->transform.position = glm::vec3(0, 0, 2);
 
-        MeshRenderer* render3 = new MeshRenderer();
         render3->LoadModel("../meshes/viking_room.obj");
         render3->RegisterRenderManager(&renderManager);
         render3->transform.position = glm::vec3(0, 2, 2);
@@ -452,6 +454,10 @@ void TriangleApp::createUniformBuffers() {
 
 
 void TriangleApp::updateUniformBufferData(uint32_t frameIndex) {
+        float deltaTime = _deltaTimer.GetDeltaTime();
+        render->Rotate(90 *deltaTime, 0, 0);
+        render2->Rotate(0, 90 * deltaTime, 0);
+        render3->Rotate(0, 0, 90 * deltaTime);
         renderManager.UpdateUniformBuffers(frameIndex, this->_camera.GetViewMatrix(), glm::perspective(glm::radians(90.f), _swapChainExtent.width / (float)_swapChainExtent.height, 0.1f, 100.f));
         // static Animation::StopWatchSeconds timer;
         // float time = timer.elapsed();

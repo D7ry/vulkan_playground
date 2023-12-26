@@ -13,6 +13,7 @@ class MeshRenderer {
         void RegisterRenderManager(MeshRenderManager* manager) {
                 manager->RegisterMeshRenderer(this, MeshRenderManager::RenderPipeline::Generic);
         }
+        void Rotate(float x, float y, float z);
         ~MeshRenderer();
         glm::mat4 GetModelMatrix();
         void Update();
