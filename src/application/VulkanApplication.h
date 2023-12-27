@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <memory>
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_core.h>
 #define GLFW_INCLUDE_VULKAN
@@ -11,6 +12,8 @@
 #include "components/DeltaTimer.h"
 #include "components/ImGuiManager.h"
 #include "lib/VQDevice.h"
+#include "components/InputManager.h"
+#include "components/Camera.h"
 // TODO: create a serialization scheme for tweakable settings.
 
 /**
@@ -91,7 +94,6 @@ class VulkanApplication {
         /**
          * @brief Override this method to handle key events.
          */
-        virtual  void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
         virtual void cursorPosCallback(GLFWwindow* window, double xpos, double ypos);
 
         virtual void renderImGui();
@@ -203,4 +205,8 @@ class VulkanApplication {
 
         std::shared_ptr<VQDevice> _device;
 
+        std::unique_ptr<InputManager> _inputManager;
+
+        Camera _camera = Camera(glm::vec3(1.0f, 0.5f, 1.0f), glm::vec3(-28, -146, 0));
+        bool viewMode = false;
 };

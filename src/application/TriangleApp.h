@@ -18,7 +18,7 @@ class TriangleApp : public VulkanApplication {
         virtual void drawFrame() override;
         virtual void updateUniformBufferData(uint32_t frameIndex) override;
 
-        virtual void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) override;
+        //virtual void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) override;
         virtual void cursorPosCallback(GLFWwindow* window, double xpos, double ypos) override;
         virtual void renderImGui() override;
         virtual void middleInit() override;
@@ -27,6 +27,5 @@ class TriangleApp : public VulkanApplication {
         virtual void preCleanup() override;
 
 
-        Camera _camera = Camera(glm::vec3(1.0f, 0.5f, 1.0f), glm::vec3(-28, -146, 0));
         std::unique_ptr<TextureManager> _textureManager = nullptr;
 };

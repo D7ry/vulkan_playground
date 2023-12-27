@@ -48,4 +48,6 @@ class MeshRenderManager {
 
         MetaPipeline _pipeline;
         std::vector<GenerticMetaPipelineUniformBuffer> _uniformBuffers; // TODO: this is pipeline-specific.
+
+        //TODO: support dynamic addition/deletion of meshRenderer.
 };

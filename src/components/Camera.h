@@ -10,7 +10,7 @@ class Camera {
         Camera(glm::vec3 position, glm::vec3 rotation);
         glm::mat4 GetViewMatrix();  
         void ModRotation(float yaw, float pitch, float roll);
-        void ModPosition(float x, float y, float z);
+        void Move(float x, float y, float z);
         inline const glm::vec3& GetPosition() { return _position; };
         inline const glm::vec3& GetRotation() { return _rotation; };
 

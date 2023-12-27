@@ -26,69 +26,9 @@ const std::string SAMPLE_TEXTURE_PATH = "../textures/viking_room.png";
 MeshRenderer* render = new MeshRenderer();
 MeshRenderer* render2 = new MeshRenderer();
 MeshRenderer* render3 = new MeshRenderer();
-
+MeshRenderer* render4 = new MeshRenderer();
         
-bool viewMode = false;
-static const bool ALLOW_MODIFY_ROLL = false;
-void TriangleApp::keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-        if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
-                INFO("Esc key pressed, closing window...");
-                glfwSetWindowShouldClose(window, GLFW_TRUE);
-        }
-        if (action == GLFW_PRESS || action == GLFW_REPEAT) {
-                switch (key) {
-                case GLFW_KEY_W:
-                        _camera.ModPosition(0.1, 0, 0);
-                        break;
-                case GLFW_KEY_S:
-                        _camera.ModPosition(-0.1, 0, 0);
-                        break;
-                case GLFW_KEY_A:
-                        _camera.ModPosition(0, 0.1, 0);
-                        break;
-                case GLFW_KEY_D:
-                        _camera.ModPosition(0, -0.1, 0);
-                        break;
-                case GLFW_KEY_LEFT_CONTROL:
-                        _camera.ModPosition(0, 0, -0.1);
-                        break;
-                case GLFW_KEY_SPACE:
-                        _camera.ModPosition(0, 0, 0.1);
-                        break;
-                case GLFW_KEY_I:
-                        _camera.ModRotation(0, 1, 0);
-                        break;
-                case GLFW_KEY_K:
-                        _camera.ModRotation(0, -1, 0);
-                        break;
-                case GLFW_KEY_J:
-                        _camera.ModRotation(1, 0, 0);
-                        break;
-                case GLFW_KEY_L:
-                        _camera.ModRotation(-1, 0, 0);
-                        break;
-                case GLFW_KEY_U:
-                        if (ALLOW_MODIFY_ROLL) {
-                                _camera.ModRotation(0, 0, -1);
-                        }
-                        break;
-                case GLFW_KEY_O:
-                        if (ALLOW_MODIFY_ROLL) {
-                                _camera.ModRotation(0, 0, 1);
-                        }
-                        break;
-                case GLFW_KEY_TAB:
-                        viewMode = !viewMode;
-                        if (viewMode) {
-                                glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-                        } else {
-                                glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-                        }
-                        break;
-                }
 
-        }
-}
 
 static bool updatedCursor = false;
 static int prevX = -1;
@@ -155,6 +95,10 @@ void TriangleApp::postInit() {
         render2->LoadModel("../meshes/viking_room.obj");
         render2->RegisterRenderManager(&renderManager);
         render2->transform.position = glm::vec3(0, 0, 2);
+
+        render3->LoadModel("../meshes/viking_room.obj");
+        render3->RegisterRenderManager(&renderManager);
+        render3->transform.position = glm::vec3(0, 2, 2);
 
         render3->LoadModel("../meshes/viking_room.obj");
         render3->RegisterRenderManager(&renderManager);

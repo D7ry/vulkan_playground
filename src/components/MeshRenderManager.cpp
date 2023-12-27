@@ -110,6 +110,8 @@ void MeshRenderManager::RecordRenderCommands(VkCommandBuffer commandBuffer, int 
                 MeshRenderData& renderData = _renderData[meshRenderers_generic[i]];
                 VkBuffer vertexBuffers[] = {renderData.vertexBuffer.buffer};
                 VkDeviceSize offsets[] = {0};
+
+                //TODO: group meshes of identical vertex and index buffers together so we don't need to perform repetitive bindings.
                 vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
 
                 vkCmdBindIndexBuffer(commandBuffer, renderData.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
@@ -121,7 +123,7 @@ void MeshRenderManager::RecordRenderCommands(VkCommandBuffer commandBuffer, int 
                         _pipeline.pipelineLayout,
                         0,
                         1,
-                        &_pipeline.descriptorSets[currentFrame],
+                        &_pipeline.descriptorSets[currentFrame], //TODO: here we can choose which descriptor set to bind to, so theoreically we can have different textures for the same pipeline
                         1,
                         &dynamicOffset
                 );

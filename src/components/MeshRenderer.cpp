@@ -14,10 +14,10 @@ glm::mat4 MeshRenderer::GetModelMatrix() {
         model = glm::rotate(model, glm::radians(rotation.y), glm::vec3(0.0f, 1.0f, 0.0f));
         model = glm::rotate(model, glm::radians(rotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
         model = glm::scale(model, scale);
-        // invert y axis
         return model;
 }
 void MeshRenderer::LoadModel(const char* meshFilePath) {
+        // TODO: implement indexing
         tinyobj::attrib_t attrib;
         std::vector<tinyobj::shape_t> shapes;
         std::vector<tinyobj::material_t> materials;

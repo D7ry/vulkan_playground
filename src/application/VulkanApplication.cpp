@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cinttypes>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
@@ -9,29 +10,24 @@
 #include <set>
 
 #include "VulkanApplication.h"
+#include "components/InputManager.h"
 #include <GLFW/glfw3.h>
 #include <cstddef>
 #include <vulkan/vulkan_core.h>
 
-
 void VulkanApplication::Run() {
         INFO("Initializing Vulkan Application...");
+        this->_inputManager = std::make_unique<InputManager>();
         this->initWindow();
         this->initVulkan();
         this->mainLoop();
         this->cleanup();
 }
-
-void VulkanApplication::keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-        INFO("{} {} {} {}", key, scancode, action, mods);
-        if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
-                glfwSetWindowShouldClose(window, GLFW_TRUE);
-        }
-}
+#define CAMERA_SPEED 3
 
 void VulkanApplication::cursorPosCallback(GLFWwindow* window, double xpos, double ypos) {
         // do nothing
-        //INFO("{} {}", xpos, ypos);
+        // INFO("{} {}", xpos, ypos);
 }
 
 void VulkanApplication::renderImGui() {
@@ -40,12 +36,42 @@ void VulkanApplication::renderImGui() {
 
 void VulkanApplication::setKeyCallback() {
         INFO("Setting up key callback...");
+        // bind glfw  keys
         auto keyCallback = [](GLFWwindow* window, int key, int scancode, int action, int mods) {
                 auto app = reinterpret_cast<VulkanApplication*>(glfwGetWindowUserPointer(window));
-                app->keyCallback(window, key, scancode, action, mods);
+                app->_inputManager->OnKeyInput(window, key, scancode, action, mods);
         };
-
         glfwSetKeyCallback(this->_window, keyCallback);
+        _inputManager->RegisterCallback(GLFW_KEY_W, InputManager::KeyCallbackCondition::HOLD, [this]() {
+                _camera.Move(_deltaTimer.GetDeltaTime() * CAMERA_SPEED, 0, 0);
+        });
+        _inputManager->RegisterCallback(GLFW_KEY_S, InputManager::KeyCallbackCondition::HOLD, [this]() {
+                _camera.Move(-_deltaTimer.GetDeltaTime() * CAMERA_SPEED, 0, 0);
+        });
+        _inputManager->RegisterCallback(GLFW_KEY_A, InputManager::KeyCallbackCondition::HOLD, [this]() {
+                _camera.Move(0, _deltaTimer.GetDeltaTime() * CAMERA_SPEED, 0);
+        });
+        _inputManager->RegisterCallback(GLFW_KEY_D, InputManager::KeyCallbackCondition::HOLD, [this]() {
+                _camera.Move(0, -_deltaTimer.GetDeltaTime() * CAMERA_SPEED, 0);
+        });
+        _inputManager->RegisterCallback(GLFW_KEY_LEFT_CONTROL, InputManager::KeyCallbackCondition::HOLD, [this]() {
+                _camera.Move(0, 0, CAMERA_SPEED * _deltaTimer.GetDeltaTime());
+        });
+        _inputManager->RegisterCallback(GLFW_KEY_SPACE, InputManager::KeyCallbackCondition::HOLD, [this]() {
+                _camera.Move(0, 0, CAMERA_SPEED * _deltaTimer.GetDeltaTime());
+        });
+
+        _inputManager->RegisterCallback(GLFW_KEY_TAB, InputManager::KeyCallbackCondition::PRESS, [this]() {
+                viewMode = !viewMode;
+                if (viewMode) {
+                        glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+                } else {
+                        glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+                }
+        });
+        _inputManager->RegisterCallback(GLFW_KEY_ESCAPE, InputManager::KeyCallbackCondition::PRESS, [this]() {
+                glfwSetWindowShouldClose(_window, GLFW_TRUE);
+        })
 }
 
 void VulkanApplication::setCursorInputCallback() {
@@ -87,6 +113,7 @@ void VulkanApplication::mainLoop() {
                 glfwPollEvents();
                 _deltaTimer.Update();
                 _imguiManager.RenderFrame();
+                _inputManager->Update(_deltaTimer.GetDeltaTime());
                 drawFrame();
         }
         vkDeviceWaitIdle(this->_device->logicalDevice);
@@ -116,7 +143,7 @@ void VulkanApplication::initVulkan() {
         this->_device->CreateLogicalDeviceAndQueue(DEVICE_EXTENSIONS);
         this->_device->CreateGraphicsCommandPool();
         this->_device->CreateGraphicsCommandBuffer(this->_commandBuffers, MAX_FRAMES_IN_FLIGHT);
-       // this->createLogicalDevice();
+        // this->createLogicalDevice();
         this->createSwapChain();
         this->createImageViews();
         this->createRenderPass();
@@ -124,24 +151,33 @@ void VulkanApplication::initVulkan() {
         this->_imguiManager.InitializeRenderPass(this->_device->logicalDevice, _swapChainImageFormat);
         this->createDepthBuffer();
         this->createFramebuffers();
-        //this->createCommandPool();
+        // this->createCommandPool();
         this->middleInit();
-        //this->loadModel();
-        //this->createVertexBuffer();
-        //this->createIndexBuffer();
-        //this->createUniformBuffers();
-        //this->createCommandBuffer();
+        // this->loadModel();
+        // this->createVertexBuffer();
+        // this->createIndexBuffer();
+        // this->createUniformBuffers();
+        // this->createCommandBuffer();
         this->createSynchronizationObjects();
 
         this->_imguiManager.InitializeDescriptorPool(MAX_FRAMES_IN_FLIGHT, _device->logicalDevice);
         this->_imguiManager.BindVulkanResources(
-                _window, _instance, _device->physicalDevice, _device->logicalDevice, _device->queueFamilyIndices.graphicsFamily.value(), _device->graphicsQueue, _swapChainFrameBuffers.size()
+                _window,
+                _instance,
+                _device->physicalDevice,
+                _device->logicalDevice,
+                _device->queueFamilyIndices.graphicsFamily.value(),
+                _device->graphicsQueue,
+                _swapChainFrameBuffers.size()
         );
-        this->_imguiManager.InitializeCommandPoolAndBuffers(MAX_FRAMES_IN_FLIGHT, _device->logicalDevice, _device->queueFamilyIndices.graphicsFamily.value());
+        this->_imguiManager.InitializeCommandPoolAndBuffers(
+                MAX_FRAMES_IN_FLIGHT, _device->logicalDevice, _device->queueFamilyIndices.graphicsFamily.value()
+        );
         this->_imguiManager.BindRenderCallback(std::bind(&VulkanApplication::renderImGui, this));
-        //this->_imguiManager.InitializeFrameBuffer(_swapChainFrameBuffers.size(), _device->logicalDevice, _swapChainImageViews, _swapChainExtent);
+        // this->_imguiManager.InitializeFrameBuffer(_swapChainFrameBuffers.size(), _device->logicalDevice,
+        // _swapChainImageViews, _swapChainExtent);
         INFO("Vulkan initialized.");
-        
+
         this->postInit();
 }
 
@@ -242,7 +278,8 @@ VkResult VulkanApplication::CreateDebugUtilsMessengerEXT(
         VkDebugUtilsMessengerEXT* pDebugMessenger
 ) {
         INFO("setting up debug messenger .... ");
-        auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
+        auto func
+                = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
 
         if (func != nullptr) {
                 return func(instance, pCreateInfo, pAllocator, pDebugMessenger);
@@ -254,9 +291,11 @@ VkResult VulkanApplication::CreateDebugUtilsMessengerEXT(
 void VulkanApplication::populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo) {
         createInfo = {};
         createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-        createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT
+        createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT
+                                     | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT
                                      | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-        createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT
+        createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT
+                                 | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT
                                  | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
         createInfo.pfnUserCallback = debugCallback;
 }
@@ -288,7 +327,8 @@ VulkanApplication::QueueFamilyIndices VulkanApplication::findQueueFamilies(VkPhy
         QueueFamilyIndices indices;
         uint32_t queueFamilyCount = 0;
         vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
-        std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount); // initialize vector to store queue familieis
+        std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount
+        ); // initialize vector to store queue familieis
         vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
         int i = 0;
         for (const auto& queueFamily : queueFamilies) {
@@ -365,7 +405,8 @@ VkPhysicalDevice VulkanApplication::pickPhysicalDevice() {
 //         INFO("Creating logical device...");
 //         QueueFamilyIndices indices = this->findQueueFamilies(this->_device.physicalDevice);
 //         std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-//         std::set<uint32_t> uniqueQueueFamilies = {indices.graphicsFamily.value(), indices.presentationFamily.value()};
+//         std::set<uint32_t> uniqueQueueFamilies = {indices.graphicsFamily.value(),
+//         indices.presentationFamily.value()};
 
 //         VkPhysicalDeviceFeatures deviceFeatures{}; // no features for no
 //         VkDeviceCreateInfo createInfo{};
@@ -385,14 +426,15 @@ VkPhysicalDevice VulkanApplication::pickPhysicalDevice() {
 //         createInfo.pEnabledFeatures = &deviceFeatures;
 //         createInfo.enabledExtensionCount = static_cast<uint32_t>(this->DEVICE_EXTENSIONS.size());
 //         createInfo.ppEnabledExtensionNames = DEVICE_EXTENSIONS.data(); // enable swapchain extension
-//         if (vkCreateDevice(this->_device.physicalDevice, &createInfo, nullptr, &this->_device->logicalDevice) != VK_SUCCESS) {
+//         if (vkCreateDevice(this->_device.physicalDevice, &createInfo, nullptr, &this->_device->logicalDevice) !=
+//         VK_SUCCESS) {
 //                 FATAL("Failed to create logical device!");
 //         }
 //         eqfjwieojf
 //         vkGetDeviceQueue(this->_device->logicalDevice, indices.graphicsFamily.value(), 0,
 //                          &this->_device.graphicsQueue); // store graphics queueCreateInfoCount
-//         vkGetDeviceQueue(this->_device->logicalDevice, indices.presentationFamily.value(), 0, &this->_presentationQueue);
-//         INFO("Logical device created.");
+//         vkGetDeviceQueue(this->_device->logicalDevice, indices.presentationFamily.value(), 0,
+//         &this->_presentationQueue); INFO("Logical device created.");
 // }
 void VulkanApplication::createSwapChain() {
         INFO("creating swapchain...");
@@ -402,7 +444,8 @@ void VulkanApplication::createSwapChain() {
         VkExtent2D extent = chooseSwapExtent(swapChainSupport.capabilities);
 
         uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
-        if (swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount) {
+        if (swapChainSupport.capabilities.maxImageCount > 0
+            && imageCount > swapChainSupport.capabilities.maxImageCount) {
                 imageCount = swapChainSupport.capabilities.maxImageCount;
         }
 
@@ -501,14 +544,17 @@ VulkanApplication::SwapChainSupportDetails VulkanApplication::querySwapChainSupp
 
         if (presentModeCount != 0) {
                 details.presentModes.resize(presentModeCount);
-                vkGetPhysicalDeviceSurfacePresentModesKHR(device, _surface, &presentModeCount, details.presentModes.data());
+                vkGetPhysicalDeviceSurfacePresentModesKHR(
+                        device, _surface, &presentModeCount, details.presentModes.data()
+                );
         }
 
         return details;
 }
 VkSurfaceFormatKHR VulkanApplication::chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) {
         for (const auto& availableFormat : availableFormats) {
-                if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+                if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB
+                    && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
                         return availableFormat;
                 }
         }
@@ -533,8 +579,12 @@ VkExtent2D VulkanApplication::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& c
 
                 VkExtent2D actualExtent = {static_cast<uint32_t>(width), static_cast<uint32_t>(height)};
 
-                actualExtent.width = std::clamp(actualExtent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
-                actualExtent.height = std::clamp(actualExtent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
+                actualExtent.width = std::clamp(
+                        actualExtent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width
+                );
+                actualExtent.height = std::clamp(
+                        actualExtent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height
+                );
 
                 return actualExtent;
         }
@@ -557,7 +607,8 @@ void VulkanApplication::createImageViews() {
                 createInfo.subresourceRange.levelCount = 1;
                 createInfo.subresourceRange.baseArrayLayer = 0;
                 createInfo.subresourceRange.layerCount = 1;
-                if (vkCreateImageView(this->_device->logicalDevice, &createInfo, nullptr, &_swapChainImageViews[i]) != VK_SUCCESS) {
+                if (vkCreateImageView(this->_device->logicalDevice, &createInfo, nullptr, &_swapChainImageViews[i])
+                    != VK_SUCCESS) {
                         FATAL("Failed to create image views!");
                 }
         }
@@ -565,9 +616,7 @@ void VulkanApplication::createImageViews() {
 }
 void VulkanApplication::createDepthBuffer() { ERROR("Base vulkan application does not have a depth buffer."); }
 
-
 void VulkanApplication::createUniformBuffers() { ERROR("Base vulkan application does not have a uniform buffer."); }
-
 
 // https://vulkan-tutorial.com/Drawing_a_triangle/Graphics_pipeline_basics/Render_passes
 void VulkanApplication::createRenderPass() { ERROR("Base vulkan application does not have a render pass."); }
@@ -576,8 +625,7 @@ void VulkanApplication::createFramebuffers() { ERROR("Base vulkan application do
 
 // void VulkanApplication::createCommandPool() { ERROR("Base vulkan application does not have a command pool."); }
 
-//void VulkanApplication::createCommandBuffer() { ERROR("Base vulkan application does not have a command buffer."); }
-
+// void VulkanApplication::createCommandBuffer() { ERROR("Base vulkan application does not have a command buffer."); }
 
 void VulkanApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
         ERROR("Base vulkan application does not have a command buffer.");
@@ -593,10 +641,13 @@ void VulkanApplication::createSynchronizationObjects() {
         semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
         VkFenceCreateInfo fenceInfo{};
         fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-        fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT; // create with a signaled bit so that the 1st frame can start right away
+        fenceInfo.flags
+                = VK_FENCE_CREATE_SIGNALED_BIT; // create with a signaled bit so that the 1st frame can start right away
         for (size_t i = 0; i < this->MAX_FRAMES_IN_FLIGHT; i++) {
-                if (vkCreateSemaphore(_device->logicalDevice, &semaphoreInfo, nullptr, &_semaImageAvailable[i]) != VK_SUCCESS
-                    || vkCreateSemaphore(_device->logicalDevice, &semaphoreInfo, nullptr, &_semaRenderFinished[i]) != VK_SUCCESS
+                if (vkCreateSemaphore(_device->logicalDevice, &semaphoreInfo, nullptr, &_semaImageAvailable[i])
+                            != VK_SUCCESS
+                    || vkCreateSemaphore(_device->logicalDevice, &semaphoreInfo, nullptr, &_semaRenderFinished[i])
+                               != VK_SUCCESS
                     || vkCreateFence(_device->logicalDevice, &fenceInfo, nullptr, &_fenceInFlight[i]) != VK_SUCCESS) {
                         FATAL("Failed to create synchronization objects for a frame!");
                 }
@@ -629,12 +680,17 @@ void VulkanApplication::cleanup() {
         postCleanup();
         INFO("Resource cleaned up.");
 }
-uint32_t VulkanApplication::findMemoryType(VkPhysicalDevice physicalDevice, uint32_t typeFilter, VkMemoryPropertyFlags properties) {
+uint32_t VulkanApplication::findMemoryType(
+        VkPhysicalDevice physicalDevice,
+        uint32_t typeFilter,
+        VkMemoryPropertyFlags properties
+) {
         VkPhysicalDeviceMemoryProperties memProperties;
         vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
 
         for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
-                if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+                if ((typeFilter & (1 << i))
+                    && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
                         return i;
                 }
         }
@@ -642,7 +698,8 @@ uint32_t VulkanApplication::findMemoryType(VkPhysicalDevice physicalDevice, uint
         FATAL("Failed to find suitable memory type!");
 }
 
-std::pair<VkBuffer, VkDeviceMemory> VulkanApplication::createStagingBuffer(VulkanApplication* app, VkDeviceSize bufferSize) {
+std::pair<VkBuffer, VkDeviceMemory>
+VulkanApplication::createStagingBuffer(VulkanApplication* app, VkDeviceSize bufferSize) {
         VkBuffer stagingBuffer;
         VkDeviceMemory stagingBufferMemory;
         VulkanUtils::createBuffer(
@@ -656,9 +713,7 @@ std::pair<VkBuffer, VkDeviceMemory> VulkanApplication::createStagingBuffer(Vulka
         );
         return {stagingBuffer, stagingBufferMemory};
 }
-void VulkanApplication::middleInit() {
-
-}
+void VulkanApplication::middleInit() {}
 void VulkanApplication::postInit() {
         // override this method to do post initialization
 }

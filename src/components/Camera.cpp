@@ -23,7 +23,7 @@ void Camera::ModRotation(float yaw, float pitch, float roll) {
 };
 
 #define INDEPENDENT_Z 1
-void Camera::ModPosition(float x, float y, float z) {
+void Camera::Move(float x, float y, float z) {
         // Convert angles from degrees to radians
         glm::vec3 rotationRad = glm::radians(_rotation);
 
