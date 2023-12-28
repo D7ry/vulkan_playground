@@ -1,6 +1,5 @@
 // Utility functions for Vulkan boilterplate functions
 #pragma once
-#include "components/MetaBuffer.h"
 #include "structs/Vertex.h"
 #include <vulkan/vulkan_core.h>
 namespace VulkanUtils {
@@ -100,22 +99,4 @@ void createImage(
 
 std::pair<VkBuffer, VkDeviceMemory>
 createStagingBuffer(VkPhysicalDevice physicalDevice, VkDevice device, VkDeviceSize bufferSize);
-void createIndexBuffer(
-        MetaBuffer& metaBuffer,
-        std::vector<uint32_t> indices,
-        VkDevice device,
-        VkPhysicalDevice physicalDevice,
-        VkCommandPool pool,
-        VkQueue queue
-);
-
-void createVertexBuffer(
-        VkPhysicalDevice physicalDevice,
-        VkDevice device,
-        std::vector<Vertex>& vertices,
-        MetaBuffer& metaBuffer,
-        VkCommandPool pool,
-        VkQueue queue
-);
-
 } // namespace VulkanUtils

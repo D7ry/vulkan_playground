@@ -7,6 +7,7 @@
  */
 class Camera {
       public:
+        Camera(float x, float y, float z, float yaw, float pitch, float roll);
         Camera(glm::vec3 position, glm::vec3 rotation);
         glm::mat4 GetViewMatrix();  
         void ModRotation(float yaw, float pitch, float roll);

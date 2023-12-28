@@ -3,7 +3,7 @@
 class DeltaTimer {
       public:
         DeltaTimer();
-        void Update();
+        void Tick();
         float GetDeltaTime();
 
       private:

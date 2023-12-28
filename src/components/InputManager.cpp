@@ -19,7 +19,7 @@ void InputManager::OnKeyInput(GLFWwindow* window, int key, int scancode, int act
         }
 }
 void InputManager::ClearHeldKeys() { _heldKeys.clear(); }
-void InputManager::Update(float deltaTime) {
+void InputManager::Tick(float deltaTime) {
         for (auto& key : _heldKeys) {
                 for (auto& callback : _holdCallbacks[key]) {
                         callback();

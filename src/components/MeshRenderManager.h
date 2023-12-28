@@ -1,5 +1,4 @@
 #pragma once
-#include "components/MetaBuffer.h"
 #include "components/MetaPipeline.h"
 #include "components/TextureManager.h"
 #include "components/VulkanUtils.h"
@@ -28,6 +27,7 @@ struct RenderGroup {
         std::vector<MeshRenderer*> meshRenderers;
         VQBuffer vertexBuffer;
         VQBuffer indexBuffer;
+        int indexCount;
 
         std::vector<VQBuffer> staticUbo;
         std::vector<VQBuffer> dynamicUbo;  
@@ -53,6 +53,8 @@ class MeshRenderManager {
         void UpdateUniformBuffers(int32_t frameIndex, glm::mat4 view, glm::mat4 proj);
 
         void RecordRenderCommands(VkCommandBuffer commandBuffer, int currentFrame);
+
+        void Cleanup();
 
       private:
         struct RuntimeRenderData {

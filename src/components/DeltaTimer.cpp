@@ -1,5 +1,5 @@
 #include "DeltaTimer.h"
-void DeltaTimer::Update() {
+void DeltaTimer::Tick() {
         if (!_started) { // if the timer hasn't started yet, start it
                 _prev = std::chrono::high_resolution_clock::now();
                 _started = true;

@@ -183,39 +183,9 @@ void MeshRenderManager::RecordRenderCommands(VkCommandBuffer commandBuffer, int 
                         }
                 }
         }
-        // bind graphics pipeline
-        // vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipeline.pipeline);
-
-        //        auto meshRenderers_generic = _rendererToProcess[RenderMethod::Generic];
-        // for (int i = 0; i < meshRenderers_generic.size(); i++) {
-        //         MeshRenderData& renderData = _renderData[meshRenderers_generic[i]];
-        //         VkBuffer vertexBuffers[] = {renderData.vertexBuffer.buffer};
-        //         VkDeviceSize offsets[] = {0};
-
-        //         //TODO: group meshes of identical vertex and index buffers together so we don't need to perform
-        //         repetitive bindings. vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
-
-        //         vkCmdBindIndexBuffer(commandBuffer, renderData.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
-
-        //         uint32_t dynamicOffset = i * static_cast<uint32_t>(dynamicAlignment);
-        //         vkCmdBindDescriptorSets(
-        //                 commandBuffer,
-        //                 VK_PIPELINE_BIND_POINT_GRAPHICS,
-        //                 _pipeline.pipelineLayout,
-        //                 0,
-        //                 1,
-        //                 &_pipeline.descriptorSets[currentFrame], //TODO: here we can choose which descriptor set to
-        //                 bind to, so theoreically we can have different textures for the same pipeline 1,
-        //                 &dynamicOffset
-        //         );
-
-        //         // issue the draw command
-        //         // vkCmdDraw(commandBuffer, 3, 1, 0, 0);
-        //         uint32_t indexCount = static_cast<uint32_t>(renderData.indexBuffer.size / sizeof(uint32_t)); //TODO:
-        //         fix this hack vkCmdDrawIndexed(
-        //                 commandBuffer, indexCount, 1, 0, 0, 0
-        //         );
         // }
 }
 
-// loop for different pipelines -> loop for different textures -> loop for different dynamic buffers.
+void MeshRenderManager::Cleanup() {
+
+}

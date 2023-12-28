@@ -33,7 +33,6 @@ target_include_directories(imgui PUBLIC ${IMGUI_DIR} ${IMGUI_DIR}/backends)
 add_executable(vulkan_playground 
         src/main.cpp
         src/application/VulkanApplication.cpp
-        src/application/TriangleApp.cpp
         src/components/Logging.cpp
         src/components/ShaderUtils.cpp
         src/components/Animation.cpp
@@ -44,12 +43,13 @@ add_executable(vulkan_playground
         src/components/ImGuiManager.cpp
         src/components/TextureManager.cpp
         src/components/MetaPipeline.cpp
-        src/components/MetaBuffer.cpp
         src/components/MeshRenderer.cpp
         src/components/MeshRenderManager.cpp
         src/components/InputManager.cpp
         src/lib/VQDevice.cpp
         src/lib/VQUtils.cpp
+        src/components/rendering/RenderManager.cpp
+        src/application/DEngine.cpp
 
         src/components/rendering/RenderManager.cpp
 )

@@ -22,7 +22,6 @@ void TextureManager::Cleanup() {
 }
 void TextureManager::GetDescriptorImageInfo(const std::string& texturePath, VkDescriptorImageInfo& imageInfo) {
         if (_textures.find(texturePath) == _textures.end()) {
-                INFO("Texture {} not loaded!", texturePath);
                 LoadTexture(texturePath);
         }
         Texture& texture = _textures.at(texturePath);

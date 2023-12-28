@@ -76,5 +76,8 @@ glm::mat4 Camera::GetViewMatrix() {
 
         // Create view matrix
         return glm::lookAt(_position, _position + direction, up);
-
- };
+};
+Camera::Camera(float x, float y, float z, float yaw, float pitch, float roll) {
+        _position = glm::vec3(x, y, z);
+        _rotation = glm::vec3(pitch, yaw, roll);
+}

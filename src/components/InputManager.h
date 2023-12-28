@@ -24,7 +24,7 @@ class InputManager {
         /**
          * @brief Update function to be called once every tick. To dispatch the hold callback function.
          */
-        void Update(float deltaTime);
+        void Tick(float deltaTime);
 
         /**
          * @brief Register a single key callback

@@ -3,6 +3,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "TriangleApp.h"
+#include "components/InputManager.h"
 #include "components/TextureManager.h"
 #include "imgui.h"
 #include "structs/UniformBuffer.h"
@@ -27,7 +28,8 @@ const std::string SAMPLE_MESH_PATH = "../meshes/viking_room.obj";
 MeshRenderer* render = new MeshRenderer(SAMPLE_MESH_PATH.data(), SAMPLE_TEXTURE_PATH.data());
 MeshRenderer* render2 = new MeshRenderer(SAMPLE_MESH_PATH.data(), SAMPLE_TEXTURE_PATH.data());
 MeshRenderer* render3 = new MeshRenderer("../meshes/spot.obj", "../textures/spot.png");
-        
+MeshRenderer* render4 = new MeshRenderer("../meshes/smoking_room.obj", "../textures/smoking_room.png");
+
 
 
 static bool updatedCursor = false;
@@ -100,7 +102,13 @@ void TriangleApp::postInit() {
         render3->RegisterRenderManager(&renderManager);
         render3->transform.position = glm::vec3(0, 2, 2);
 
+        render4->RegisterRenderManager(&renderManager);
+        render4->transform.position = glm::vec3(0, 0, -10);
+        render4->transform.rotation = {90, 0, 0};
+
         renderManager.PrepareRendering(MAX_FRAMES_IN_FLIGHT, _renderPass, _device);
+
+        //_inputManager->RegisterCallback(GLFW_KEY_UP, InputManager::KeyCallbackCondition::HOLD, []() {render4->Rotate(10, 0, 0);});
 }
 
 
