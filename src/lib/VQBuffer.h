@@ -1,10 +1,11 @@
 #pragma once
 #include <vulkan/vulkan.h>
 #include <structs/Vertex.h>
+#include <vulkan/vulkan_core.h>
 
 struct VQBuffer {
-        VkDevice device;
-        VkBuffer buffer;
+        VkDevice device = VK_NULL_HANDLE;
+        VkBuffer buffer = VK_NULL_HANDLE;
         VkDeviceMemory bufferMemory;
         VkDeviceSize size;
         void* bufferAddress;
@@ -13,6 +14,9 @@ struct VQBuffer {
          */
         void Cleanup() 
         {
+                if (device == VK_NULL_HANDLE) {
+                        FATAL("Buffer device not speficied");
+                }
                 if (buffer) {
                         vkDestroyBuffer(device, buffer, nullptr);
                 }

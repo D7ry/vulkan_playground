@@ -1,9 +1,7 @@
 #include "MetaPipeline.h"
-#include "ShaderUtils.h"
-#include "VulkanUtils.h"
+#include "components/ShaderUtils.h"
 #include "components/TextureManager.h"
 #include "structs/Vertex.h"
-#include "structs/UniformBuffer.h"
 #include <vulkan/vulkan_core.h>
 #include "MeshRenderManager.h"
 MetaPipeline CreateGenericMetaPipeline(
@@ -81,6 +79,7 @@ MetaPipeline CreateGenericMetaPipeline(
                 poolInfo.poolSizeCount = sizeof(poolSizes) / sizeof(VkDescriptorPoolSize); // number of pool sizes
                 poolInfo.pPoolSizes = poolSizes;
                 poolInfo.maxSets = numFrameInFlight * poolInfo.poolSizeCount;
+                poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
 
                 if (vkCreateDescriptorPool(device->logicalDevice, &poolInfo, nullptr, &m.descriptorPool) != VK_SUCCESS) {
                         FATAL("Failed to create descriptor pool!");
@@ -103,6 +102,9 @@ MetaPipeline CreateGenericMetaPipeline(
                             != VK_SUCCESS) {
                                 FATAL("Failed to allocate descriptor sets!");
                         }
+
+                        group.descriptorSetDevice = device->logicalDevice;
+                        group.descriptorPool = m.descriptorPool;
 
                         for (size_t i = 0; i < numFrameInFlight; i++) {
                                 VkDescriptorBufferInfo descriptorBufferInfo_static{};

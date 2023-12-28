@@ -1,6 +1,6 @@
 #include "MeshRenderManager.h"
 #include "MeshRenderer.h"
-#include "components/MetaPipeline.h"
+#include "MetaPipeline.h"
 #include "lib/VQDevice.h"
 #include "lib/VQUtils.h"
 #include <unordered_map>
@@ -187,5 +187,10 @@ void MeshRenderManager::RecordRenderCommands(VkCommandBuffer commandBuffer, int 
 }
 
 void MeshRenderManager::Cleanup() {
-
+        for (auto& elem : _runtimeRenderData) {
+                RuntimeRenderData& data = elem.second;
+                for (auto& renderGroup : data.renderGroups) {
+                        renderGroup.cleanup();
+                }
+        }
 }

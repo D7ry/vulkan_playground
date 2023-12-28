@@ -1,7 +1,6 @@
 #pragma once
-#include "components/MetaPipeline.h"
+#include "MetaPipeline.h"
 #include "components/TextureManager.h"
-#include "components/VulkanUtils.h"
 #include "lib/VQBuffer.h"
 #include "structs/UniformBuffer.h"
 #include <cstdint>
@@ -32,11 +31,28 @@ struct RenderGroup {
         std::vector<VQBuffer> staticUbo;
         std::vector<VQBuffer> dynamicUbo;  
         std::vector<VkDescriptorSet> descriptorSets;
+
+        VkDevice descriptorSetDevice;
+        VkDescriptorPool descriptorPool;
+
+        inline void cleanup() {
+                vertexBuffer.Cleanup();
+                indexBuffer.Cleanup();
+                for (VQBuffer& buffer : staticUbo) {
+                        buffer.Cleanup();
+                }
+                for (VQBuffer& buffer : dynamicUbo) {
+                        buffer.Cleanup();
+                }
+                vkFreeDescriptorSets(descriptorSetDevice,descriptorPool, descriptorSets.size(), descriptorSets.data());
+        }
 };
 
 class MeshRenderManager {
       public:
         enum class RenderMethod { Generic };
+
+        MeshRenderManager() {};
 
         void Render() {}
 

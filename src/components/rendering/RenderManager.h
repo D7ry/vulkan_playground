@@ -9,6 +9,8 @@
 
 #include <vector>
 #include "components/ImGuiManager.h"
+#include "MeshRenderManager.h"
+#include "MeshRenderer.h"
 #include "lib/VQDevice.h"
 #include "components/InputManager.h"
 #include "components/Camera.h"
@@ -26,6 +28,11 @@ class RenderManager {
         void Tick(float deltaTime);
         void Cleanup();
 
+        /**
+         * @brief Update the view matrix.
+         * 
+         * @param viewMatrix 
+         */
         void SetViewMatrix(glm::mat4 viewMatrix);
 
         void SetImguiRenderCallback(std::function<void()> imguiFunction);
@@ -181,4 +188,7 @@ class RenderManager {
         bool viewMode = false;
 
         std::function<void()> _imguiRenderCallback;
+
+        std::unique_ptr<MeshRenderManager> _meshRenderManager;
+
 };

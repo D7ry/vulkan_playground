@@ -16,10 +16,10 @@
 #include "components/VulkanUtils.h"
 
 // for testing only
-#include "components/MetaPipeline.h"
+#include "components/rendering/MetaPipeline.h"
 
-#include "components/MeshRenderManager.h"
-#include "components/MeshRenderer.h"
+#include "components/rendering/MeshRenderManager.h"
+#include "components/rendering/MeshRenderer.h"
 
 static MeshRenderManager renderManager;
 

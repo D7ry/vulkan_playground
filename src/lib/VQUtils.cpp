@@ -198,6 +198,7 @@ void VQUtils::createIndexBuffer(const std::vector<uint32_t>& indices, VQBuffer& 
         );
 
         vqBuffer.size = indexBufferSize;
+        vqBuffer.device = vqDevice.logicalDevice;
 
         vkDestroyBuffer(vqDevice.logicalDevice, stagingBuffer, nullptr);
         vkFreeMemory(vqDevice.logicalDevice, stagingBufferMemory, nullptr);
@@ -238,7 +239,7 @@ void VQUtils::createVertexBuffer(const std::vector<Vertex>& vertices, VQBuffer& 
         );
 
         vqBuffer.size = vertexBufferSize;
-
+        vqBuffer.device = vqDevice.logicalDevice;
         // get rid of staging buffer, it is very much temproary
         vkDestroyBuffer(vqDevice.logicalDevice, stagingBuffer, nullptr);
         vkFreeMemory(vqDevice.logicalDevice, stagingBufferMemory, nullptr);

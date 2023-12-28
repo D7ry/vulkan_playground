@@ -49,7 +49,7 @@ class DEngine {
                 glfwPollEvents();
                 _deltaTimer.Tick();
                 float deltaTime = _deltaTimer.GetDeltaTime();
-                _renderManager->SetViewMatrix(_mainCamera.GetViewMatrix());
+                _renderManager->SetViewMatrix(_mainCamera.GetViewMatrix()); // TODO: only update the view matrix when updating the camera
                 _renderManager->Tick(deltaTime);
                 _inputManager->Tick(deltaTime);
         };

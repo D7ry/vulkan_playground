@@ -13,8 +13,8 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #include <vulkan/vulkan_core.h>
-#include "components/MeshRenderManager.h"
-#include "components/MeshRenderer.h"
+#include "MeshRenderManager.h"
+#include "MeshRenderer.h"
 
 
 #include "RenderManager.h"
@@ -22,6 +22,7 @@ void RenderManager::Init(GLFWwindow* window) {
         INFO("Initializing Render Manager...");
         this->_window = window;
         glfwSetFramebufferSizeCallback(_window, this->framebufferResizeCallback);
+        this->_meshRenderManager = std::make_unique<MeshRenderManager>();
         this->initVulkan();
 }
 #define CAMERA_SPEED 3
@@ -511,6 +512,7 @@ void RenderManager::createSynchronizationObjects() {
 }
 void RenderManager::Cleanup() {
         INFO("Cleaning up...");
+        _meshRenderManager->Cleanup();
         TextureManager::GetSingleton()->Cleanup();
         _imguiManager.Cleanup(_device->logicalDevice);
         cleanupSwapChain();
@@ -536,7 +538,6 @@ void RenderManager::Cleanup() {
         INFO("Resource cleaned up.");
 }
 
-static MeshRenderManager meshRenderManager;
 
 const std::string SAMPLE_TEXTURE_PATH = "../resources/textures/viking_room.png";
 const std::string SAMPLE_MESH_PATH = "../resources/meshes/viking_room.obj";
@@ -552,22 +553,22 @@ void RenderManager::middleInit() {
 
 void RenderManager::postInit() {
 
-        render->RegisterRenderManager(&meshRenderManager);
+        render->RegisterRenderManager(_meshRenderManager.get());
 
-        render2->RegisterRenderManager(&meshRenderManager);
+        render2->RegisterRenderManager(_meshRenderManager.get());
         render2->transform.position = glm::vec3(0, 0, 2);
 
-        render3->RegisterRenderManager(&meshRenderManager);
+        render3->RegisterRenderManager(_meshRenderManager.get());
         render3->transform.position = glm::vec3(0, 2, 2);
 
-        render3->RegisterRenderManager(&meshRenderManager);
+        render3->RegisterRenderManager(_meshRenderManager.get());
         render3->transform.position = glm::vec3(0, 2, 2);
 
-        render4->RegisterRenderManager(&meshRenderManager);
+        render4->RegisterRenderManager(_meshRenderManager.get());
         render4->transform.position = glm::vec3(0, 0, -10);
         render4->transform.rotation = {90, 0, 0};
 
-        meshRenderManager.PrepareRendering(MAX_FRAMES_IN_FLIGHT, _renderPass, _device);
+        _meshRenderManager->PrepareRendering(MAX_FRAMES_IN_FLIGHT, _renderPass, _device);
 
         //_inputManager->RegisterCallback(GLFW_KEY_UP, InputManager::KeyCallbackCondition::HOLD, []() {render4->Rotate(10, 0, 0);});
 }
@@ -675,7 +676,7 @@ void RenderManager::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t 
 
         if (vkBeginCommandBuffer(this->_commandBuffers[_currentFrame], &beginInfo) != VK_SUCCESS) {
                 FATAL("Failed to begin recording command buffer!");
-        }
+                }
 
         // start render pass
         VkRenderPassBeginInfo renderPassInfo{};
@@ -710,7 +711,7 @@ void RenderManager::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t 
         scissor.extent = _swapChainExtent;
         vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-        meshRenderManager.RecordRenderCommands(commandBuffer, _currentFrame);
+        _meshRenderManager->RecordRenderCommands(commandBuffer, _currentFrame);
         vkCmdEndRenderPass(commandBuffer);
 
         if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
@@ -766,7 +767,7 @@ void RenderManager::drawFrame() {
         this->recordCommandBuffer(this->_commandBuffers[this->_currentFrame], imageIndex);
         _imguiManager.RecordCommandBuffer(this->_currentFrame, imageIndex, _swapChainExtent);
 
-        meshRenderManager.UpdateUniformBuffers(_currentFrame, _viewMatrix, glm::perspective(glm::radians(90.f), _swapChainExtent.width / (float)_swapChainExtent.height, 0.1f, 100.f));
+        _meshRenderManager->UpdateUniformBuffers(_currentFrame, _viewMatrix, glm::perspective(glm::radians(90.f), _swapChainExtent.width / (float)_swapChainExtent.height, 0.1f, 100.f));
 
         //  Submit the recorded command buffer
         VkSubmitInfo submitInfo{};
