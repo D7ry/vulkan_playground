@@ -23,10 +23,10 @@
 static MeshRenderManager renderManager;
 
 const std::string SAMPLE_TEXTURE_PATH = "../textures/viking_room.png";
-MeshRenderer* render = new MeshRenderer();
-MeshRenderer* render2 = new MeshRenderer();
-MeshRenderer* render3 = new MeshRenderer();
-MeshRenderer* render4 = new MeshRenderer();
+const std::string SAMPLE_MESH_PATH = "../meshes/viking_room.obj";
+MeshRenderer* render = new MeshRenderer(SAMPLE_MESH_PATH.data(), SAMPLE_TEXTURE_PATH.data());
+MeshRenderer* render2 = new MeshRenderer(SAMPLE_MESH_PATH.data(), SAMPLE_TEXTURE_PATH.data());
+MeshRenderer* render3 = new MeshRenderer("../meshes/spot.obj", "../textures/spot.png");
         
 
 
@@ -83,28 +83,24 @@ void TriangleApp::renderImGui() {
 }
 
 void TriangleApp::middleInit() {
-        _textureManager = std::make_unique<TextureManager>(_device);
-        _textureManager->LoadTexture(SAMPLE_TEXTURE_PATH);
+        TextureManager::GetSingleton()->Init(_device); // pass device to texture manager for it to start loading
+        TextureManager::GetSingleton()->LoadTexture(SAMPLE_TEXTURE_PATH);
 }
 
 void TriangleApp::postInit() {
 
-        render->LoadModel("../meshes/viking_room.obj");
         render->RegisterRenderManager(&renderManager);
 
-        render2->LoadModel("../meshes/viking_room.obj");
         render2->RegisterRenderManager(&renderManager);
         render2->transform.position = glm::vec3(0, 0, 2);
 
-        render3->LoadModel("../meshes/viking_room.obj");
         render3->RegisterRenderManager(&renderManager);
         render3->transform.position = glm::vec3(0, 2, 2);
 
-        render3->LoadModel("../meshes/viking_room.obj");
         render3->RegisterRenderManager(&renderManager);
         render3->transform.position = glm::vec3(0, 2, 2);
 
-        renderManager.PrepareRendering(MAX_FRAMES_IN_FLIGHT, _textureManager, _swapChainExtent, _renderPass, _device);
+        renderManager.PrepareRendering(MAX_FRAMES_IN_FLIGHT, _renderPass, _device);
 }
 
 
@@ -407,6 +403,6 @@ void TriangleApp::drawFrame() {
 }
 
 void TriangleApp::preCleanup() {
-        _textureManager->Cleanup();
+        TextureManager::GetSingleton()->Cleanup();
         //metapipeline.Cleanup(_logicalDevice);
 }

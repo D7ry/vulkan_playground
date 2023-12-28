@@ -1,18 +1,34 @@
 #pragma once
 #include <vulkan/vulkan.h>
-class VQBuffer {
+#include <structs/Vertex.h>
+
+struct VQBuffer {
         VkDevice device;
         VkBuffer buffer;
         VkDeviceMemory bufferMemory;
         VkDeviceSize size;
-        void* mappedAddress;
-        void cleanup() {
+        void* bufferAddress;
+        /**
+         * @brief Clean up all the resources held by this buffer.
+         */
+        void Cleanup() 
+        {
                 if (buffer) {
                         vkDestroyBuffer(device, buffer, nullptr);
                 }
                 if (bufferMemory) {
                         vkFreeMemory(device, bufferMemory, nullptr);
                 }
-                mappedAddress = nullptr;
+                bufferAddress = nullptr;
         }
+};
+
+struct VQBufferVertex {
+        VQBuffer vqBuffer;
+        std::vector<Vertex> vertices;
+};
+
+struct VQBufferIndex {
+        VQBuffer vqBuffer;
+        std::vector<uint32_t> indices;
 };

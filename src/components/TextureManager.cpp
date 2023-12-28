@@ -5,11 +5,6 @@
 #include "VulkanUtils.h"
 #include "lib/VQDevice.h"
 
-TextureManager::TextureManager(
-        std::shared_ptr<VQDevice> device
-) {
-        _device = device;
-}
 TextureManager::~TextureManager() {
         if (!_textures.empty()) {
                 FATAL("Textures must be cleaned up before ending texture manager!");
@@ -36,6 +31,9 @@ void TextureManager::GetDescriptorImageInfo(const std::string& texturePath, VkDe
         imageInfo.sampler = texture.textureSampler;
 }
 void TextureManager::LoadTexture(const std::string& texturePath) {
+        if (_device == VK_NULL_HANDLE) {
+                FATAL("Texture manager hasn't been initialized!");
+        }
         int width, height, channels;
         stbi_uc* pixels = stbi_load(texturePath.c_str(), &width, &height, &channels, STBI_rgb_alpha);
 
@@ -206,3 +204,4 @@ void TextureManager::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t 
         vkCmdCopyBufferToImage(commandBuffer, buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
         VulkanUtils::endSingleTimeCommands(commandBuffer, _device->logicalDevice, _device->graphicsQueue, _device->graphicsCommandPool);
 }
+void TextureManager::Init(std::shared_ptr<VQDevice> device) { this->_device = device; }

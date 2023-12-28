@@ -7,11 +7,14 @@
 #include "MeshRenderManager.h"
 class MeshRenderer {
       public:
-        MeshRenderer() {};
+        MeshRenderer() = delete;
+        MeshRenderer(const char* meshFilePath, const char* textureFilePath) {
+                this->meshFilePath = meshFilePath;
+                this->textureFilePath = textureFilePath;
+        }
 
-        void LoadModel(const char* meshFilePath);
         void RegisterRenderManager(MeshRenderManager* manager) {
-                manager->RegisterMeshRenderer(this, MeshRenderManager::RenderPipeline::Generic);
+                manager->RegisterMeshRenderer(this, MeshRenderManager::RenderMethod::Generic);
         }
         void Rotate(float x, float y, float z);
         ~MeshRenderer();
@@ -22,10 +25,10 @@ class MeshRenderer {
         std::vector<Vertex> vertices;
         std::vector<uint32_t> indices;
 
-        Transform transform = Transform{{0, 0, 0},{0, 0, 0}, {1, 1, 1}};
+        Transform transform = Transform{{0, 0, 0}, {0, 0, 0}, {1, 1, 1}};
 
-      private:
         // transform
-        bool _isVisible = true;
-
+        bool isVisible = true;
+        std::string meshFilePath;
+        std::string textureFilePath;
 };

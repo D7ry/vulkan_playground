@@ -3,6 +3,7 @@
 #include "components/MetaPipeline.h"
 #include "components/TextureManager.h"
 #include "components/VulkanUtils.h"
+#include "lib/VQBuffer.h"
 #include "structs/UniformBuffer.h"
 #include <cstdint>
 #include <cstring>
@@ -13,20 +14,38 @@
 
 class VQDevice;
 class MeshRenderer;
+
+
+/**
+ * @brief A render group is a set of meshes that shares the same texture, render pipeline, and therefore shaders. 
+ * Each mesh has its own dynamic UBO for information such as transform.
+ * There are exactly NUMFRAMEINFLIGHT static UBO and dynamic UBO.
+  * Render groups that share the render pipeline must share the same buffer layout.
+ */
+struct RenderGroup {
+        std::string texturePath;
+        uint32_t dynamicUboCount;
+        std::vector<MeshRenderer*> meshRenderers;
+        VQBuffer vertexBuffer;
+        VQBuffer indexBuffer;
+
+        std::vector<VQBuffer> staticUbo;
+        std::vector<VQBuffer> dynamicUbo;  
+        std::vector<VkDescriptorSet> descriptorSets;
+};
+
 class MeshRenderManager {
       public:
-        enum class RenderPipeline { Generic };
+        enum class RenderMethod { Generic };
 
         void Render() {}
 
-        void RegisterMeshRenderer(MeshRenderer* meshRenderer, RenderPipeline pipeline) {
-                _meshes[pipeline].push_back(meshRenderer);
+        void RegisterMeshRenderer(MeshRenderer* meshRenderer, RenderMethod renderMethod) {
+                _rendererToProcess[renderMethod].push_back(meshRenderer);
         }
 
         void PrepareRendering(
-                uint32_t numDescriptorSets,
-                const std::unique_ptr<TextureManager>& textureManager,
-                VkExtent2D swapchainExtent,
+                uint32_t numFrameInFlight,
                 VkRenderPass renderPass,
                 std::shared_ptr<VQDevice> device
         );
@@ -36,18 +55,13 @@ class MeshRenderManager {
         void RecordRenderCommands(VkCommandBuffer commandBuffer, int currentFrame);
 
       private:
-        struct MeshRenderData {
-                MeshRenderer* renderer;
-                MetaBuffer vertexBuffer;
-                MetaBuffer indexBuffer;
+        struct RuntimeRenderData {
+                MetaPipeline metaPipeline;
+                std::vector<RenderGroup> renderGroups;
         };
 
-        std::unordered_map<RenderPipeline, std::vector<MeshRenderer*>> _meshes;
+        std::unordered_map<RenderMethod, std::vector<MeshRenderer*>> _rendererToProcess; // list of renderers to prepare for rendering
 
-        std::unordered_map<MeshRenderer*, MeshRenderData> _renderData;
-
-        MetaPipeline _pipeline;
-        std::vector<GenerticMetaPipelineUniformBuffer> _uniformBuffers; // TODO: this is pipeline-specific.
-
+        std::unordered_map<RenderMethod, RuntimeRenderData> _runtimeRenderData; // pipeline type -> pipeline objects
         //TODO: support dynamic addition/deletion of meshRenderer.
 };

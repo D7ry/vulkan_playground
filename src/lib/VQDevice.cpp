@@ -1,9 +1,9 @@
-#include "VQDevice.h"
 #include <cstdint>
 #include <set>
 #include <vulkan/vulkan_core.h>
-#include "lib/VQBuffer.h"
-
+#include "VQDevice.h"
+#include "VQBuffer.h"
+#include "VQUtils.h"
 void VQDevice::CreateLogicalDeviceAndQueue(const std::vector<const char*>& extensions) {
         if (!this->queueFamilyIndices.isComplete()) {
                 FATAL("Queue family indices incomplete! Call InitQueueFamilyIndices().");
@@ -122,6 +122,41 @@ VQDevice::VQDevice(VkPhysicalDevice physicalDevice) {
 }
 void VQDevice::FreeGraphicsCommandBuffer(const std::vector<VkCommandBuffer>& commandBuffers) {
         vkFreeCommandBuffers(logicalDevice, graphicsCommandPool, commandBuffers.size(), commandBuffers.data());
+}
+VQBuffer VQDevice::CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties) {
+        VQBuffer vqBuffer{};
+
+        vqBuffer.device = this->logicalDevice;
+        vqBuffer.size = size;
+
+        VkBufferCreateInfo bufferInfo{};
+        bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        bufferInfo.size = size;
+        bufferInfo.usage = usage;
+        bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+        if (vkCreateBuffer(this->logicalDevice, &bufferInfo, nullptr, &vqBuffer.buffer) != VK_SUCCESS) {
+                FATAL("Failed to create VK buffer!");
+        }
+
+        VkMemoryRequirements memRequirements;
+        vkGetBufferMemoryRequirements(this->logicalDevice, vqBuffer.buffer, &memRequirements);
+
+        VkMemoryAllocateInfo allocInfo{};
+        allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        allocInfo.allocationSize = memRequirements.size;
+        allocInfo.memoryTypeIndex
+                = VQUtils::findMemoryType(physicalDevice, memRequirements.memoryTypeBits, properties);
+
+        if (vkAllocateMemory(this->logicalDevice, &allocInfo, nullptr, &vqBuffer.bufferMemory) != VK_SUCCESS) {
+                FATAL("Failed to allocate device memory for buffer creation!");
+        }
+
+        vkBindBufferMemory(this->logicalDevice, vqBuffer.buffer, vqBuffer.bufferMemory, 0);
+
+        vkMapMemory(this->logicalDevice, vqBuffer.bufferMemory, 0, vqBuffer.size, 0, &vqBuffer.bufferAddress);
+
+        return vqBuffer;
 }
 VQDevice::~VQDevice() {
 

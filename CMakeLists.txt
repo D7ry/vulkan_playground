@@ -49,6 +49,7 @@ add_executable(vulkan_playground
         src/components/MeshRenderManager.cpp
         src/components/InputManager.cpp
         src/lib/VQDevice.cpp
+        src/lib/VQUtils.cpp
 )
 # std directory
 target_include_directories(vulkan_playground PUBLIC ${STB_DIR})

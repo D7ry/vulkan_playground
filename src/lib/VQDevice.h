@@ -1,3 +1,4 @@
+#pragma once
 #include "vulkan/vulkan.h"
 #include <optional>
 #include <vulkan/vulkan_core.h>
@@ -73,6 +74,16 @@ struct VQDevice {
         void CreateGraphicsCommandBuffer(std::vector<VkCommandBuffer>& commandBuffers, uint32_t commandBufferCount);
 
         void FreeGraphicsCommandBuffer(const std::vector<VkCommandBuffer>& commandBuffers);
+
+        /**
+         * @brief Create a VQBuffer from this device. 
+         *  The buffer shall be freed by the callee.
+         * @param size 
+         * @param usage 
+         * @param properties 
+         * @return VQBuffer 
+         */
+        VQBuffer CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties);
 
         void Cleanup();
 };

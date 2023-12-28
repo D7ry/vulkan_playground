@@ -4,5 +4,4 @@
 namespace VQ {
 
 
-
 } // namespace VulQ

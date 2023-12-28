@@ -1,7 +1,11 @@
 #pragma once
 #include <GLFW/glfw3.h>
 #include <unordered_set>
-#include"DeltaTimer.h"
+
+/**
+ * @brief Manages GLFW input, dispatches key hold callbacks
+ * 
+ */
 class InputManager {
       public:
         enum KeyCallbackCondition {
@@ -22,6 +26,13 @@ class InputManager {
          */
         void Update(float deltaTime);
 
+        /**
+         * @brief Register a single key callback
+         * 
+         * @param key the key to register
+         * @param callbackCondition the condition of the input for the callback to dispatch
+         * @param callback the callback function.
+         */
         void RegisterCallback(int key, KeyCallbackCondition callbackCondition, std::function<void()> callback);
 
         void RegisterComboKeyCallback(int key, KeyCallbackCondition callbackCondition, std::function<void()> callback) {

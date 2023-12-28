@@ -5,13 +5,15 @@ class VQDevice;
 class TextureManager {
 
       public:
-        TextureManager() = delete;
-        TextureManager(
-                std::shared_ptr<VQDevice> device
-        );
+        static TextureManager* GetSingleton() {
+                static TextureManager singleton;
+                return &singleton;
+        }
+        TextureManager() {_device = nullptr;};
 
         ~TextureManager();
 
+        void Init(std::shared_ptr<VQDevice> device);
         // clean up and deallocate everything.
         // suggested to call before cleaning up swapchain.
         void Cleanup();

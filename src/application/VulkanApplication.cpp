@@ -55,7 +55,7 @@ void VulkanApplication::setKeyCallback() {
                 _camera.Move(0, -_deltaTimer.GetDeltaTime() * CAMERA_SPEED, 0);
         });
         _inputManager->RegisterCallback(GLFW_KEY_LEFT_CONTROL, InputManager::KeyCallbackCondition::HOLD, [this]() {
-                _camera.Move(0, 0, CAMERA_SPEED * _deltaTimer.GetDeltaTime());
+                _camera.Move(0, 0, -CAMERA_SPEED * _deltaTimer.GetDeltaTime());
         });
         _inputManager->RegisterCallback(GLFW_KEY_SPACE, InputManager::KeyCallbackCondition::HOLD, [this]() {
                 _camera.Move(0, 0, CAMERA_SPEED * _deltaTimer.GetDeltaTime());
@@ -71,7 +71,7 @@ void VulkanApplication::setKeyCallback() {
         });
         _inputManager->RegisterCallback(GLFW_KEY_ESCAPE, InputManager::KeyCallbackCondition::PRESS, [this]() {
                 glfwSetWindowShouldClose(_window, GLFW_TRUE);
-        })
+        });
 }
 
 void VulkanApplication::setCursorInputCallback() {

@@ -26,6 +26,4 @@ class TriangleApp : public VulkanApplication {
 
         virtual void preCleanup() override;
 
-
-        std::unique_ptr<TextureManager> _textureManager = nullptr;
 };
