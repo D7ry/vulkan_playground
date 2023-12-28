@@ -16,6 +16,7 @@ MetaPipeline CreateGenericMetaPipeline(
 ) {
         INFO("Creating genertic meta pipeline...");
         MetaPipeline m{};
+        m.device = device->logicalDevice;
 
         // descriptor set layout
         {
@@ -107,6 +108,7 @@ MetaPipeline CreateGenericMetaPipeline(
                         group.descriptorPool = m.descriptorPool;
 
                         for (size_t i = 0; i < numFrameInFlight; i++) {
+                                INFO("{}", i);
                                 VkDescriptorBufferInfo descriptorBufferInfo_static{};
                                 descriptorBufferInfo_static.buffer = group.staticUbo[i].buffer;
                                 descriptorBufferInfo_static.offset = 0;

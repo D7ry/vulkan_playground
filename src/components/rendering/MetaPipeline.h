@@ -17,7 +17,9 @@ struct MetaPipeline {
         VkDescriptorSetLayout descriptorSetLayout;
         VkDescriptorPool descriptorPool;
 
-        inline void Cleanup(VkDevice device) {
+        VkDevice device;
+
+        inline void Cleanup() {
                 INFO("Cleaning up meta pipeline...");
                 vkDestroyPipeline(device, pipeline, nullptr);
                 vkDestroyPipelineLayout(device, pipelineLayout, nullptr);

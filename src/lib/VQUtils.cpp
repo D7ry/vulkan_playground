@@ -250,11 +250,13 @@ void VQUtils::meshToBuffer(
         VQBuffer& vertexBuffer,
         VQBuffer& indexBuffer
 ) {
+        INFO("Loading mesh {}", meshFilePath);
         std::vector<Vertex> vertices;
         std::vector<uint32_t> indices;
         CoreUtils::loadModel(meshFilePath, vertices, indices);
         createVertexBuffer(vertices, vertexBuffer, vqDevice);
         createIndexBuffer(indices, indexBuffer, vqDevice);
+        INFO("Mesh loaded");
 }
 uint32_t
 VQUtils::findMemoryType(VkPhysicalDevice physicalDevice, uint32_t typeFilter, VkMemoryPropertyFlags properties) {

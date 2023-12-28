@@ -4,6 +4,7 @@
 #include "components/DeltaTimer.h"
 #include "components/InputManager.h"
 #include "components/rendering/RenderManager.h"
+#include "imgui_impl_glfw.h"
 #include <GLFW/glfw3.h>
 #include <memory>
 class DEngine {
@@ -24,6 +25,7 @@ class DEngine {
                         auto keyCallback = [](GLFWwindow* window, int key, int scancode, int action, int mods) {
                                 auto app = reinterpret_cast<DEngine*>(glfwGetWindowUserPointer(window));
                                 app->_inputManager->OnKeyInput(window, key, scancode, action, mods);
+                                ImGui_ImplGlfw_KeyCallback(window, key, scancode, action, mods);
                         };
                         glfwSetKeyCallback(this->_window, keyCallback);
                         this->bindInputs(); // register key callbacks
@@ -32,6 +34,7 @@ class DEngine {
                         auto cursorPosCallback = [](GLFWwindow* window, double xpos, double ypos) {
                                 auto app = reinterpret_cast<DEngine*>(glfwGetWindowUserPointer(window));
                                 app->cursorPosCallback(window, xpos, ypos);
+                                ImGui_ImplGlfw_CursorPosCallback(window, xpos, ypos);
                         };
                         glfwSetCursorPosCallback(this->_window, cursorPosCallback);
                 }

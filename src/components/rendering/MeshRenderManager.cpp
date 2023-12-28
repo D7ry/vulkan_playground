@@ -55,6 +55,7 @@ void MeshRenderManager::PrepareRendering(
 
         // uniform buffer allocation
         {
+                INFO("Allocating uniform buffers...");
                 for (auto& it : this->_runtimeRenderData) {
                         RuntimeRenderData& renderData = it.second;
                         for (RenderGroup& group : renderData.renderGroups) {
@@ -84,6 +85,7 @@ void MeshRenderManager::PrepareRendering(
 
         // pipeline creation
         {
+                INFO("Creating metapipeline...");
                 for (auto& it : this->_runtimeRenderData) {
                         RuntimeRenderData& renderData = it.second;
                         // TODO: shader should be a part of metapipeline
@@ -192,5 +194,6 @@ void MeshRenderManager::Cleanup() {
                 for (auto& renderGroup : data.renderGroups) {
                         renderGroup.cleanup();
                 }
+                data.metaPipeline.Cleanup();
         }
 }
