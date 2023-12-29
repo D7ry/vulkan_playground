@@ -4,6 +4,7 @@
 #include "components/DeltaTimer.h"
 #include "components/InputManager.h"
 #include "components/rendering/RenderManager.h"
+#include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include <GLFW/glfw3.h>
 #include <memory>
@@ -106,7 +107,7 @@ class DEngine {
                 if (ImGui::Begin("Debug")) {
                         ImGui::SetWindowPos(ImVec2(0, 0), ImGuiCond_Once);
                         ImGui::SetWindowSize(ImVec2(400, 400), ImGuiCond_Once);
-                        ImGui::Text("Framerate: %f", ImGui::GetIO().Framerate);
+                        ImGui::Text("Framerate: %f", 1 / _deltaTimer.GetDeltaTime());
                         ImGui::Separator();
                         ImGui::Text("Camera");
                         if (ImGui::BeginChild("Camera")) {

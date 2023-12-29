@@ -159,6 +159,25 @@ void loadModel(const char* meshFilePath, std::vector<Vertex>& vertices, std::vec
                         indices.push_back(uniqueVertices[vertex]);
                 }
         }
+
+        // calculate vertex normals
+        for (int i = 0; i < indices.size(); i += 3) { // note that we traverse indices here instead of vertices; each iteration is a triangle
+                Vertex& v0 = vertices[indices[i + 0]];
+                Vertex& v1 = vertices[indices[i + 1]];
+                Vertex& v2 = vertices[indices[i + 2]];
+
+                glm::vec3 edge1 = v1.pos - v0.pos;
+                glm::vec3 edge2 = v2.pos - v0.pos;
+                glm::vec3 normal = glm::normalize(glm::cross(edge1, edge2));
+
+                v0.normal += normal;
+                v1.normal += normal;
+                v2.normal += normal;
+        }
+
+        for (Vertex& v : vertices) {
+                v.normal = glm::normalize(v.normal);
+        }
 }
 } // namespace CoreUtils
 
@@ -204,7 +223,7 @@ void VQUtils::createIndexBuffer(const std::vector<uint32_t>& indices, VQBuffer& 
         vkFreeMemory(vqDevice.logicalDevice, stagingBufferMemory, nullptr);
 }
 void VQUtils::createVertexBuffer(const std::vector<Vertex>& vertices, VQBuffer& vqBuffer, VQDevice& vqDevice) {
-        VkDeviceSize vertexBufferSize = sizeof(vertices[0]) * vertices.size();
+        VkDeviceSize vertexBufferSize = sizeof(Vertex) * vertices.size();
 
         std::pair<VkBuffer, VkDeviceMemory> res = CoreUtils::createVulkanStagingBuffer(
                 vqDevice.physicalDevice, vqDevice.logicalDevice, vertexBufferSize

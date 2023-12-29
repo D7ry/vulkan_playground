@@ -544,7 +544,7 @@ const std::string SAMPLE_MESH_PATH = "../resources/meshes/viking_room.obj";
 MeshRenderer* render = new MeshRenderer(SAMPLE_MESH_PATH.data(), SAMPLE_TEXTURE_PATH.data());
 MeshRenderer* render2 = new MeshRenderer(SAMPLE_MESH_PATH.data(), SAMPLE_TEXTURE_PATH.data());
 MeshRenderer* render3 = new MeshRenderer("../resources/meshes/spot.obj", "../resources/textures/spot.png");
-MeshRenderer* render4 = new MeshRenderer("../resources/meshes/spot.obj", "../resources/textures/spot.png");
+MeshRenderer* render4 = new MeshRenderer("../resources/meshes/wall.obj", "../resources/textures/wall.png");
 
 void RenderManager::middleInit() {
         TextureManager::GetSingleton()->Init(_device); // pass device to texture manager for it to start loading
@@ -566,7 +566,7 @@ void RenderManager::postInit() {
 
         render4->RegisterRenderManager(_meshRenderManager.get());
         render4->transform.position = glm::vec3(0, 0, -10);
-        render4->transform.rotation = {90, 0, 0};
+        render4->transform.rotation = {0, 0, 180};
 
         _meshRenderManager->PrepareRendering(MAX_FRAMES_IN_FLIGHT, _renderPass, _device);
 

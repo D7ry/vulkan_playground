@@ -13,6 +13,7 @@ struct Vertex {
         // 12 bytes 
         glm::vec3 color;
         glm::vec2 texCoord;
+        glm::vec3 normal;
 
         static VkVertexInputBindingDescription GetBindingDescription();
 
