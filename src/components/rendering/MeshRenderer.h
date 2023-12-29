@@ -1,5 +1,6 @@
 #pragma once
 #include "components/Transform.h"
+#include "imgui.h"
 #include "structs/Vertex.h"
 #include <glm/ext/matrix_transform.hpp>
 #include <vulkan/vulkan_core.h>
@@ -26,6 +27,18 @@ class MeshRenderer {
         std::vector<uint32_t> indices;
 
         Transform transform = Transform{{0, 0, 0}, {0, 0, 0}, {1, 1, 1}};
+
+        void DrawImguiController() {
+                ImGui::Separator();
+                ImGui::Text("Mesh: %s", this->meshFilePath.data());
+                ImGui::Text("Texture: %s", this->textureFilePath.data());
+                if (ImGui::BeginChild(fmt::format("{}", (void*)this).data()), 0, ImGuiWindowFlags_AlwaysAutoResize) {
+                        transform.DrawImguiControllers();
+                }
+                ImGui::EndChild();
+
+
+        }
 
         // transform
         bool isVisible = true;

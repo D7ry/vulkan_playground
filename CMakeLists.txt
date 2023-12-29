@@ -46,6 +46,7 @@ add_executable(vulkan_playground
         src/components/rendering/MeshRenderer.cpp
         src/components/rendering/MeshRenderManager.cpp
         src/components/InputManager.cpp
+        src/components/Transform.cpp
         src/lib/VQDevice.cpp
         src/lib/VQUtils.cpp
         src/components/rendering/RenderManager.cpp

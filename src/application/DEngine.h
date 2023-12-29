@@ -8,11 +8,34 @@
 #include "imgui_impl_glfw.h"
 #include <GLFW/glfw3.h>
 #include <memory>
+
+
 class DEngine {
       public:
         DEngine () {
         };
 
+        void addExperimentalMesh() {
+                const std::string SAMPLE_TEXTURE_PATH = "../resources/textures/viking_room.png";
+                const std::string SAMPLE_MESH_PATH = "../resources/meshes/viking_room.obj";
+                MeshRenderer* render = new MeshRenderer(SAMPLE_MESH_PATH.data(), SAMPLE_TEXTURE_PATH.data());
+                MeshRenderer* render2 = new MeshRenderer(SAMPLE_MESH_PATH.data(), SAMPLE_TEXTURE_PATH.data());
+                MeshRenderer* render3 = new MeshRenderer("../resources/meshes/spot.obj", "../resources/textures/spot.png");
+                MeshRenderer* render4 = new MeshRenderer("../resources/meshes/wall.obj", "../resources/textures/wall.png");
+                render2->transform.position = glm::vec3(0, 0, 2);
+
+                render3->transform.position = glm::vec3(0, 2, 2);
+
+                render3->transform.position = glm::vec3(0, 2, 2);
+
+                render4->transform.position = glm::vec3(0, 0, -10);
+                render4->transform.rotation = {0, 0, 180};
+
+                _renderManager->AddMesh(render);
+                _renderManager->AddMesh(render2);
+                _renderManager->AddMesh(render3);
+                _renderManager->AddMesh(render4);
+        }
         void Init() {
                 INFO("Initializing dEngine...");
                 initGLFW();
@@ -20,6 +43,8 @@ class DEngine {
                         _renderManager = std::make_unique<RenderManager>();
                         _renderManager->Init(_window);
                         _renderManager->SetImguiRenderCallback([this]() { this->renderImgui(); });
+                        addExperimentalMesh();
+                        _renderManager->Prepare();
                 }
                 { // input manager
                         this->_inputManager = std::make_unique<InputManager>();
@@ -128,10 +153,11 @@ class DEngine {
                                 } else {
                                         ImGui::Text("View Mode: Deactive");
                                 }
-                                ImGui::EndChild();
                         }
+                        ImGui::EndChild();
                 }
                 ImGui::End();
+                _renderManager->DrawImgui();
         }
 
         void cleanup() {

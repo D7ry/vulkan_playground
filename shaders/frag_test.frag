@@ -9,9 +9,9 @@ layout(location = 4) in vec3 fragGlobalLightPos;
 
 layout(location = 0) out vec4 outColor;
 
-vec3 ambientLighting = vec3(0.1, 0.1, 0.1);
+vec3 ambientLighting = vec3(0.0, 0.0, 0.0);
 vec3 lightSourceColor = vec3(0.7, 1.0, 1.0); // White light
-float lightSourceIntensity = 10;
+float lightSourceIntensity = 100;
 
 void main() {
     vec4 textureColor = texture(textureSampler, fragTexCoord);

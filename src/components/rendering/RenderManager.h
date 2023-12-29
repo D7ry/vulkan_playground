@@ -11,6 +11,7 @@
 #include "components/ImGuiManager.h"
 #include "MeshRenderManager.h"
 #include "MeshRenderer.h"
+#include "imgui.h"
 #include "lib/VQDevice.h"
 #include "components/InputManager.h"
 #include "components/Camera.h"
@@ -25,8 +26,18 @@ class RenderManager {
        * @brief Initialize render manager, create necessary vulkan resources and bindings.
        */
         void Init(GLFWwindow* window);
+        void Prepare();
         void Tick(float deltaTime);
         void Cleanup();
+        void AddMesh(MeshRenderer* renderer);
+        void DrawImgui() {
+                if (ImGui::Begin("Render Manager")) {
+                        for (MeshRenderer* mesh : _meshes) {
+                                mesh->DrawImguiController();
+                        }
+                }
+                ImGui::End();
+        }
 
         /**
          * @brief Update the view matrix.
@@ -170,6 +181,7 @@ class RenderManager {
         std::vector<VkSemaphore> _semaRenderFinished;
         std::vector<VkFence> _fenceInFlight;
 
+        std::vector<MeshRenderer*> _meshes;
         // depth buffer
         VkImage _depthImage;
         VkDeviceMemory _depthImageMemory;
