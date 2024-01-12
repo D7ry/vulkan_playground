@@ -25,8 +25,7 @@ struct RenderGroup {
         uint32_t dynamicUboCount;
         std::vector<MeshRenderer*> meshRenderers;
         VQBuffer vertexBuffer;
-        VQBuffer indexBuffer;
-        int indexCount;
+        VQBufferIndex indexBuffer;
 
         std::vector<VQBuffer> staticUbo;
         std::vector<VQBuffer> dynamicUbo;  

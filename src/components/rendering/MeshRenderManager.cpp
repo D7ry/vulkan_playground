@@ -177,11 +177,7 @@ void MeshRenderManager::RecordRenderCommands(VkCommandBuffer commandBuffer, int 
                                         &dynamicOffset
                                 );
 
-                                // vkCmdDraw(commandBuffer, 3, 1, 0, 0);
-                                uint32_t indexCount = static_cast<uint32_t>(
-                                        renderGroup.indexBuffer.size / sizeof(uint32_t)
-                                ); // TODO: fix this hack
-                                vkCmdDrawIndexed(commandBuffer, indexCount, 1, 0, 0, 0);
+                                vkCmdDrawIndexed(commandBuffer, renderGroup.indexBuffer.numIndices, 1, 0, 0, 0);
                         }
                 }
         }

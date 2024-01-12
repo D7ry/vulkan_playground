@@ -1,4 +1,5 @@
 #include "VQUtils.h"
+#include "lib/VQBuffer.h"
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader.h>
 // utilities not exposed
@@ -181,47 +182,6 @@ void loadModel(const char* meshFilePath, std::vector<Vertex>& vertices, std::vec
 }
 } // namespace CoreUtils
 
-void VQUtils::createIndexBuffer(const std::vector<uint32_t>& indices, VQBuffer& vqBuffer, VQDevice& vqDevice) {
-        INFO("Creating index buffer...");
-        VkDeviceSize indexBufferSize = sizeof(indices[0]) * indices.size();
-
-        std::pair<VkBuffer, VkDeviceMemory> res = CoreUtils::createVulkanStagingBuffer(
-                vqDevice.physicalDevice, vqDevice.logicalDevice, indexBufferSize
-        );
-        VkBuffer stagingBuffer = res.first;
-        VkDeviceMemory stagingBufferMemory = res.second;
-        // copy over data from cpu memory to gpu memory(staging buffer)
-        void* data;
-        vkMapMemory(vqDevice.logicalDevice, stagingBufferMemory, 0, indexBufferSize, 0, &data);
-        memcpy(data, indices.data(), (size_t)indexBufferSize); // copy the data
-        vkUnmapMemory(vqDevice.logicalDevice, stagingBufferMemory);
-
-        // create index buffer
-        CoreUtils::createVulkanBuffer(
-                vqDevice.physicalDevice,
-                vqDevice.logicalDevice,
-                indexBufferSize,
-                VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                vqBuffer.buffer,
-                vqBuffer.bufferMemory
-        );
-
-        CoreUtils::copyVulkanBuffer(
-                vqDevice.logicalDevice,
-                vqDevice.graphicsCommandPool,
-                vqDevice.graphicsQueue,
-                stagingBuffer,
-                vqBuffer.buffer,
-                indexBufferSize
-        );
-
-        vqBuffer.size = indexBufferSize;
-        vqBuffer.device = vqDevice.logicalDevice;
-
-        vkDestroyBuffer(vqDevice.logicalDevice, stagingBuffer, nullptr);
-        vkFreeMemory(vqDevice.logicalDevice, stagingBufferMemory, nullptr);
-}
 void VQUtils::createVertexBuffer(const std::vector<Vertex>& vertices, VQBuffer& vqBuffer, VQDevice& vqDevice) {
         VkDeviceSize vertexBufferSize = sizeof(Vertex) * vertices.size();
 
@@ -267,7 +227,7 @@ void VQUtils::meshToBuffer(
         const char* meshFilePath,
         VQDevice& vqDevice,
         VQBuffer& vertexBuffer,
-        VQBuffer& indexBuffer
+        VQBufferIndex& indexBuffer
 ) {
         INFO("Loading mesh {}", meshFilePath);
         std::vector<Vertex> vertices;

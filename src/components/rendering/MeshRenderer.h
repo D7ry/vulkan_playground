@@ -6,6 +6,11 @@
 #include <vulkan/vulkan_core.h>
 
 #include "MeshRenderManager.h"
+
+/**
+ * @brief Mesh renderer object for game object. Exposed to engine user.
+ * 
+ */
 class MeshRenderer {
       public:
         MeshRenderer() = delete;
