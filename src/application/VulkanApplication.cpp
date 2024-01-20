@@ -147,12 +147,9 @@ void VulkanApplication::initVulkan() {
         this->createSwapChain();
         this->createImageViews();
         this->createRenderPass();
-        this->_imguiManager.InitializeImgui();
-        this->_imguiManager.InitializeRenderPass(this->_device->logicalDevice, _swapChainImageFormat);
         this->createDepthBuffer();
         this->createFramebuffers();
         // this->createCommandPool();
-        this->middleInit();
         // this->loadModel();
         // this->createVertexBuffer();
         // this->createIndexBuffer();
@@ -160,6 +157,8 @@ void VulkanApplication::initVulkan() {
         // this->createCommandBuffer();
         this->createSynchronizationObjects();
 
+        this->_imguiManager.InitializeImgui();
+        this->_imguiManager.InitializeRenderPass(this->_device->logicalDevice, _swapChainImageFormat);
         this->_imguiManager.InitializeDescriptorPool(MAX_FRAMES_IN_FLIGHT, _device->logicalDevice);
         this->_imguiManager.BindVulkanResources(
                 _window,
@@ -174,11 +173,13 @@ void VulkanApplication::initVulkan() {
                 MAX_FRAMES_IN_FLIGHT, _device->logicalDevice, _device->queueFamilyIndices.graphicsFamily.value()
         );
         this->_imguiManager.BindRenderCallback(std::bind(&VulkanApplication::renderImGui, this));
-        // this->_imguiManager.InitializeFrameBuffer(_swapChainFrameBuffers.size(), _device->logicalDevice,
-        // _swapChainImageViews, _swapChainExtent);
+
+        auto cleanupImgui = [this]() {
+                this->_imguiManager.Cleanup(this->_device->logicalDevice);
+        };
+        this->_deletionQueue.push(cleanupImgui);
         INFO("Vulkan initialized.");
 
-        this->postInit();
 }
 
 bool VulkanApplication::checkValidationLayerSupport() {
@@ -655,7 +656,6 @@ void VulkanApplication::createSynchronizationObjects() {
 }
 void VulkanApplication::cleanup() {
         INFO("Cleaning up...");
-        preCleanup();
         _imguiManager.Cleanup(_device->logicalDevice);
         cleanupSwapChain();
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
@@ -677,7 +677,6 @@ void VulkanApplication::cleanup() {
         vkDestroyInstance(this->_instance, nullptr);
         glfwDestroyWindow(this->_window);
         glfwTerminate();
-        postCleanup();
         INFO("Resource cleaned up.");
 }
 uint32_t VulkanApplication::findMemoryType(
@@ -713,10 +712,7 @@ VulkanApplication::createStagingBuffer(VulkanApplication* app, VkDeviceSize buff
         );
         return {stagingBuffer, stagingBufferMemory};
 }
-void VulkanApplication::middleInit() {}
-void VulkanApplication::postInit() {
-        // override this method to do post initialization
-}
+
 // void VulkanApplication::loadModel() {
 //         tinyobj::attrib_t attrib;
 //         std::vector<tinyobj::shape_t> shapes;

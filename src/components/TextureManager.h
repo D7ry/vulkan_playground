@@ -23,7 +23,7 @@ class TextureManager {
         void LoadTexture(const std::string& texturePath);
 
       private:
-        struct Texture {
+        struct __TextureInternal {
                 VkImage textureImage;
                 VkImageView textureImageView;
                 VkDeviceMemory textureImageMemory; // gpu memory that holds the image.
@@ -35,6 +35,6 @@ class TextureManager {
         // copy over content  in the staging buffer to the actual image
         void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
 
-        std::unordered_map<std::string, Texture> _textures; // image path -> texture obj
+        std::unordered_map<std::string, __TextureInternal> _textures; // image path -> texture obj
         std::shared_ptr<VQDevice> _device;
 };

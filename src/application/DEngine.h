@@ -3,7 +3,7 @@
 #include "components/Camera.h"
 #include "components/DeltaTimer.h"
 #include "components/InputManager.h"
-#include "components/rendering/RenderManager.h"
+#include "components/rendering/VulkanEngine.h"
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include <GLFW/glfw3.h>
@@ -31,20 +31,20 @@ class DEngine {
                 render4->transform.position = glm::vec3(0, 0, -10);
                 render4->transform.rotation = {0, 0, 180};
 
-                _renderManager->AddMesh(render);
-                _renderManager->AddMesh(render2);
-                _renderManager->AddMesh(render3);
-                _renderManager->AddMesh(render4);
+                _vulkanEngine->AddMesh(render);
+                _vulkanEngine->AddMesh(render2);
+                _vulkanEngine->AddMesh(render3);
+                _vulkanEngine->AddMesh(render4);
         }
         void Init() {
                 INFO("Initializing dEngine...");
                 initGLFW();
                 { // render manager
-                        _renderManager = std::make_unique<RenderManager>();
-                        _renderManager->Init(_window);
-                        _renderManager->SetImguiRenderCallback([this]() { this->renderImgui(); });
+                        _vulkanEngine = std::make_unique<VulkanEngine>();
+                        _vulkanEngine->Init(_window);
+                        _vulkanEngine->SetImguiRenderCallback([this]() { this->renderImgui(); });
                         addExperimentalMesh();
-                        _renderManager->Prepare();
+                        _vulkanEngine->Prepare();
                 }
                 { // input manager
                         this->_inputManager = std::make_unique<InputManager>();
@@ -78,8 +78,8 @@ class DEngine {
                 glfwPollEvents();
                 _deltaTimer.Tick();
                 float deltaTime = _deltaTimer.GetDeltaTime();
-                _renderManager->SetViewMatrix(_mainCamera.GetViewMatrix()); // TODO: only update the view matrix when updating the camera
-                _renderManager->Tick(deltaTime);
+                _vulkanEngine->SetViewMatrix(_mainCamera.GetViewMatrix()); // TODO: only update the view matrix when updating the camera
+                _vulkanEngine->Tick(deltaTime);
                 _inputManager->Tick(deltaTime);
         };
 
@@ -88,7 +88,7 @@ class DEngine {
         Camera _mainCamera = Camera(0, 0, 0, 0, 0, 0);
 
         GLFWwindow* _window;
-        std::unique_ptr<RenderManager> _renderManager;
+        std::unique_ptr<VulkanEngine> _vulkanEngine;
         std::unique_ptr<InputManager> _inputManager;
 
         bool _lockCursor;
@@ -157,11 +157,11 @@ class DEngine {
                         ImGui::EndChild();
                 }
                 ImGui::End();
-                _renderManager->DrawImgui();
+                _vulkanEngine->DrawImgui();
         }
 
         void cleanup() {
-                _renderManager->Cleanup();
+                _vulkanEngine->Cleanup();
                 glfwDestroyWindow(this->_window);
                 glfwTerminate();
         }
@@ -193,8 +193,10 @@ class DEngine {
                         _lockCursor = !_lockCursor;
                         if (_lockCursor) {
                                 glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+                                ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NoMouse;
                         } else {
                                 glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+                                ImGui::GetIO().ConfigFlags &= ~ImGuiConfigFlags_NoMouse;
                         }
                 });
                 _inputManager->RegisterCallback(GLFW_KEY_ESCAPE, InputManager::KeyCallbackCondition::PRESS, [this]() {

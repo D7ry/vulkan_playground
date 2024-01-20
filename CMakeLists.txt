@@ -49,10 +49,9 @@ add_executable(vulkan_playground
         src/components/Transform.cpp
         src/lib/VQDevice.cpp
         src/lib/VQUtils.cpp
-        src/components/rendering/RenderManager.cpp
+        src/components/rendering/VulkanEngine.cpp
         src/application/DEngine.cpp
 
-        src/components/rendering/RenderManager.cpp
 )
 # std directory
 target_include_directories(vulkan_playground PUBLIC ${STB_DIR})

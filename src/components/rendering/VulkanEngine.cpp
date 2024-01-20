@@ -17,8 +17,8 @@
 #include "MeshRenderer.h"
 
 
-#include "RenderManager.h"
-void RenderManager::Init(GLFWwindow* window) {
+#include "VulkanEngine.h"
+void VulkanEngine::Init(GLFWwindow* window) {
         INFO("Initializing Render Manager...");
         this->_window = window;
         glfwSetFramebufferSizeCallback(_window, this->framebufferResizeCallback);
@@ -27,23 +27,23 @@ void RenderManager::Init(GLFWwindow* window) {
 }
 #define CAMERA_SPEED 3
 
-void RenderManager::SetViewMatrix(glm::mat4 viewMatrix) {
+void VulkanEngine::SetViewMatrix(glm::mat4 viewMatrix) {
         _viewMatrix = viewMatrix;
 }
 
-void RenderManager::Tick(float deltaTime) {
+void VulkanEngine::Tick(float deltaTime) {
         _imguiManager.RenderFrame();
         drawFrame();
         vkDeviceWaitIdle(this->_device->logicalDevice);
 }
 
-void RenderManager::framebufferResizeCallback(GLFWwindow* window, int width, int height) {
+void VulkanEngine::framebufferResizeCallback(GLFWwindow* window, int width, int height) {
         INFO("Window resized to {}x{}", width, height);
-        auto app = reinterpret_cast<RenderManager*>(glfwGetWindowUserPointer(window));
+        auto app = reinterpret_cast<VulkanEngine*>(glfwGetWindowUserPointer(window));
         app->_framebufferResized = true;
 }
 
-void RenderManager::initVulkan() {
+void VulkanEngine::initVulkan() {
         INFO("Initializing Vulkan...");
         this->createInstance();
         if (this->enableValidationLayers) {
@@ -60,12 +60,12 @@ void RenderManager::initVulkan() {
         this->createSwapChain();
         this->createImageViews();
         this->createRenderPass();
-        this->_imguiManager.InitializeImgui();
-        this->_imguiManager.InitializeRenderPass(this->_device->logicalDevice, _swapChainImageFormat);
         this->createDepthBuffer();
-        this->createFramebuffers();
         this->middleInit();
         this->createSynchronizationObjects();
+        this->_imguiManager.InitializeImgui();
+        this->_imguiManager.InitializeRenderPass(this->_device->logicalDevice, _swapChainImageFormat);
+        this->createFramebuffers();
 
         this->_imguiManager.InitializeDescriptorPool(MAX_FRAMES_IN_FLIGHT, _device->logicalDevice);
         this->_imguiManager.BindVulkanResources(
@@ -80,14 +80,12 @@ void RenderManager::initVulkan() {
         this->_imguiManager.InitializeCommandPoolAndBuffers(
                 MAX_FRAMES_IN_FLIGHT, _device->logicalDevice, _device->queueFamilyIndices.graphicsFamily.value()
         );
-        // this->_imguiManager.InitializeFrameBuffer(_swapChainFrameBuffers.size(), _device->logicalDevice,
-        // _swapChainImageViews, _swapChainExtent);
         INFO("Vulkan initialized.");
 
         this->postInit();
 }
 
-bool RenderManager::checkValidationLayerSupport() {
+bool VulkanEngine::checkValidationLayerSupport() {
         uint32_t layerCount;
         vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
 
@@ -109,7 +107,7 @@ bool RenderManager::checkValidationLayerSupport() {
         return true;
 }
 
-void RenderManager::createInstance() {
+void VulkanEngine::createInstance() {
         INFO("Creating Vulkan instance...");
         if (this->enableValidationLayers) {
                 if (!this->checkValidationLayerSupport()) {
@@ -170,14 +168,14 @@ void RenderManager::createInstance() {
         INFO("Vulkan instance created.");
 }
 
-void RenderManager::createSurface() {
+void VulkanEngine::createSurface() {
         VkResult result = glfwCreateWindowSurface(this->_instance, this->_window, nullptr, &this->_surface);
         if (result != VK_SUCCESS) {
                 FATAL("Failed to create window surface.");
         }
 }
 
-VkResult RenderManager::CreateDebugUtilsMessengerEXT(
+VkResult VulkanEngine::CreateDebugUtilsMessengerEXT(
         VkInstance instance,
         const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,
         const VkAllocationCallbacks* pAllocator,
@@ -194,7 +192,7 @@ VkResult RenderManager::CreateDebugUtilsMessengerEXT(
                 return VK_ERROR_EXTENSION_NOT_PRESENT;
         }
 }
-void RenderManager::populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo) {
+void VulkanEngine::populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo) {
         createInfo = {};
         createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
         createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT
@@ -205,7 +203,7 @@ void RenderManager::populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreate
                                  | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
         createInfo.pfnUserCallback = debugCallback;
 }
-void RenderManager::setupDebugMessenger() {
+void VulkanEngine::setupDebugMessenger() {
         if (!this->enableValidationLayers) {
                 ERROR("Validation layers are not enabled, cannot set up debug messenger.");
         }
@@ -217,7 +215,7 @@ void RenderManager::setupDebugMessenger() {
                 FATAL("Failed to set up debug messenger!");
         }
 }
-VKAPI_ATTR VkBool32 VKAPI_CALL RenderManager::debugCallback(
+VKAPI_ATTR VkBool32 VKAPI_CALL VulkanEngine::debugCallback(
         VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
         VkDebugUtilsMessageTypeFlagsEXT messageType,
         const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
@@ -227,7 +225,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL RenderManager::debugCallback(
 
         return VK_FALSE;
 }
-RenderManager::QueueFamilyIndices RenderManager::findQueueFamilies(VkPhysicalDevice device) {
+VulkanEngine::QueueFamilyIndices VulkanEngine::findQueueFamilies(VkPhysicalDevice device) {
         INFO("Finding graphics and presentation queue families...");
 
         QueueFamilyIndices indices;
@@ -256,7 +254,7 @@ RenderManager::QueueFamilyIndices RenderManager::findQueueFamilies(VkPhysicalDev
         std::optional<uint32_t> graphicsFamily;
         return indices;
 }
-bool RenderManager::checkDeviceExtensionSupport(VkPhysicalDevice device) {
+bool VulkanEngine::checkDeviceExtensionSupport(VkPhysicalDevice device) {
         uint32_t extensionCount;
         vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
 
@@ -271,7 +269,7 @@ bool RenderManager::checkDeviceExtensionSupport(VkPhysicalDevice device) {
 
         return requiredExtensions.empty();
 }
-bool RenderManager::isDeviceSuitable(VkPhysicalDevice device) {
+bool VulkanEngine::isDeviceSuitable(VkPhysicalDevice device) {
         VkPhysicalDeviceProperties deviceProperties;
         VkPhysicalDeviceFeatures deviceFeatures;
         vkGetPhysicalDeviceProperties(device, &deviceProperties);
@@ -284,7 +282,7 @@ bool RenderManager::isDeviceSuitable(VkPhysicalDevice device) {
                 return false;
         }
 }
-VkPhysicalDevice RenderManager::pickPhysicalDevice() {
+VkPhysicalDevice VulkanEngine::pickPhysicalDevice() {
         INFO("Picking physical device ");
         VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
         uint32_t deviceCount = 0;
@@ -308,7 +306,7 @@ VkPhysicalDevice RenderManager::pickPhysicalDevice() {
         return physicalDevice;
 }
 
-void RenderManager::createSwapChain() {
+void VulkanEngine::createSwapChain() {
         INFO("creating swapchain...");
         SwapChainSupportDetails swapChainSupport = querySwapChainSupport(_device->physicalDevice);
         VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
@@ -363,7 +361,7 @@ void RenderManager::createSwapChain() {
         _swapChainExtent = extent;
         INFO("Swap chain created!\n");
 }
-void RenderManager::cleanupSwapChain() {
+void VulkanEngine::cleanupSwapChain() {
         INFO("Cleaning up swap chain...");
         vkDestroyImageView(_device->logicalDevice, _depthImageView, nullptr);
         vkDestroyImage(_device->logicalDevice, _depthImage, nullptr);
@@ -378,7 +376,7 @@ void RenderManager::cleanupSwapChain() {
         }
         vkDestroySwapchainKHR(this->_device->logicalDevice, this->_swapChain, nullptr);
 }
-void RenderManager::recreateSwapChain() {
+void VulkanEngine::recreateSwapChain() {
         // need to recreate render pass for HDR changing, we're not doing that for now
         INFO("Recreating swap chain...");
         // handle window minimization
@@ -398,7 +396,7 @@ void RenderManager::recreateSwapChain() {
         this->createFramebuffers();
         INFO("Swap chain recreated.");
 }
-RenderManager::SwapChainSupportDetails RenderManager::querySwapChainSupport(VkPhysicalDevice device) {
+VulkanEngine::SwapChainSupportDetails VulkanEngine::querySwapChainSupport(VkPhysicalDevice device) {
         SwapChainSupportDetails details;
 
         vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, _surface, &details.capabilities);
@@ -423,7 +421,7 @@ RenderManager::SwapChainSupportDetails RenderManager::querySwapChainSupport(VkPh
 
         return details;
 }
-VkSurfaceFormatKHR RenderManager::chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) {
+VkSurfaceFormatKHR VulkanEngine::chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) {
         for (const auto& availableFormat : availableFormats) {
                 if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB
                     && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
@@ -433,7 +431,7 @@ VkSurfaceFormatKHR RenderManager::chooseSwapSurfaceFormat(const std::vector<VkSu
 
         return availableFormats[0];
 }
-VkPresentModeKHR RenderManager::chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes) {
+VkPresentModeKHR VulkanEngine::chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes) {
         for (const auto& availablePresentMode : availablePresentModes) {
                 if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
                         return availablePresentMode;
@@ -442,7 +440,7 @@ VkPresentModeKHR RenderManager::chooseSwapPresentMode(const std::vector<VkPresen
 
         return VK_PRESENT_MODE_FIFO_KHR;
 }
-VkExtent2D RenderManager::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities) {
+VkExtent2D VulkanEngine::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities) {
         if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
                 return capabilities.currentExtent;
         } else {
@@ -461,7 +459,7 @@ VkExtent2D RenderManager::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capab
                 return actualExtent;
         }
 }
-void RenderManager::createImageViews() {
+void VulkanEngine::createImageViews() {
         INFO("Creating {} image views...", this->_swapChainImages.size());
         this->_swapChainImageViews.resize(this->_swapChainImages.size());
         for (size_t i = 0; i < this->_swapChainImages.size(); i++) {
@@ -488,7 +486,7 @@ void RenderManager::createImageViews() {
 }
 
 
-void RenderManager::createSynchronizationObjects() {
+void VulkanEngine::createSynchronizationObjects() {
         INFO("Creating synchronization objects...");
         this->_semaImageAvailable.resize(MAX_FRAMES_IN_FLIGHT);
         this->_semaRenderFinished.resize(MAX_FRAMES_IN_FLIGHT);
@@ -510,7 +508,7 @@ void RenderManager::createSynchronizationObjects() {
                 }
         }
 }
-void RenderManager::Cleanup() {
+void VulkanEngine::Cleanup() {
         INFO("Cleaning up...");
         _meshRenderManager->Cleanup();
         TextureManager::GetSingleton()->Cleanup();
@@ -540,16 +538,16 @@ void RenderManager::Cleanup() {
 
 
 
-void RenderManager::middleInit() {
+void VulkanEngine::middleInit() {
         TextureManager::GetSingleton()->Init(_device); // pass device to texture manager for it to start loading
 }
 
-void RenderManager::postInit() {
+void VulkanEngine::postInit() {
         //_inputManager->RegisterCallback(GLFW_KEY_UP, InputManager::KeyCallbackCondition::HOLD, []() {render4->Rotate(10, 0, 0);});
 }
 
 
-void RenderManager::createRenderPass() {
+void VulkanEngine::createRenderPass() {
         INFO("Creating render pass...");
         VkAttachmentDescription colorAttachment{};
         colorAttachment.format = this->_swapChainImageFormat;
@@ -617,7 +615,7 @@ void RenderManager::createRenderPass() {
                 FATAL("Failed to create render pass!");
         }
 }
-void RenderManager::createFramebuffers() {
+void VulkanEngine::createFramebuffers() {
         INFO("Creating {} framebuffers...", this->_swapChainImageViews.size());
         this->_swapChainFrameBuffers.resize(this->_swapChainImageViews.size());
         // iterate through image views and create framebuffers
@@ -643,7 +641,7 @@ void RenderManager::createFramebuffers() {
         INFO("Framebuffers created.");
 }
 
-void RenderManager::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) { // called every frame
+void VulkanEngine::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) { // called every frame
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         beginInfo.flags = 0;                  // Optional
@@ -694,7 +692,7 @@ void RenderManager::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t 
         }
 }
 
-void RenderManager::createDepthBuffer() {
+void VulkanEngine::createDepthBuffer() {
         INFO("Creating depth buffer...");
         VkFormat depthFormat = VulkanUtils::findBestFormat(
                 {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT},
@@ -718,7 +716,7 @@ void RenderManager::createDepthBuffer() {
 }
 
 
-void RenderManager::drawFrame() {
+void VulkanEngine::drawFrame() {
         //  Wait for the previous frame to finish
         vkWaitForFences(_device->logicalDevice, 1, &this->_fenceInFlight[this->_currentFrame], VK_TRUE, UINT64_MAX);
 
@@ -794,13 +792,13 @@ void RenderManager::drawFrame() {
         _currentFrame = (_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 }
 
-void RenderManager::SetImguiRenderCallback(std::function<void()> imguiFunction) {
+void VulkanEngine::SetImguiRenderCallback(std::function<void()> imguiFunction) {
         this->_imguiManager.BindRenderCallback(imguiFunction);
 }
-void RenderManager::Prepare() {
+void VulkanEngine::Prepare() {
         for (MeshRenderer* renderer : this->_meshes) {
                 _meshRenderManager->RegisterMeshRenderer(renderer, MeshRenderManager::RenderMethod::Generic);
         }
         this->_meshRenderManager->PrepareRendering(MAX_FRAMES_IN_FLIGHT, _renderPass, _device);
 }
-void RenderManager::AddMesh(MeshRenderer* renderer) { _meshes.push_back(renderer); }
+void VulkanEngine::AddMesh(MeshRenderer* renderer) { _meshes.push_back(renderer); }

@@ -15,12 +15,14 @@
 #include "lib/VQDevice.h"
 #include "components/InputManager.h"
 #include "components/Camera.h"
+
+#include "lib/DeletionQueue.h"
 // TODO: create a serialization scheme for tweakable settings.
 
 /**
  * @brief A render manager responsible for rendering everything
  */
-class RenderManager {
+class VulkanEngine {
       public:
       /**
        * @brief Initialize render manager, create necessary vulkan resources and bindings.
@@ -202,5 +204,7 @@ class RenderManager {
         std::function<void()> _imguiRenderCallback;
 
         std::unique_ptr<MeshRenderManager> _meshRenderManager;
+
+        DeletionQueue _deletionQueue;
 
 };

@@ -12,7 +12,7 @@ TextureManager::~TextureManager() {
 }
 void TextureManager::Cleanup() {
         for (auto& elem : _textures) {
-                Texture& texture = elem.second;
+                __TextureInternal& texture = elem.second;
                 vkDestroyImageView(_device->logicalDevice, texture.textureImageView, nullptr);
                 vkDestroyImage(_device->logicalDevice, texture.textureImage, nullptr);
                 vkDestroySampler(_device->logicalDevice, texture.textureSampler,nullptr);
@@ -24,7 +24,7 @@ void TextureManager::GetDescriptorImageInfo(const std::string& texturePath, VkDe
         if (_textures.find(texturePath) == _textures.end()) {
                 LoadTexture(texturePath);
         }
-        Texture& texture = _textures.at(texturePath);
+        __TextureInternal& texture = _textures.at(texturePath);
         imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         imageInfo.imageView = texture.textureImageView;
         imageInfo.sampler = texture.textureSampler;
@@ -125,7 +125,7 @@ void TextureManager::LoadTexture(const std::string& texturePath) {
         }
 
         _textures.emplace(
-                std::make_pair(texturePath, Texture{textureImage, textureImageView, textureImageMemory, textureSampler})
+                std::make_pair(texturePath, __TextureInternal{textureImage, textureImageView, textureImageMemory, textureSampler})
         );
 
         // clean up staging buffer

@@ -14,6 +14,8 @@
 #include "lib/VQDevice.h"
 #include "components/InputManager.h"
 #include "components/Camera.h"
+
+#include "lib/DeletionQueue.h"
 // TODO: create a serialization scheme for tweakable settings.
 
 /**
@@ -77,8 +79,6 @@ class VulkanApplication {
 
         void createImageViews();
 
-        virtual void middleInit();
-        virtual void postInit();
         virtual void createDepthBuffer();
         virtual void createUniformBuffers();
         virtual void createRenderPass();
@@ -209,4 +209,6 @@ class VulkanApplication {
 
         Camera _camera = Camera(glm::vec3(1.0f, 0.5f, 1.0f), glm::vec3(-28, -146, 0));
         bool viewMode = false;
+
+        DeletionQueue _deletionQueue;
 };
