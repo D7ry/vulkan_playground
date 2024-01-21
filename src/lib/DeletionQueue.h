@@ -1,15 +1,22 @@
 #pragma once
 
-#include <deque>
+#include <vector>
 
-struct DeletionQueue {
+/**
+ * @brief A stack of functions to be executed that handles the deletion of resources.
+ * Stack is FIFO, so push cleaning functions right after resource initialization.
+ *
+ */
+struct DeletionStack
+{
         void push(std::function<void()>&& function) { _deleters.push_back(function); }
 
         /**
-         * @brief Execute all deletion functions
+         * @brief Execute all deletion functions in the stack.
          *
          */
-        void flush() {
+        void flush()
+        {
                 for (auto it = _deleters.rbegin(); it != _deleters.rend(); it++) {
                         (*it)();
                 }
@@ -17,5 +24,5 @@ struct DeletionQueue {
         }
 
       private:
-        std::deque<std::function<void()>> _deleters;
+        std::vector<std::function<void()>> _deleters;
 };

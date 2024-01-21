@@ -12,7 +12,8 @@ void MeshRenderManager::PrepareRendering(
         uint32_t numFrameInFlight,
         VkRenderPass renderPass,
         std::shared_ptr<VQDevice> device
-) {
+)
+{
         // construct render groups
         for (auto it = _rendererToProcess.begin(); it != _rendererToProcess.end(); it++) {
                 ASSERT(it->first == RenderMethod::Generic); // TODO: add more render methods
@@ -99,11 +100,12 @@ void MeshRenderManager::PrepareRendering(
                                 "../shaders/frag_test.frag.spv",
                                 renderPass
                         );
-                        
                 }
         }
 }
-void MeshRenderManager::UpdateUniformBuffers(int32_t frameIndex, glm::mat4 view, glm::mat4 proj) {
+
+void MeshRenderManager::UpdateUniformBuffers(int32_t frameIndex, glm::mat4 view, glm::mat4 proj)
+{
         for (auto& elem : _runtimeRenderData) {
                 std::vector<RenderGroup>& groups = elem.second.renderGroups;
                 for (RenderGroup& group : groups) {
@@ -148,7 +150,9 @@ void MeshRenderManager::UpdateUniformBuffers(int32_t frameIndex, glm::mat4 view,
         //         memcpy(bufferAddr, &ubd, sizeof(UniformBuffer_Dynamic));
         // }
 }
-void MeshRenderManager::RecordRenderCommands(VkCommandBuffer commandBuffer, int currentFrame) {
+
+void MeshRenderManager::RecordRenderCommands(VkCommandBuffer commandBuffer, int currentFrame)
+{
         for (auto& elem : _runtimeRenderData) {
                 RuntimeRenderData& renderData = elem.second;
                 for (RenderGroup& renderGroup : renderData.renderGroups) {
@@ -184,7 +188,9 @@ void MeshRenderManager::RecordRenderCommands(VkCommandBuffer commandBuffer, int 
         // }
 }
 
-void MeshRenderManager::Cleanup() {
+void MeshRenderManager::Cleanup()
+{
+        INFO("CLeaning up mesh render manager...");
         for (auto& elem : _runtimeRenderData) {
                 RuntimeRenderData& data = elem.second;
                 for (auto& renderGroup : data.renderGroups) {

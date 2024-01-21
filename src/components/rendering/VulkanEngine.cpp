@@ -23,8 +23,11 @@ void VulkanEngine::Init(GLFWwindow* window)
         INFO("Initializing Render Manager...");
         this->_window = window;
         glfwSetFramebufferSizeCallback(_window, this->framebufferResizeCallback);
-        this->_meshRenderManager = std::make_unique<MeshRenderManager>();
         this->initVulkan();
+        TextureManager::GetSingleton()->Init(_device); // pass device to texture manager for it to start loading
+        this->_meshRenderManager = std::make_unique<MeshRenderManager>();
+        this->_deletionStack.push([this]() { TextureManager::GetSingleton()->Cleanup(); });
+        this->_deletionStack.push([this]() { this->_meshRenderManager->Cleanup(); });
 }
 
 #define CAMERA_SPEED 3
@@ -45,6 +48,17 @@ void VulkanEngine::framebufferResizeCallback(GLFWwindow* window, int width, int 
         app->_framebufferResized = true;
 }
 
+void VulkanEngine::createDevice()
+{
+        VkPhysicalDevice physicalDevice = this->pickPhysicalDevice();
+        this->_device = std::make_shared<VQDevice>(physicalDevice);
+        this->_device->InitQueueFamilyIndices(this->_surface);
+        this->_device->CreateLogicalDeviceAndQueue(DEVICE_EXTENSIONS);
+        this->_device->CreateGraphicsCommandPool();
+        this->_device->CreateGraphicsCommandBuffer(INTER_FRAMES);
+        this->_deletionStack.push([this]() { this->_device->Cleanup(); });
+}
+
 void VulkanEngine::initVulkan()
 {
         INFO("Initializing Vulkan...");
@@ -53,24 +67,17 @@ void VulkanEngine::initVulkan()
                 // this->setupDebugMessenger();
         }
         this->createSurface();
-        VkPhysicalDevice physicalDevice = this->pickPhysicalDevice();
-        this->_device = std::make_shared<VQDevice>(physicalDevice);
-        this->_device->InitQueueFamilyIndices(this->_surface);
-        this->_device->CreateLogicalDeviceAndQueue(DEVICE_EXTENSIONS);
-        this->_device->CreateGraphicsCommandPool();
-        this->_device->CreateGraphicsCommandBuffer(this->_commandBuffers, MAX_FRAMES_IN_FLIGHT);
-        // this->createLogicalDevice();
+        this->createDevice();
         this->createSwapChain();
         this->createImageViews();
         this->createRenderPass();
         this->createDepthBuffer();
-        this->middleInit();
         this->createSynchronizationObjects();
-        this->_imguiManager.InitializeImgui();
         this->_imguiManager.InitializeRenderPass(this->_device->logicalDevice, _swapChainImageFormat);
         this->createFramebuffers();
 
-        this->_imguiManager.InitializeDescriptorPool(MAX_FRAMES_IN_FLIGHT, _device->logicalDevice);
+        this->_imguiManager.InitializeImgui();
+        this->_imguiManager.InitializeDescriptorPool(INTER_FRAMES, _device->logicalDevice);
         this->_imguiManager.BindVulkanResources(
                 _window,
                 _instance,
@@ -81,8 +88,10 @@ void VulkanEngine::initVulkan()
                 _swapChainFrameBuffers.size()
         );
         this->_imguiManager.InitializeCommandPoolAndBuffers(
-                MAX_FRAMES_IN_FLIGHT, _device->logicalDevice, _device->queueFamilyIndices.graphicsFamily.value()
+                INTER_FRAMES, _device->logicalDevice, _device->queueFamilyIndices.graphicsFamily.value()
         );
+
+        this->_deletionStack.push([this]() { this->_imguiManager.Cleanup(_device->logicalDevice); });
         INFO("Vulkan initialized.");
 
         this->postInit();
@@ -168,6 +177,7 @@ void VulkanEngine::createInstance()
         if (result != VK_SUCCESS) {
                 FATAL("Failed to create Vulkan instance.");
         }
+        _deletionStack.push([this]() { vkDestroyInstance(this->_instance, nullptr); });
 
         INFO("Vulkan instance created.");
 }
@@ -178,6 +188,7 @@ void VulkanEngine::createSurface()
         if (result != VK_SUCCESS) {
                 FATAL("Failed to create window surface.");
         }
+        _deletionStack.push([this]() { vkDestroySurfaceKHR(this->_instance, this->_surface, nullptr); });
 }
 
 VkResult VulkanEngine::CreateDebugUtilsMessengerEXT(
@@ -381,6 +392,7 @@ void VulkanEngine::createSwapChain()
         _swapChainImageFormat = surfaceFormat.format;
         _swapChainExtent = extent;
         INFO("Swap chain created!\n");
+        this->_deletionStack.push([this]() { this->cleanupSwapChain(); });
 }
 
 void VulkanEngine::cleanupSwapChain()
@@ -523,9 +535,9 @@ void VulkanEngine::createImageViews()
 void VulkanEngine::createSynchronizationObjects()
 {
         INFO("Creating synchronization objects...");
-        this->_semaImageAvailable.resize(MAX_FRAMES_IN_FLIGHT);
-        this->_semaRenderFinished.resize(MAX_FRAMES_IN_FLIGHT);
-        this->_fenceInFlight.resize(MAX_FRAMES_IN_FLIGHT);
+        this->_semaImageAvailable.resize(INTER_FRAMES);
+        this->_semaRenderFinished.resize(INTER_FRAMES);
+        this->_fenceInFlight.resize(INTER_FRAMES);
 
         VkSemaphoreCreateInfo semaphoreInfo{};
         semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -533,7 +545,7 @@ void VulkanEngine::createSynchronizationObjects()
         fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
         fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT; // create with a signaled bit so that the
                                                         // 1st frame can start right away
-        for (size_t i = 0; i < this->MAX_FRAMES_IN_FLIGHT; i++) {
+        for (size_t i = 0; i < this->INTER_FRAMES; i++) {
                 if (vkCreateSemaphore(_device->logicalDevice, &semaphoreInfo, nullptr, &_semaImageAvailable[i])
                             != VK_SUCCESS
                     || vkCreateSemaphore(_device->logicalDevice, &semaphoreInfo, nullptr, &_semaRenderFinished[i])
@@ -542,41 +554,31 @@ void VulkanEngine::createSynchronizationObjects()
                         FATAL("Failed to create synchronization objects for a frame!");
                 }
         }
+        this->_deletionStack.push([this]() {
+                for (size_t i = 0; i < INTER_FRAMES; i++) {
+                        vkDestroySemaphore(this->_device->logicalDevice, this->_semaRenderFinished[i], nullptr);
+                        vkDestroySemaphore(this->_device->logicalDevice, this->_semaImageAvailable[i], nullptr);
+                        vkDestroyFence(this->_device->logicalDevice, this->_fenceInFlight[i], nullptr);
+                }
+        });
 }
 
 void VulkanEngine::Cleanup()
 {
         INFO("Cleaning up...");
-        _meshRenderManager->Cleanup();
-        TextureManager::GetSingleton()->Cleanup();
-        _imguiManager.Cleanup(_device->logicalDevice);
-        cleanupSwapChain();
-        for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-                vkDestroySemaphore(this->_device->logicalDevice, this->_semaRenderFinished[i], nullptr);
-                vkDestroySemaphore(this->_device->logicalDevice, this->_semaImageAvailable[i], nullptr);
-                vkDestroyFence(this->_device->logicalDevice, this->_fenceInFlight[i], nullptr);
-        }
+        _deletionStack.flush();
 
-        vkDestroyRenderPass(this->_device->logicalDevice, this->_renderPass, nullptr);
         if (enableValidationLayers) {
                 if (this->_debugMessenger != nullptr) {
                         // TODO: implement this
                         // vkDestroyDebugUtilsMessengerEXT(_instance, _debugMessenger, nullptr);
                 }
         }
-        _device->FreeGraphicsCommandBuffer(this->_commandBuffers);
-        _device->Cleanup();
-        vkDestroySurfaceKHR(this->_instance, this->_surface, nullptr);
-        vkDestroyInstance(this->_instance, nullptr);
-
         postCleanup();
         INFO("Resource cleaned up.");
 }
 
-void VulkanEngine::middleInit()
-{
-        TextureManager::GetSingleton()->Init(_device); // pass device to texture manager for it to start loading
-}
+void VulkanEngine::middleInit() {}
 
 void VulkanEngine::postInit()
 {
@@ -654,6 +656,9 @@ void VulkanEngine::createRenderPass()
         if (vkCreateRenderPass(_device->logicalDevice, &renderPassInfo, nullptr, &this->_renderPass) != VK_SUCCESS) {
                 FATAL("Failed to create render pass!");
         }
+
+        _deletionStack.push([this]() { vkDestroyRenderPass(this->_device->logicalDevice, this->_renderPass, nullptr); }
+        );
 }
 
 void VulkanEngine::createFramebuffers()
@@ -694,7 +699,7 @@ void VulkanEngine::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t i
         beginInfo.flags = 0;                  // Optional
         beginInfo.pInheritanceInfo = nullptr; // Optional
 
-        if (vkBeginCommandBuffer(this->_commandBuffers[_currentFrame], &beginInfo) != VK_SUCCESS) {
+        if (vkBeginCommandBuffer(this->_device->graphicsCommandBuffers[_currentFrame], &beginInfo) != VK_SUCCESS) {
                 FATAL("Failed to begin recording command buffer!");
         }
 
@@ -791,8 +796,8 @@ void VulkanEngine::drawFrame()
         vkResetFences(this->_device->logicalDevice, 1, &this->_fenceInFlight[this->_currentFrame]);
 
         //  Record a command buffer which draws the scene onto that image
-        vkResetCommandBuffer(this->_commandBuffers[this->_currentFrame], 0);
-        this->recordCommandBuffer(this->_commandBuffers[this->_currentFrame], imageIndex);
+        vkResetCommandBuffer(this->_device->graphicsCommandBuffers[this->_currentFrame], 0);
+        this->recordCommandBuffer(this->_device->graphicsCommandBuffers[this->_currentFrame], imageIndex);
         _imguiManager.RecordCommandBuffer(this->_currentFrame, imageIndex, _swapChainExtent);
 
         _meshRenderManager->UpdateUniformBuffers(
@@ -812,7 +817,7 @@ void VulkanEngine::drawFrame()
                                                                              // available before drawing
         VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
         std::array<VkCommandBuffer, 2> submitCommandBuffers
-                = {_commandBuffers[_currentFrame], _imguiManager.GetCommandBuffer(_currentFrame)};
+                = {this->_device->graphicsCommandBuffers[_currentFrame], _imguiManager.GetCommandBuffer(_currentFrame)};
 
         submitInfo.waitSemaphoreCount = 1;
         submitInfo.pWaitSemaphores = waitSemaphores;
@@ -854,7 +859,7 @@ void VulkanEngine::drawFrame()
                 FATAL("Failed to present swap chain image!");
         }
         //  Advance to the next frame
-        _currentFrame = (_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+        _currentFrame = (_currentFrame + 1) % INTER_FRAMES;
 }
 
 void VulkanEngine::SetImguiRenderCallback(std::function<void()> imguiFunction)
@@ -867,7 +872,7 @@ void VulkanEngine::Prepare()
         for (MeshRenderer* renderer : this->_meshes) {
                 _meshRenderManager->RegisterMeshRenderer(renderer, MeshRenderManager::RenderMethod::Generic);
         }
-        this->_meshRenderManager->PrepareRendering(MAX_FRAMES_IN_FLIGHT, _renderPass, _device);
+        this->_meshRenderManager->PrepareRendering(INTER_FRAMES, _renderPass, _device);
 }
 
 void VulkanEngine::AddMesh(MeshRenderer* renderer) { _meshes.push_back(renderer); }

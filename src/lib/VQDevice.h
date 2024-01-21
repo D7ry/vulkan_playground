@@ -3,18 +3,22 @@
 #include <optional>
 #include <vulkan/vulkan_core.h>
 
-struct QueueFamilyIndices {
+struct QueueFamilyIndices
+{
         std::optional<uint32_t> graphicsFamily;
         std::optional<uint32_t> presentationFamily;
+
         inline bool isComplete() { return graphicsFamily.has_value() && presentationFamily.has_value(); }
 };
 struct VQBuffer;
+
 /**
  * @brief Vulkan device representation.Call InitQueueFamilyIndices() with the right surface, then call
  * CreateLogicalDeviceAndQueue() with the right extensions.
  *
  */
-struct VQDevice {
+struct VQDevice
+{
         /** @brief Physical device representation */
         VkPhysicalDevice physicalDevice;
         /** @brief Logical device representation (application's view of the device) */
@@ -31,6 +35,8 @@ struct VQDevice {
         std::vector<VkQueueFamilyProperties> queueFamilyProperties;
         /** @brief List of extensions supported by the device */
         std::vector<std::string> supportedExtensions;
+        /** @brief Graphics command buffer associated with this device.*/
+        std::vector<VkCommandBuffer> graphicsCommandBuffers;
 
         VkQueue graphicsQueue = VK_NULL_HANDLE;
 
@@ -40,20 +46,22 @@ struct VQDevice {
 
         /** @brief Contains queue family indices */
         QueueFamilyIndices queueFamilyIndices;
+
         operator VkDevice() const { return logicalDevice; };
+
         explicit VQDevice(VkPhysicalDevice physicalDevice);
         ~VQDevice();
 
         /**
          * @brief Query Vulkan API to find the queue family indices that support graphics and presentation.
-         * 
+         *
          * @param surface The surface on which the presentation queue will present to.
          */
         void InitQueueFamilyIndices(VkSurfaceKHR surface);
 
         /**
          * @brief Create a Logical Device, and create a graphics queue and a presentation queue.
-         * 
+         *
          * @param extensions the extensions to enable
          */
         void CreateLogicalDeviceAndQueue(const std::vector<const char*>& extensions);
@@ -64,24 +72,20 @@ struct VQDevice {
         void CreateGraphicsCommandPool();
 
         /**
-         * @brief Populate a vector of VkCommandBuffer with the given command buffer count. The command buffers can be
+         * @brief Populate a graphicsCommandBuffers with the given command buffer count. The command buffers can be
          * used to submit to the graphics command queue.
-         * Note that the caller is responsible for freeing the command buffers.
          *
-         * @param commandBuffers the vector to populate
          * @param commandBufferCount    the number of command buffers to create
          */
-        void CreateGraphicsCommandBuffer(std::vector<VkCommandBuffer>& commandBuffers, uint32_t commandBufferCount);
-
-        void FreeGraphicsCommandBuffer(const std::vector<VkCommandBuffer>& commandBuffers);
+        void CreateGraphicsCommandBuffer(uint32_t commandBufferCount);
 
         /**
-         * @brief Create a VQBuffer from this device. 
+         * @brief Create a VQBuffer from this device.
          *  The buffer shall be freed by the callee.
-         * @param size 
-         * @param usage 
-         * @param properties 
-         * @return VQBuffer 
+         * @param size
+         * @param usage
+         * @param properties
+         * @return VQBuffer
          */
         VQBuffer CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties);
 

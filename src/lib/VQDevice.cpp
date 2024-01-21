@@ -1,10 +1,12 @@
-#include <cstdint>
-#include <set>
-#include <vulkan/vulkan_core.h>
 #include "VQDevice.h"
 #include "VQBuffer.h"
 #include "VQUtils.h"
-void VQDevice::CreateLogicalDeviceAndQueue(const std::vector<const char*>& extensions) {
+#include <cstdint>
+#include <set>
+#include <vulkan/vulkan_core.h>
+
+void VQDevice::CreateLogicalDeviceAndQueue(const std::vector<const char*>& extensions)
+{
         if (!this->queueFamilyIndices.isComplete()) {
                 FATAL("Queue family indices incomplete! Call InitQueueFamilyIndices().");
         }
@@ -37,9 +39,13 @@ void VQDevice::CreateLogicalDeviceAndQueue(const std::vector<const char*>& exten
                 FATAL("Failed to create logical device!");
         }
         vkGetDeviceQueue(this->logicalDevice, queueFamilyIndices.graphicsFamily.value(), 0, &this->graphicsQueue);
-        vkGetDeviceQueue(this->logicalDevice, queueFamilyIndices.presentationFamily.value(), 0, &this->presentationQueue);
+        vkGetDeviceQueue(
+                this->logicalDevice, queueFamilyIndices.presentationFamily.value(), 0, &this->presentationQueue
+        );
 }
-void VQDevice::InitQueueFamilyIndices(VkSurfaceKHR surface) {
+
+void VQDevice::InitQueueFamilyIndices(VkSurfaceKHR surface)
+{
         INFO("Finding graphics and presentation queue families...");
         uint32_t queueFamilyCount = 0;
         vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, nullptr);
@@ -64,13 +70,16 @@ void VQDevice::InitQueueFamilyIndices(VkSurfaceKHR surface) {
                 i++;
         }
 }
-void VQDevice::CreateGraphicsCommandPool() {
+
+void VQDevice::CreateGraphicsCommandPool()
+{
         if (!queueFamilyIndices.graphicsFamily.has_value()) {
                 FATAL("Graphics queue family not initialized! Call InitQueueFamilyIndices().");
         }
         VkCommandPoolCreateInfo poolInfo{};
         poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-        poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT; // ALlow command buffers to be re-recorded individually
+        poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT; // ALlow command buffers to be re-recorded
+                                                                          // individually
         // we want to re-record the command buffer every single frame.
         poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
 
@@ -78,20 +87,24 @@ void VQDevice::CreateGraphicsCommandPool() {
                 FATAL("Failed to create command pool!");
         }
 }
-void VQDevice::CreateGraphicsCommandBuffer(std::vector<VkCommandBuffer>& commandBuffers, uint32_t commandBufferCount) {
-        commandBuffers.resize(commandBufferCount);
+
+void VQDevice::CreateGraphicsCommandBuffer(uint32_t commandBufferCount)
+{
+        this->graphicsCommandBuffers.resize(commandBufferCount);
 
         VkCommandBufferAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
         allocInfo.commandPool = graphicsCommandPool;
         allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        allocInfo.commandBufferCount = (uint32_t)commandBuffers.size();
+        allocInfo.commandBufferCount = (uint32_t)this->graphicsCommandBuffers.size();
 
-        if (vkAllocateCommandBuffers(logicalDevice, &allocInfo, commandBuffers.data()) != VK_SUCCESS) {
+        if (vkAllocateCommandBuffers(logicalDevice, &allocInfo, this->graphicsCommandBuffers.data()) != VK_SUCCESS) {
                 FATAL("Failed to allocate command buffers!");
         }
 }
-VQDevice::VQDevice(VkPhysicalDevice physicalDevice) {
+
+VQDevice::VQDevice(VkPhysicalDevice physicalDevice)
+{
         this->physicalDevice = physicalDevice;
         // Store Properties features, limits and properties of the physical device for later use
         // Device properties also contain limits and sparse properties
@@ -120,10 +133,9 @@ VQDevice::VQDevice(VkPhysicalDevice physicalDevice) {
                 }
         }
 }
-void VQDevice::FreeGraphicsCommandBuffer(const std::vector<VkCommandBuffer>& commandBuffers) {
-        vkFreeCommandBuffers(logicalDevice, graphicsCommandPool, commandBuffers.size(), commandBuffers.data());
-}
-VQBuffer VQDevice::CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties) {
+
+VQBuffer VQDevice::CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties)
+{
         VQBuffer vqBuffer{};
 
         vqBuffer.device = this->logicalDevice;
@@ -145,8 +157,7 @@ VQBuffer VQDevice::CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkM
         VkMemoryAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         allocInfo.allocationSize = memRequirements.size;
-        allocInfo.memoryTypeIndex
-                = VQUtils::findMemoryType(physicalDevice, memRequirements.memoryTypeBits, properties);
+        allocInfo.memoryTypeIndex = VQUtils::findMemoryType(physicalDevice, memRequirements.memoryTypeBits, properties);
 
         if (vkAllocateMemory(this->logicalDevice, &allocInfo, nullptr, &vqBuffer.bufferMemory) != VK_SUCCESS) {
                 FATAL("Failed to allocate device memory for buffer creation!");
@@ -158,10 +169,16 @@ VQBuffer VQDevice::CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkM
 
         return vqBuffer;
 }
-VQDevice::~VQDevice() {
 
-}
-void VQDevice::Cleanup() {        
+VQDevice::~VQDevice() {}
+
+void VQDevice::Cleanup()
+{
+        if (graphicsCommandBuffers.size() > 0) {
+                vkFreeCommandBuffers(
+                        logicalDevice, graphicsCommandPool, graphicsCommandBuffers.size(), graphicsCommandBuffers.data()
+                );
+        }
         if (graphicsCommandPool != VK_NULL_HANDLE) {
                 vkDestroyCommandPool(logicalDevice, graphicsCommandPool, nullptr);
         }

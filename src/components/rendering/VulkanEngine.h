@@ -109,6 +109,7 @@ class VulkanEngine
         void middleInit();
         void postInit();
         void createDepthBuffer();
+        void createDevice();
         void createUniformBuffers();
         void createRenderPass();
         void createFramebuffers();
@@ -161,7 +162,7 @@ class VulkanEngine
         static inline const char* ENGINE_NAME = "No Engine";
         static inline const uint32_t ENGINE_VERSION = VK_MAKE_VERSION(1, 0, 0);
         static inline const uint32_t API_VERSION = VK_API_VERSION_1_0;
-        static inline const int MAX_FRAMES_IN_FLIGHT = 2;
+        static inline const int INTER_FRAMES = 2;
 
         static void framebufferResizeCallback(GLFWwindow* window, int width, int height);
 
@@ -186,7 +187,6 @@ class VulkanEngine
 
         VkRenderPass _renderPass = VK_NULL_HANDLE;
 
-        std::vector<VkCommandBuffer> _commandBuffers;
         std::vector<VkSemaphore> _semaImageAvailable;
         std::vector<VkSemaphore> _semaRenderFinished;
         std::vector<VkFence> _fenceInFlight;
@@ -213,5 +213,5 @@ class VulkanEngine
 
         std::unique_ptr<MeshRenderManager> _meshRenderManager;
 
-        DeletionQueue _deletionQueue;
+        DeletionStack _deletionStack;
 };
