@@ -2,7 +2,8 @@
 #pragma once
 #include "structs/Vertex.h"
 #include <vulkan/vulkan_core.h>
-namespace VulkanUtils {
+namespace VulkanUtils
+{
 
 VkCommandBuffer beginSingleTimeCommands(VkDevice device, VkCommandPool commandPool);
 void endSingleTimeCommands(
@@ -73,7 +74,12 @@ void copyBuffer(
         VkDeviceSize size
 );
 
-VkImageView createImageView(VkImage& textureImage, VkDevice& logicalDevice, VkFormat format = VK_FORMAT_R8G8B8A8_SRGB, VkImageAspectFlags flags = VK_IMAGE_ASPECT_COLOR_BIT);
+VkImageView createImageView(
+        VkImage& textureImage,
+        VkDevice& logicalDevice,
+        VkFormat format = VK_FORMAT_R8G8B8A8_SRGB,
+        VkImageAspectFlags flags = VK_IMAGE_ASPECT_COLOR_BIT
+);
 
 VkFormat findBestFormat(
         const std::vector<VkFormat>& candidates,
@@ -97,6 +103,9 @@ void createImage(
         VkDevice logicalDevice
 );
 
-std::pair<VkBuffer, VkDeviceMemory>
-createStagingBuffer(VkPhysicalDevice physicalDevice, VkDevice device, VkDeviceSize bufferSize);
+std::pair<VkBuffer, VkDeviceMemory> createStagingBuffer(
+        VkPhysicalDevice physicalDevice,
+        VkDevice device,
+        VkDeviceSize bufferSize
+);
 } // namespace VulkanUtils

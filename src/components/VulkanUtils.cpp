@@ -1,6 +1,7 @@
 #include "VulkanUtils.h"
 #include <vulkan/vulkan_core.h>
-VkCommandBuffer VulkanUtils::beginSingleTimeCommands(VkDevice device, VkCommandPool commandPool) {
+VkCommandBuffer VulkanUtils::beginSingleTimeCommands(VkDevice device, VkCommandPool commandPool)
+{
         VkCommandBufferAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
         allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
@@ -18,7 +19,13 @@ VkCommandBuffer VulkanUtils::beginSingleTimeCommands(VkDevice device, VkCommandP
 
         return commandBuffer;
 }
-void VulkanUtils::endSingleTimeCommands(VkCommandBuffer commandBuffer, VkDevice device, VkQueue graphicsQueue, VkCommandPool commandPool) {
+void VulkanUtils::endSingleTimeCommands(
+        VkCommandBuffer commandBuffer,
+        VkDevice device,
+        VkQueue graphicsQueue,
+        VkCommandPool commandPool
+)
+{
         vkEndCommandBuffer(commandBuffer);
 
         VkSubmitInfo submitInfo{};
@@ -31,7 +38,13 @@ void VulkanUtils::endSingleTimeCommands(VkCommandBuffer commandBuffer, VkDevice 
 
         vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer);
 }
-void VulkanUtils::createCommandBuffers(VkCommandBuffer* commandBuffer, uint32_t commandBufferCount, VkCommandPool commandPool, VkDevice device) {
+void VulkanUtils::createCommandBuffers(
+        VkCommandBuffer* commandBuffer,
+        uint32_t commandBufferCount,
+        VkCommandPool commandPool,
+        VkDevice device
+)
+{
         VkCommandBufferAllocateInfo commandBufferAllocateInfo = {};
         commandBufferAllocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
         commandBufferAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
@@ -46,11 +59,18 @@ void VulkanUtils::createCommandBuffers(
         uint32_t commandBufferCount,
         VkCommandPool commandPool,
         VkDevice device
-) {
+)
+{
         commandBuffers.resize(commandBufferCount);
         createCommandBuffers(commandBuffers.data(), commandBufferCount, commandPool, device);
 }
-void VulkanUtils::createCommandPool(VkCommandPool* commandPool, VkCommandPoolCreateFlags flags, uint32_t queueFamilyIndex, VkDevice device) {
+void VulkanUtils::createCommandPool(
+        VkCommandPool* commandPool,
+        VkCommandPoolCreateFlags flags,
+        uint32_t queueFamilyIndex,
+        VkDevice device
+)
+{
         VkCommandPoolCreateInfo commandPoolCreateInfo = {};
         commandPoolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
         commandPoolCreateInfo.queueFamilyIndex = queueFamilyIndex;
@@ -67,17 +87,24 @@ void VulkanUtils::createCommandPoolAndBuffers(
         VkCommandPoolCreateFlags flags,
         uint32_t queueFamilyIndex,
         VkDevice device
-) {
+)
+{
         createCommandPool(&commandPool, flags, queueFamilyIndex, device);
         createCommandBuffers(&commandBuffer, commandBufferCount, commandPool, device);
 }
 
-uint32_t VulkanUtils::findMemoryType(VkPhysicalDevice physicalDevice, uint32_t typeFilter, VkMemoryPropertyFlags properties) {
+uint32_t VulkanUtils::findMemoryType(
+        VkPhysicalDevice physicalDevice,
+        uint32_t typeFilter,
+        VkMemoryPropertyFlags properties
+)
+{
         VkPhysicalDeviceMemoryProperties memProperties;
         vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
 
         for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
-                if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+                if ((typeFilter & (1 << i))
+                    && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
                         return i;
                 }
         }
@@ -93,7 +120,8 @@ void VulkanUtils::createBuffer(
         VkMemoryPropertyFlags properties,
         VkBuffer& buffer,
         VkDeviceMemory& bufferMemory
-) {
+)
+{
         VkBufferCreateInfo bufferInfo{};
         bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
         bufferInfo.size = size;
@@ -118,14 +146,23 @@ void VulkanUtils::createBuffer(
 
         vkBindBufferMemory(device, buffer, bufferMemory, 0);
 }
-void VulkanUtils::vkMemCopy(void* src, VkDeviceMemory dstMemory, VkDeviceSize size, VkDevice dstDevice) {
+void VulkanUtils::vkMemCopy(void* src, VkDeviceMemory dstMemory, VkDeviceSize size, VkDevice dstDevice)
+{
         void* data;
         vkMapMemory(dstDevice, dstMemory, 0, size, 0, &data);
         memcpy(data, src, static_cast<size_t>(size));
         vkUnmapMemory(dstDevice, dstMemory);
 }
 
-void VulkanUtils::copyBuffer(VkDevice device, VkCommandPool commandPool, VkQueue queue, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
+void VulkanUtils::copyBuffer(
+        VkDevice device,
+        VkCommandPool commandPool,
+        VkQueue queue,
+        VkBuffer srcBuffer,
+        VkBuffer dstBuffer,
+        VkDeviceSize size
+)
+{
         VkCommandBuffer commandBuffer = beginSingleTimeCommands(device, commandPool);
 
         VkBufferCopy copyRegion{};
@@ -135,7 +172,13 @@ void VulkanUtils::copyBuffer(VkDevice device, VkCommandPool commandPool, VkQueue
         endSingleTimeCommands(commandBuffer, device, queue, commandPool);
 }
 
-VkImageView VulkanUtils::createImageView(VkImage& textureImage, VkDevice& logicalDevice, VkFormat format, VkImageAspectFlags flags) {
+VkImageView VulkanUtils::createImageView(
+        VkImage& textureImage,
+        VkDevice& logicalDevice,
+        VkFormat format,
+        VkImageAspectFlags flags
+)
+{
         VkImageViewCreateInfo viewInfo{};
         viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
         viewInfo.image = textureImage;
@@ -166,7 +209,8 @@ void VulkanUtils::createImage(
         VkDeviceMemory& imageMemory,
         VkPhysicalDevice physicalDevice,
         VkDevice logicalDevice
-) {
+)
+{
         VkImageCreateInfo imageInfo{};
         imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
         imageInfo.imageType = VK_IMAGE_TYPE_2D;
@@ -201,7 +245,8 @@ void VulkanUtils::createImage(
 
         vkBindImageMemory(logicalDevice, image, imageMemory, 0);
 }
-VkFormat VulkanUtils::findDepthFormat(VkPhysicalDevice physicalDevice) {
+VkFormat VulkanUtils::findDepthFormat(VkPhysicalDevice physicalDevice)
+{
         return findBestFormat(
                 {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT},
                 VK_IMAGE_TILING_OPTIMAL,
@@ -214,7 +259,8 @@ VkFormat VulkanUtils::findBestFormat(
         VkImageTiling tiling,
         VkFormatFeatureFlags features,
         VkPhysicalDevice physicalDevice
-) {
+)
+{
         for (VkFormat format : candidates) {
                 VkFormatProperties formatProperties;
                 vkGetPhysicalDeviceFormatProperties(physicalDevice, format, &formatProperties);
@@ -228,8 +274,12 @@ VkFormat VulkanUtils::findBestFormat(
         FATAL("Failed tot find format!");
         return VK_FORMAT_R8G8B8A8_SRGB; // unreacheable
 };
-std::pair<VkBuffer, VkDeviceMemory>
-VulkanUtils::createStagingBuffer(VkPhysicalDevice physicalDevice, VkDevice device, VkDeviceSize bufferSize) {
+std::pair<VkBuffer, VkDeviceMemory> VulkanUtils::createStagingBuffer(
+        VkPhysicalDevice physicalDevice,
+        VkDevice device,
+        VkDeviceSize bufferSize
+)
+{
         VkBuffer stagingBuffer;
         VkDeviceMemory stagingBufferMemory;
         VulkanUtils::createBuffer(
@@ -243,4 +293,3 @@ VulkanUtils::createStagingBuffer(VkPhysicalDevice physicalDevice, VkDevice devic
         );
         return {stagingBuffer, stagingBufferMemory};
 }
-

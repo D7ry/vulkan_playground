@@ -34,6 +34,8 @@ BraceWrapping:
   SplitEmptyFunction: true
 
 SeparateDefinitionBlocks: Always
+
+SortIncludes: CaseSensitive
 # multipel declarations are aligned to right
 # AlignConsecutiveDeclarations:
 #   Enabled: true

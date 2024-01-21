@@ -32,7 +32,6 @@ target_include_directories(imgui PUBLIC ${IMGUI_DIR} ${IMGUI_DIR}/backends)
 
 add_executable(vulkan_playground 
         src/main.cpp
-        src/application/VulkanApplication.cpp
         src/components/Logging.cpp
         src/components/ShaderUtils.cpp
         src/components/Animation.cpp

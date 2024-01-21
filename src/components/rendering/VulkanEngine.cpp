@@ -11,39 +11,42 @@
 
 #include <cstddef>
 #define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
-#include <vulkan/vulkan_core.h>
 #include "MeshRenderManager.h"
 #include "MeshRenderer.h"
-
+#include <GLFW/glfw3.h>
+#include <vulkan/vulkan_core.h>
 
 #include "VulkanEngine.h"
-void VulkanEngine::Init(GLFWwindow* window) {
+
+void VulkanEngine::Init(GLFWwindow* window)
+{
         INFO("Initializing Render Manager...");
         this->_window = window;
         glfwSetFramebufferSizeCallback(_window, this->framebufferResizeCallback);
         this->_meshRenderManager = std::make_unique<MeshRenderManager>();
         this->initVulkan();
 }
+
 #define CAMERA_SPEED 3
 
-void VulkanEngine::SetViewMatrix(glm::mat4 viewMatrix) {
-        _viewMatrix = viewMatrix;
-}
+void VulkanEngine::SetViewMatrix(glm::mat4 viewMatrix) { _viewMatrix = viewMatrix; }
 
-void VulkanEngine::Tick(float deltaTime) {
+void VulkanEngine::Tick(float deltaTime)
+{
         _imguiManager.RenderFrame();
         drawFrame();
         vkDeviceWaitIdle(this->_device->logicalDevice);
 }
 
-void VulkanEngine::framebufferResizeCallback(GLFWwindow* window, int width, int height) {
+void VulkanEngine::framebufferResizeCallback(GLFWwindow* window, int width, int height)
+{
         INFO("Window resized to {}x{}", width, height);
         auto app = reinterpret_cast<VulkanEngine*>(glfwGetWindowUserPointer(window));
         app->_framebufferResized = true;
 }
 
-void VulkanEngine::initVulkan() {
+void VulkanEngine::initVulkan()
+{
         INFO("Initializing Vulkan...");
         this->createInstance();
         if (this->enableValidationLayers) {
@@ -85,7 +88,8 @@ void VulkanEngine::initVulkan() {
         this->postInit();
 }
 
-bool VulkanEngine::checkValidationLayerSupport() {
+bool VulkanEngine::checkValidationLayerSupport()
+{
         uint32_t layerCount;
         vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
 
@@ -107,7 +111,8 @@ bool VulkanEngine::checkValidationLayerSupport() {
         return true;
 }
 
-void VulkanEngine::createInstance() {
+void VulkanEngine::createInstance()
+{
         INFO("Creating Vulkan instance...");
         if (this->enableValidationLayers) {
                 if (!this->checkValidationLayerSupport()) {
@@ -158,7 +163,6 @@ void VulkanEngine::createInstance() {
                 createInfo.enabledLayerCount = 0;
                 createInfo.pNext = nullptr;
         }
-
         VkResult result = vkCreateInstance(&createInfo, nullptr, &this->_instance);
 
         if (result != VK_SUCCESS) {
@@ -168,7 +172,8 @@ void VulkanEngine::createInstance() {
         INFO("Vulkan instance created.");
 }
 
-void VulkanEngine::createSurface() {
+void VulkanEngine::createSurface()
+{
         VkResult result = glfwCreateWindowSurface(this->_instance, this->_window, nullptr, &this->_surface);
         if (result != VK_SUCCESS) {
                 FATAL("Failed to create window surface.");
@@ -180,7 +185,8 @@ VkResult VulkanEngine::CreateDebugUtilsMessengerEXT(
         const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,
         const VkAllocationCallbacks* pAllocator,
         VkDebugUtilsMessengerEXT* pDebugMessenger
-) {
+)
+{
         INFO("setting up debug messenger .... ");
         auto func
                 = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
@@ -188,11 +194,14 @@ VkResult VulkanEngine::CreateDebugUtilsMessengerEXT(
         if (func != nullptr) {
                 return func(instance, pCreateInfo, pAllocator, pDebugMessenger);
         } else {
-                ERROR("Failed to set up debug messenger. Function \"vkCreateDebugUtilsMessengerEXT\" not found.");
+                ERROR("Failed to set up debug messenger. Function "
+                      "\"vkCreateDebugUtilsMessengerEXT\" not found.");
                 return VK_ERROR_EXTENSION_NOT_PRESENT;
         }
 }
-void VulkanEngine::populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo) {
+
+void VulkanEngine::populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo)
+{
         createInfo = {};
         createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
         createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT
@@ -203,7 +212,9 @@ void VulkanEngine::populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateI
                                  | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
         createInfo.pfnUserCallback = debugCallback;
 }
-void VulkanEngine::setupDebugMessenger() {
+
+void VulkanEngine::setupDebugMessenger()
+{
         if (!this->enableValidationLayers) {
                 ERROR("Validation layers are not enabled, cannot set up debug messenger.");
         }
@@ -215,17 +226,20 @@ void VulkanEngine::setupDebugMessenger() {
                 FATAL("Failed to set up debug messenger!");
         }
 }
+
 VKAPI_ATTR VkBool32 VKAPI_CALL VulkanEngine::debugCallback(
         VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
         VkDebugUtilsMessageTypeFlagsEXT messageType,
         const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
         void* pUserData
-) {
+)
+{
         std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
-
         return VK_FALSE;
 }
-VulkanEngine::QueueFamilyIndices VulkanEngine::findQueueFamilies(VkPhysicalDevice device) {
+
+VulkanEngine::QueueFamilyIndices VulkanEngine::findQueueFamilies(VkPhysicalDevice device)
+{
         INFO("Finding graphics and presentation queue families...");
 
         QueueFamilyIndices indices;
@@ -254,7 +268,9 @@ VulkanEngine::QueueFamilyIndices VulkanEngine::findQueueFamilies(VkPhysicalDevic
         std::optional<uint32_t> graphicsFamily;
         return indices;
 }
-bool VulkanEngine::checkDeviceExtensionSupport(VkPhysicalDevice device) {
+
+bool VulkanEngine::checkDeviceExtensionSupport(VkPhysicalDevice device)
+{
         uint32_t extensionCount;
         vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
 
@@ -269,7 +285,9 @@ bool VulkanEngine::checkDeviceExtensionSupport(VkPhysicalDevice device) {
 
         return requiredExtensions.empty();
 }
-bool VulkanEngine::isDeviceSuitable(VkPhysicalDevice device) {
+
+bool VulkanEngine::isDeviceSuitable(VkPhysicalDevice device)
+{
         VkPhysicalDeviceProperties deviceProperties;
         VkPhysicalDeviceFeatures deviceFeatures;
         vkGetPhysicalDeviceProperties(device, &deviceProperties);
@@ -282,7 +300,9 @@ bool VulkanEngine::isDeviceSuitable(VkPhysicalDevice device) {
                 return false;
         }
 }
-VkPhysicalDevice VulkanEngine::pickPhysicalDevice() {
+
+VkPhysicalDevice VulkanEngine::pickPhysicalDevice()
+{
         INFO("Picking physical device ");
         VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
         uint32_t deviceCount = 0;
@@ -306,7 +326,8 @@ VkPhysicalDevice VulkanEngine::pickPhysicalDevice() {
         return physicalDevice;
 }
 
-void VulkanEngine::createSwapChain() {
+void VulkanEngine::createSwapChain()
+{
         INFO("creating swapchain...");
         SwapChainSupportDetails swapChainSupport = querySwapChainSupport(_device->physicalDevice);
         VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
@@ -361,7 +382,9 @@ void VulkanEngine::createSwapChain() {
         _swapChainExtent = extent;
         INFO("Swap chain created!\n");
 }
-void VulkanEngine::cleanupSwapChain() {
+
+void VulkanEngine::cleanupSwapChain()
+{
         INFO("Cleaning up swap chain...");
         vkDestroyImageView(_device->logicalDevice, _depthImageView, nullptr);
         vkDestroyImage(_device->logicalDevice, _depthImage, nullptr);
@@ -376,7 +399,9 @@ void VulkanEngine::cleanupSwapChain() {
         }
         vkDestroySwapchainKHR(this->_device->logicalDevice, this->_swapChain, nullptr);
 }
-void VulkanEngine::recreateSwapChain() {
+
+void VulkanEngine::recreateSwapChain()
+{
         // need to recreate render pass for HDR changing, we're not doing that for now
         INFO("Recreating swap chain...");
         // handle window minimization
@@ -396,7 +421,9 @@ void VulkanEngine::recreateSwapChain() {
         this->createFramebuffers();
         INFO("Swap chain recreated.");
 }
-VulkanEngine::SwapChainSupportDetails VulkanEngine::querySwapChainSupport(VkPhysicalDevice device) {
+
+VulkanEngine::SwapChainSupportDetails VulkanEngine::querySwapChainSupport(VkPhysicalDevice device)
+{
         SwapChainSupportDetails details;
 
         vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, _surface, &details.capabilities);
@@ -421,7 +448,9 @@ VulkanEngine::SwapChainSupportDetails VulkanEngine::querySwapChainSupport(VkPhys
 
         return details;
 }
-VkSurfaceFormatKHR VulkanEngine::chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) {
+
+VkSurfaceFormatKHR VulkanEngine::chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats)
+{
         for (const auto& availableFormat : availableFormats) {
                 if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB
                     && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
@@ -431,7 +460,9 @@ VkSurfaceFormatKHR VulkanEngine::chooseSwapSurfaceFormat(const std::vector<VkSur
 
         return availableFormats[0];
 }
-VkPresentModeKHR VulkanEngine::chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes) {
+
+VkPresentModeKHR VulkanEngine::chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes)
+{
         for (const auto& availablePresentMode : availablePresentModes) {
                 if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
                         return availablePresentMode;
@@ -440,7 +471,9 @@ VkPresentModeKHR VulkanEngine::chooseSwapPresentMode(const std::vector<VkPresent
 
         return VK_PRESENT_MODE_FIFO_KHR;
 }
-VkExtent2D VulkanEngine::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities) {
+
+VkExtent2D VulkanEngine::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities)
+{
         if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
                 return capabilities.currentExtent;
         } else {
@@ -459,7 +492,9 @@ VkExtent2D VulkanEngine::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabi
                 return actualExtent;
         }
 }
-void VulkanEngine::createImageViews() {
+
+void VulkanEngine::createImageViews()
+{
         INFO("Creating {} image views...", this->_swapChainImages.size());
         this->_swapChainImageViews.resize(this->_swapChainImages.size());
         for (size_t i = 0; i < this->_swapChainImages.size(); i++) {
@@ -485,8 +520,8 @@ void VulkanEngine::createImageViews() {
         INFO("Image views created.");
 }
 
-
-void VulkanEngine::createSynchronizationObjects() {
+void VulkanEngine::createSynchronizationObjects()
+{
         INFO("Creating synchronization objects...");
         this->_semaImageAvailable.resize(MAX_FRAMES_IN_FLIGHT);
         this->_semaRenderFinished.resize(MAX_FRAMES_IN_FLIGHT);
@@ -496,8 +531,8 @@ void VulkanEngine::createSynchronizationObjects() {
         semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
         VkFenceCreateInfo fenceInfo{};
         fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-        fenceInfo.flags
-                = VK_FENCE_CREATE_SIGNALED_BIT; // create with a signaled bit so that the 1st frame can start right away
+        fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT; // create with a signaled bit so that the
+                                                        // 1st frame can start right away
         for (size_t i = 0; i < this->MAX_FRAMES_IN_FLIGHT; i++) {
                 if (vkCreateSemaphore(_device->logicalDevice, &semaphoreInfo, nullptr, &_semaImageAvailable[i])
                             != VK_SUCCESS
@@ -508,7 +543,9 @@ void VulkanEngine::createSynchronizationObjects() {
                 }
         }
 }
-void VulkanEngine::Cleanup() {
+
+void VulkanEngine::Cleanup()
+{
         INFO("Cleaning up...");
         _meshRenderManager->Cleanup();
         TextureManager::GetSingleton()->Cleanup();
@@ -536,18 +573,20 @@ void VulkanEngine::Cleanup() {
         INFO("Resource cleaned up.");
 }
 
-
-
-void VulkanEngine::middleInit() {
+void VulkanEngine::middleInit()
+{
         TextureManager::GetSingleton()->Init(_device); // pass device to texture manager for it to start loading
 }
 
-void VulkanEngine::postInit() {
-        //_inputManager->RegisterCallback(GLFW_KEY_UP, InputManager::KeyCallbackCondition::HOLD, []() {render4->Rotate(10, 0, 0);});
+void VulkanEngine::postInit()
+{
+        //_inputManager->RegisterCallback(GLFW_KEY_UP,
+        // InputManager::KeyCallbackCondition::HOLD, []() {render4->Rotate(10, 0,
+        // 0);});
 }
 
-
-void VulkanEngine::createRenderPass() {
+void VulkanEngine::createRenderPass()
+{
         INFO("Creating render pass...");
         VkAttachmentDescription colorAttachment{};
         colorAttachment.format = this->_swapChainImageFormat;
@@ -561,7 +600,7 @@ void VulkanEngine::createRenderPass() {
         colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 
         colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        //colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        // colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
         colorAttachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL; // for imgui
 
         VkAttachmentReference colorAttachmentRef{};
@@ -589,7 +628,8 @@ void VulkanEngine::createRenderPass() {
         subpass.pColorAttachments = &colorAttachmentRef;
         subpass.pDepthStencilAttachment = &depthAttachmentRef;
 
-        // dependency to make sure that the render pass waits for the image to be available before drawing
+        // dependency to make sure that the render pass waits for the image to be
+        // available before drawing
         VkSubpassDependency dependency{};
         dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
         dependency.dstSubpass = 0;
@@ -615,7 +655,9 @@ void VulkanEngine::createRenderPass() {
                 FATAL("Failed to create render pass!");
         }
 }
-void VulkanEngine::createFramebuffers() {
+
+void VulkanEngine::createFramebuffers()
+{
         INFO("Creating {} framebuffers...", this->_swapChainImageViews.size());
         this->_swapChainFrameBuffers.resize(this->_swapChainImageViews.size());
         // iterate through image views and create framebuffers
@@ -626,22 +668,27 @@ void VulkanEngine::createFramebuffers() {
                 VkImageView attachments[] = {_swapChainImageViews[i], _depthImageView};
                 VkFramebufferCreateInfo framebufferInfo{};
                 framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-                framebufferInfo.renderPass = _renderPass; // each framebuffer is associated with a render pass;  they need to be compatible i.e.
-                                                          // having same number of attachments and same formats
-                framebufferInfo.attachmentCount = sizeof(attachments) / sizeof(VkImageView); 
+                framebufferInfo.renderPass = _renderPass; // each framebuffer is associated with a render pass;  they
+                                                          // need to be compatible i.e. having same number of
+                                                          // attachments and same formats
+                framebufferInfo.attachmentCount = sizeof(attachments) / sizeof(VkImageView);
                 framebufferInfo.pAttachments = attachments;
                 framebufferInfo.width = _swapChainExtent.width;
                 framebufferInfo.height = _swapChainExtent.height;
                 framebufferInfo.layers = 1; // number of layers in image arrays
-                if (vkCreateFramebuffer(_device->logicalDevice, &framebufferInfo, nullptr, &_swapChainFrameBuffers[i]) != VK_SUCCESS) {
+                if (vkCreateFramebuffer(_device->logicalDevice, &framebufferInfo, nullptr, &_swapChainFrameBuffers[i])
+                    != VK_SUCCESS) {
                         FATAL("Failed to create framebuffer!");
                 }
         }
-        _imguiManager.InitializeFrameBuffer(this->_swapChainImageViews.size(), _device->logicalDevice, _swapChainImageViews, _swapChainExtent);
+        _imguiManager.InitializeFrameBuffer(
+                this->_swapChainImageViews.size(), _device->logicalDevice, _swapChainImageViews, _swapChainExtent
+        );
         INFO("Framebuffers created.");
 }
 
-void VulkanEngine::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) { // called every frame
+void VulkanEngine::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex)
+{ // called every frame
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         beginInfo.flags = 0;                  // Optional
@@ -649,7 +696,7 @@ void VulkanEngine::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t i
 
         if (vkBeginCommandBuffer(this->_commandBuffers[_currentFrame], &beginInfo) != VK_SUCCESS) {
                 FATAL("Failed to begin recording command buffer!");
-                }
+        }
 
         // start render pass
         VkRenderPassBeginInfo renderPassInfo{};
@@ -692,7 +739,8 @@ void VulkanEngine::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t i
         }
 }
 
-void VulkanEngine::createDepthBuffer() {
+void VulkanEngine::createDepthBuffer()
+{
         INFO("Creating depth buffer...");
         VkFormat depthFormat = VulkanUtils::findBestFormat(
                 {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT},
@@ -712,18 +760,25 @@ void VulkanEngine::createDepthBuffer() {
                 _device->physicalDevice,
                 _device->logicalDevice
         );
-        _depthImageView = VulkanUtils::createImageView(_depthImage, _device->logicalDevice, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
+        _depthImageView = VulkanUtils::createImageView(
+                _depthImage, _device->logicalDevice, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT
+        );
 }
 
-
-void VulkanEngine::drawFrame() {
+void VulkanEngine::drawFrame()
+{
         //  Wait for the previous frame to finish
         vkWaitForFences(_device->logicalDevice, 1, &this->_fenceInFlight[this->_currentFrame], VK_TRUE, UINT64_MAX);
 
         //  Acquire an image from the swap chain
         uint32_t imageIndex;
         VkResult result = vkAcquireNextImageKHR(
-                this->_device->logicalDevice, _swapChain, UINT64_MAX, _semaImageAvailable[this->_currentFrame], VK_NULL_HANDLE, &imageIndex
+                this->_device->logicalDevice,
+                _swapChain,
+                UINT64_MAX,
+                _semaImageAvailable[this->_currentFrame],
+                VK_NULL_HANDLE,
+                &imageIndex
         );
         if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
                 this->recreateSwapChain();
@@ -740,16 +795,24 @@ void VulkanEngine::drawFrame() {
         this->recordCommandBuffer(this->_commandBuffers[this->_currentFrame], imageIndex);
         _imguiManager.RecordCommandBuffer(this->_currentFrame, imageIndex, _swapChainExtent);
 
-        _meshRenderManager->UpdateUniformBuffers(_currentFrame, _viewMatrix, glm::perspective(glm::radians(90.f), _swapChainExtent.width / (float)_swapChainExtent.height, 0.1f, 100.f));
+        _meshRenderManager->UpdateUniformBuffers(
+                _currentFrame,
+                _viewMatrix,
+                glm::perspective(
+                        glm::radians(90.f), _swapChainExtent.width / (float)_swapChainExtent.height, 0.1f, 100.f
+                )
+        );
 
         //  Submit the recorded command buffer
         VkSubmitInfo submitInfo{};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-        VkSemaphore waitSemaphores[]
-                = {_semaImageAvailable[_currentFrame]}; // use imageAvailable semaphore to make sure that the image is available before drawing
+        VkSemaphore waitSemaphores[] = {_semaImageAvailable[_currentFrame]}; // use imageAvailable semaphore to
+                                                                             // make sure that the image is
+                                                                             // available before drawing
         VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
-        std::array<VkCommandBuffer, 2> submitCommandBuffers = {_commandBuffers[_currentFrame], _imguiManager.GetCommandBuffer(_currentFrame)};
+        std::array<VkCommandBuffer, 2> submitCommandBuffers
+                = {_commandBuffers[_currentFrame], _imguiManager.GetCommandBuffer(_currentFrame)};
 
         submitInfo.waitSemaphoreCount = 1;
         submitInfo.pWaitSemaphores = waitSemaphores;
@@ -761,7 +824,8 @@ void VulkanEngine::drawFrame() {
         submitInfo.signalSemaphoreCount = 1;
         submitInfo.pSignalSemaphores = signalSemaphores;
 
-        // the submission does not start until vkAcquireNextImageKHR returns, and downs the corresponding _semaRenderFinished semapohre once it's done.
+        // the submission does not start until vkAcquireNextImageKHR returns, and
+        // downs the corresponding _semaRenderFinished semapohre once it's done.
         if (vkQueueSubmit(_device->graphicsQueue, 1, &submitInfo, _fenceInFlight[_currentFrame]) != VK_SUCCESS) {
                 FATAL("Failed to submit draw command buffer!");
         }
@@ -770,7 +834,7 @@ void VulkanEngine::drawFrame() {
         VkPresentInfoKHR presentInfo{};
         presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 
-        // set up semaphore, so that  after submitting to the queue, we wait  for the 
+        // set up semaphore, so that  after submitting to the queue, we wait  for the
         presentInfo.waitSemaphoreCount = 1;
         presentInfo.pWaitSemaphores = signalSemaphores; // wait for render to finish before presenting
 
@@ -780,7 +844,8 @@ void VulkanEngine::drawFrame() {
         presentInfo.pImageIndices = &imageIndex; // specify which image to present
         presentInfo.pResults = nullptr;          // Optional: can be used to check if presentation was successful
 
-        // the present doesn't happen until the render is finished, and the semaphore is signaled(result of vkQueueSubimt)
+        // the present doesn't happen until the render is finished, and the semaphore
+        // is signaled(result of vkQueueSubimt)
         result = vkQueuePresentKHR(_device->presentationQueue, &presentInfo);
         if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || this->_framebufferResized) {
                 this->recreateSwapChain();
@@ -792,13 +857,17 @@ void VulkanEngine::drawFrame() {
         _currentFrame = (_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 }
 
-void VulkanEngine::SetImguiRenderCallback(std::function<void()> imguiFunction) {
+void VulkanEngine::SetImguiRenderCallback(std::function<void()> imguiFunction)
+{
         this->_imguiManager.BindRenderCallback(imguiFunction);
 }
-void VulkanEngine::Prepare() {
+
+void VulkanEngine::Prepare()
+{
         for (MeshRenderer* renderer : this->_meshes) {
                 _meshRenderManager->RegisterMeshRenderer(renderer, MeshRenderManager::RenderMethod::Generic);
         }
         this->_meshRenderManager->PrepareRendering(MAX_FRAMES_IN_FLIGHT, _renderPass, _device);
 }
+
 void VulkanEngine::AddMesh(MeshRenderer* renderer) { _meshes.push_back(renderer); }

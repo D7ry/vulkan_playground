@@ -7,32 +7,36 @@
 
 #include <optional>
 
-#include <vector>
-#include "components/ImGuiManager.h"
 #include "MeshRenderManager.h"
 #include "MeshRenderer.h"
+#include "components/Camera.h"
+#include "components/ImGuiManager.h"
+#include "components/InputManager.h"
 #include "imgui.h"
 #include "lib/VQDevice.h"
-#include "components/InputManager.h"
-#include "components/Camera.h"
+#include <vector>
 
 #include "lib/DeletionQueue.h"
+
 // TODO: create a serialization scheme for tweakable settings.
 
 /**
  * @brief A render manager responsible for rendering everything
  */
-class VulkanEngine {
+class VulkanEngine
+{
       public:
-      /**
-       * @brief Initialize render manager, create necessary vulkan resources and bindings.
-       */
+        /**
+         * @brief Initialize render manager, create necessary vulkan resources and bindings.
+         */
         void Init(GLFWwindow* window);
         void Prepare();
         void Tick(float deltaTime);
         void Cleanup();
         void AddMesh(MeshRenderer* renderer);
-        void DrawImgui() {
+
+        void DrawImgui()
+        {
                 if (ImGui::Begin("Render Manager")) {
                         for (MeshRenderer* mesh : _meshes) {
                                 mesh->DrawImguiController();
@@ -43,25 +47,29 @@ class VulkanEngine {
 
         /**
          * @brief Update the view matrix.
-         * 
-         * @param viewMatrix 
+         *
+         * @param viewMatrix
          */
         void SetViewMatrix(glm::mat4 viewMatrix);
 
         void SetImguiRenderCallback(std::function<void()> imguiFunction);
 
-        inline std::pair<uint32_t, uint32_t> GetSwapchainExtent() {
+        inline std::pair<uint32_t, uint32_t> GetSwapchainExtent()
+        {
                 return {_swapChainExtent.width, _swapChainExtent.height};
         }
 
       protected:
-        struct QueueFamilyIndices {
+        struct QueueFamilyIndices
+        {
                 std::optional<uint32_t> graphicsFamily;
                 std::optional<uint32_t> presentationFamily;
+
                 inline bool isComplete() { return graphicsFamily.has_value() && presentationFamily.has_value(); }
         };
 
-        struct SwapChainSupportDetails {
+        struct SwapChainSupportDetails
+        {
                 VkSurfaceCapabilitiesKHR capabilities;
                 std::vector<VkSurfaceFormatKHR> formats;
                 std::vector<VkPresentModeKHR> presentModes;
@@ -82,7 +90,7 @@ class VulkanEngine {
 
         VkPhysicalDevice pickPhysicalDevice();
 
-        //void createLogicalDevice();
+        // void createLogicalDevice();
 
         SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
 
@@ -109,7 +117,6 @@ class VulkanEngine {
         void renderImGui();
         void updateUniformBufferData(uint32_t frameIndex);
 
-
         void createSynchronizationObjects();
 
         /**
@@ -120,8 +127,7 @@ class VulkanEngine {
 
         virtual void drawFrame();
 
-        virtual void postCleanup() {};
-
+        virtual void postCleanup(){};
 
         // validation layers, enable under debug mode only
 #ifdef NDEBUG
@@ -158,6 +164,8 @@ class VulkanEngine {
         static inline const int MAX_FRAMES_IN_FLIGHT = 2;
 
         static void framebufferResizeCallback(GLFWwindow* window, int width, int height);
+
+        const int SOME_VAR = 0;
 
         GLFWwindow* _window;
         VkInstance _instance;
@@ -206,5 +214,4 @@ class VulkanEngine {
         std::unique_ptr<MeshRenderManager> _meshRenderManager;
 
         DeletionQueue _deletionQueue;
-
 };

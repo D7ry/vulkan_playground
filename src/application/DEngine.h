@@ -4,24 +4,27 @@
 #include "components/DeltaTimer.h"
 #include "components/InputManager.h"
 #include "components/rendering/VulkanEngine.h"
+
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include <GLFW/glfw3.h>
 #include <memory>
 
-
-class DEngine {
+class DEngine
+{
       public:
-        DEngine () {
-        };
+        DEngine(){};
 
-        void addExperimentalMesh() {
+        void addExperimentalMesh()
+        {
                 const std::string SAMPLE_TEXTURE_PATH = "../resources/textures/viking_room.png";
                 const std::string SAMPLE_MESH_PATH = "../resources/meshes/viking_room.obj";
                 MeshRenderer* render = new MeshRenderer(SAMPLE_MESH_PATH.data(), SAMPLE_TEXTURE_PATH.data());
                 MeshRenderer* render2 = new MeshRenderer(SAMPLE_MESH_PATH.data(), SAMPLE_TEXTURE_PATH.data());
-                MeshRenderer* render3 = new MeshRenderer("../resources/meshes/spot.obj", "../resources/textures/spot.png");
-                MeshRenderer* render4 = new MeshRenderer("../resources/meshes/wall.obj", "../resources/textures/wall.png");
+                MeshRenderer* render3
+                        = new MeshRenderer("../resources/meshes/spot.obj", "../resources/textures/spot.png");
+                MeshRenderer* render4
+                        = new MeshRenderer("../resources/meshes/wall.obj", "../resources/textures/wall.png");
                 render2->transform.position = glm::vec3(0, 0, 2);
 
                 render3->transform.position = glm::vec3(0, 2, 2);
@@ -36,7 +39,9 @@ class DEngine {
                 _vulkanEngine->AddMesh(render3);
                 _vulkanEngine->AddMesh(render4);
         }
-        void Init() {
+
+        void Init()
+        {
                 INFO("Initializing dEngine...");
                 initGLFW();
                 { // render manager
@@ -66,7 +71,8 @@ class DEngine {
                 }
         }
 
-        void Run() {
+        void Run()
+        {
                 while (!glfwWindowShouldClose(_window)) {
                         Tick();
                 }
@@ -74,11 +80,13 @@ class DEngine {
         }
 
         // main update function
-        void Tick() {
+        void Tick()
+        {
                 glfwPollEvents();
                 _deltaTimer.Tick();
                 float deltaTime = _deltaTimer.GetDeltaTime();
-                _vulkanEngine->SetViewMatrix(_mainCamera.GetViewMatrix()); // TODO: only update the view matrix when updating the camera
+                _vulkanEngine->SetViewMatrix(_mainCamera.GetViewMatrix()
+                ); // TODO: only update the view matrix when updating the camera
                 _vulkanEngine->Tick(deltaTime);
                 _inputManager->Tick(deltaTime);
         };
@@ -93,7 +101,8 @@ class DEngine {
 
         bool _lockCursor;
 
-        void cursorPosCallback(GLFWwindow* window, double xpos, double ypos) {
+        void cursorPosCallback(GLFWwindow* window, double xpos, double ypos)
+        {
                 static bool updatedCursor = false;
                 static int prevX = -1;
                 static int prevY = -1;
@@ -114,7 +123,8 @@ class DEngine {
                 prevY = ypos;
         }
 
-        void initGLFW() {
+        void initGLFW()
+        {
                 glfwInit();
                 glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
                 glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
@@ -127,8 +137,9 @@ class DEngine {
                 }
                 glfwSetWindowUserPointer(_window, this);
         }
-        
-        void renderImgui() {
+
+        void renderImgui()
+        {
                 if (ImGui::Begin("Debug")) {
                         ImGui::SetWindowPos(ImVec2(0, 0), ImGuiCond_Once);
                         ImGui::SetWindowSize(ImVec2(400, 400), ImGuiCond_Once);
@@ -160,13 +171,15 @@ class DEngine {
                 _vulkanEngine->DrawImgui();
         }
 
-        void cleanup() {
+        void cleanup()
+        {
                 _vulkanEngine->Cleanup();
                 glfwDestroyWindow(this->_window);
                 glfwTerminate();
         }
 
-        void bindInputs() {
+        void bindInputs()
+        {
                 static const int CAMERA_SPEED = 3;
                 _inputManager->RegisterCallback(GLFW_KEY_W, InputManager::KeyCallbackCondition::HOLD, [this]() {
                         _mainCamera.Move(_deltaTimer.GetDeltaTime() * CAMERA_SPEED, 0, 0);
