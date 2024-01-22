@@ -68,7 +68,7 @@ void VulkanEngine::initVulkan()
         }
         this->createSurface();
         this->createDevice();
-        this->createSwapChain();
+        this->initSwapChain();
         this->createImageViews();
         this->createRenderPass();
         this->createDepthBuffer();
@@ -392,7 +392,6 @@ void VulkanEngine::createSwapChain()
         _swapChainImageFormat = surfaceFormat.format;
         _swapChainExtent = extent;
         INFO("Swap chain created!\n");
-        this->_deletionStack.push([this]() { this->cleanupSwapChain(); });
 }
 
 void VulkanEngine::cleanupSwapChain()
@@ -419,7 +418,7 @@ void VulkanEngine::recreateSwapChain()
         // handle window minimization
         int width = 0, height = 0;
         glfwGetFramebufferSize(_window, &width, &height);
-        while (width == 0 || height == 0) {
+        while (width == 0 || height == 0) { // when the window is minimized, wait for it to be restored
                 glfwGetFramebufferSize(_window, &width, &height);
                 glfwWaitEvents();
         }
@@ -876,3 +875,9 @@ void VulkanEngine::Prepare()
 }
 
 void VulkanEngine::AddMesh(MeshRenderer* renderer) { _meshes.push_back(renderer); }
+
+void VulkanEngine::initSwapChain()
+{
+        createSwapChain();
+        this->_deletionStack.push([this]() { this->cleanupSwapChain(); });
+}

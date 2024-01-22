@@ -100,6 +100,10 @@ class VulkanEngine
 
         VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
 
+        /** @brief Internally calls createSwapChain, but also pushes a swapchain cleanup function once, to clean up the
+         * last swapchain created.*/
+        void initSwapChain();
+
         void createSwapChain();
         void recreateSwapChain();
         void cleanupSwapChain();
