@@ -1,19 +1,19 @@
 #include "MetaPipeline.h"
+#include "MeshRenderManager.h"
 #include "components/ShaderUtils.h"
 #include "components/TextureManager.h"
 #include "structs/Vertex.h"
 #include <vulkan/vulkan_core.h>
-#include "MeshRenderManager.h"
+
 MetaPipeline CreateGenericMetaPipeline(
         std::shared_ptr<VQDevice> device,
         uint32_t numFrameInFlight,
-        uint32_t staticUboRange,
-        uint32_t dynamicUboRange,
         std::vector<RenderGroup>& renderGroups,
         std::string vertexShader,
         std::string fragmentShader,
         VkRenderPass renderPass
-) {
+)
+{
         INFO("Creating genertic meta pipeline...");
         MetaPipeline m{};
         m.device = device->logicalDevice;
@@ -48,7 +48,8 @@ MetaPipeline CreateGenericMetaPipeline(
                                                         // height mapping)
                 samplerLayoutBinding.pImmutableSamplers = nullptr;
 
-                std::array<VkDescriptorSetLayoutBinding, 3> bindings = {uboStaticBinding, uboDynamicBinding, samplerLayoutBinding};
+                std::array<VkDescriptorSetLayoutBinding, 3> bindings
+                        = {uboStaticBinding, uboDynamicBinding, samplerLayoutBinding};
 
                 VkDescriptorSetLayoutCreateInfo layoutInfo{};
                 layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -69,10 +70,11 @@ MetaPipeline CreateGenericMetaPipeline(
         }
         // descriptor pool
         {
-                uint32_t numDescriptorPerType = numFrameInFlight * renderGroups.size(); // each render group has its own set of descriptors
+                uint32_t numDescriptorPerType
+                        = numFrameInFlight * renderGroups.size(); // each render group has its own set of descriptors
                 VkDescriptorPoolSize poolSizes[]
-                        = { {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, static_cast<uint32_t>(numDescriptorPerType)},
-                        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, static_cast<uint32_t>(numDescriptorPerType)},
+                        = {{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, static_cast<uint32_t>(numDescriptorPerType)},
+                           {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, static_cast<uint32_t>(numDescriptorPerType)},
                            {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(numDescriptorPerType)}};
 
                 VkDescriptorPoolCreateInfo poolInfo{};
@@ -82,7 +84,8 @@ MetaPipeline CreateGenericMetaPipeline(
                 poolInfo.maxSets = numFrameInFlight * poolInfo.poolSizeCount;
                 poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
 
-                if (vkCreateDescriptorPool(device->logicalDevice, &poolInfo, nullptr, &m.descriptorPool) != VK_SUCCESS) {
+                if (vkCreateDescriptorPool(device->logicalDevice, &poolInfo, nullptr, &m.descriptorPool)
+                    != VK_SUCCESS) {
                         FATAL("Failed to create descriptor pool!");
                 }
         }
@@ -108,16 +111,15 @@ MetaPipeline CreateGenericMetaPipeline(
                         group.descriptorPool = m.descriptorPool;
 
                         for (size_t i = 0; i < numFrameInFlight; i++) {
-                                INFO("{}", i);
                                 VkDescriptorBufferInfo descriptorBufferInfo_static{};
                                 descriptorBufferInfo_static.buffer = group.staticUbo[i].buffer;
                                 descriptorBufferInfo_static.offset = 0;
-                                descriptorBufferInfo_static.range = staticUboRange;
+                                descriptorBufferInfo_static.range = group.staticUboSize;
 
                                 VkDescriptorBufferInfo descriptorBufferInfo_dynamic{};
                                 descriptorBufferInfo_dynamic.buffer = group.dynamicUbo[i].buffer;
                                 descriptorBufferInfo_dynamic.offset = 0;
-                                descriptorBufferInfo_dynamic.range = dynamicUboRange;
+                                descriptorBufferInfo_dynamic.range = group.dynamicUboSize;
                                 INFO("Dynamic descriptor range: {}", descriptorBufferInfo_dynamic.range);
                                 // TODO: make a more fool-proof abstraction
                                 VkDescriptorImageInfo descriptorImageInfo{};
@@ -152,20 +154,77 @@ MetaPipeline CreateGenericMetaPipeline(
                                 descriptorWrites[2].pImageInfo = &descriptorImageInfo;
 
                                 vkUpdateDescriptorSets(
-                                        device->logicalDevice, descriptorWrites.size(), descriptorWrites.data(), 0, nullptr
+                                        device->logicalDevice,
+                                        descriptorWrites.size(),
+                                        descriptorWrites.data(),
+                                        0,
+                                        nullptr
                                 );
                         }
                 }
         }
 
         // pipeline
+        // {
+        //         VQPipelineBuilder pipelineBuilder(device);
+        //         // programmable stages
+        //         VkShaderModule vertShaderModule
+        //                 = ShaderCreation::createShaderModule(device->logicalDevice, vertexShader.data());
+        //         VkShaderModule fragShaderModule
+        //                 = ShaderCreation::createShaderModule(device->logicalDevice, fragmentShader.data());
+
+        //         pipelineBuilder.SetShaders(vertShaderModule, fragShaderModule);
+        //         pipelineBuilder.SetInputTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+        //         pipelineBuilder.SetPolygonMode(VK_POLYGON_MODE_FILL);
+        //         pipelineBuilder.SetCullMode(VK_CULL_MODE_NONE); // don't cull anything(TODO: maybe can cull back
+        //         face) pipelineBuilder.SetMultiSamplingDisabled(); pipelineBuilder.SetColorBlendingDisabled();
+        //         // depth and stencil state
+        //         VkPipelineDepthStencilStateCreateInfo depthStencilCreateInfo{};
+        //         depthStencilCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+        //         depthStencilCreateInfo.depthTestEnable = VK_TRUE;
+        //         depthStencilCreateInfo.depthWriteEnable = VK_TRUE;
+
+        //         depthStencilCreateInfo.depthCompareOp
+        //                 = VK_COMPARE_OP_LESS; // low depth == closer object -> cull far object
+
+        //         depthStencilCreateInfo.depthBoundsTestEnable = VK_FALSE;
+        //         depthStencilCreateInfo.minDepthBounds = 0.0f; // Optional
+        //         depthStencilCreateInfo.maxDepthBounds = 1.0f; // Optional
+
+        //         depthStencilCreateInfo.stencilTestEnable = VK_FALSE;
+        //         depthStencilCreateInfo.front = {}; // Optional
+        //         depthStencilCreateInfo.back = {};  // Optional
+
+        //         pipelineBuilder.SetDepthStencil(depthStencilCreateInfo);
+
+        //         VkPipelineVertexInputStateCreateInfo vertexInputInfo = {}; // describes the format of the vertex
+        //         data. vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+        //         // set up vertex descriptions
+        //         VkVertexInputBindingDescription bindingDescription = Vertex::GetBindingDescription();
+        //         std::unique_ptr<std::vector<VkVertexInputAttributeDescription>> attributeDescriptions
+        //                 = Vertex::GetAttributeDescriptions();
+
+        //         vertexInputInfo.vertexBindingDescriptionCount = 1;
+        //         vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
+        //         vertexInputInfo.vertexAttributeDescriptionCount =
+        //         static_cast<uint32_t>(attributeDescriptions->size()); vertexInputInfo.pVertexAttributeDescriptions =
+        //         attributeDescriptions->data();
+
+        //         pipelineBuilder.SetVertexInputInfo(vertexInputInfo);
+
+        //         pipelineBuilder.SetRenderPass(renderPass);
+
+        //         m.pipeline = pipelineBuilder.BuildPipeline(device->logicalDevice);
+        //         vkDestroyShaderModule(device->logicalDevice, fragShaderModule, nullptr);
+        //         vkDestroyShaderModule(device->logicalDevice, vertShaderModule, nullptr);
+        // }
         {
                 INFO("setting up shader modules...");
                 // programmable stages
                 VkShaderModule vertShaderModule
                         = ShaderCreation::createShaderModule(device->logicalDevice, vertexShader.data());
                 VkShaderModule fragShaderModule
-                        = ShaderCreation::createShaderModule(device->logicalDevice,fragmentShader.data());
+                        = ShaderCreation::createShaderModule(device->logicalDevice, fragmentShader.data());
 
                 VkPipelineShaderStageCreateInfo vertShaderStageInfo = {};
                 vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -325,8 +384,8 @@ MetaPipeline CreateGenericMetaPipeline(
                 pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
                 pipelineLayoutInfo.setLayoutCount = 1;
                 pipelineLayoutInfo.pSetLayouts = &m.descriptorSetLayout; // bind our own layout
-                pipelineLayoutInfo.pushConstantRangeCount = 0;          // Optional
-                pipelineLayoutInfo.pPushConstantRanges = nullptr;       // Optional
+                pipelineLayoutInfo.pushConstantRangeCount = 0;           // Optional
+                pipelineLayoutInfo.pPushConstantRanges = nullptr;        // Optional
 
                 if (vkCreatePipelineLayout(device->logicalDevice, &pipelineLayoutInfo, nullptr, &m.pipelineLayout)
                     != VK_SUCCESS) {
@@ -367,6 +426,4 @@ MetaPipeline CreateGenericMetaPipeline(
         }
 
         return m;
-
-
 }

@@ -1,8 +1,10 @@
 #include "MeshRenderManager.h"
 #include "MeshRenderer.h"
 #include "MetaPipeline.h"
+#include "components/rendering/RenderGroup.h"
 #include "lib/VQDevice.h"
 #include "lib/VQUtils.h"
+#include "structs/UniformBuffer.h"
 #include <unordered_map>
 #include <vulkan/vulkan_core.h>
 
@@ -31,7 +33,7 @@ void MeshRenderManager::PrepareRendering(
                         }
                 }
                 for (auto& it : uniqueModlesTextures) {
-                        RenderGroup group;
+                        RenderGroup group = CreateRenderGroup<UniformBuffer_Dynamic, UniformBuffer_Static>(device);
                         group.meshRenderers = it.second;
                         group.texturePath = it.second[0]->textureFilePath;
                         group.dynamicUboCount = it.second.size();
@@ -41,18 +43,6 @@ void MeshRenderManager::PrepareRendering(
                         renderData.renderGroups.push_back(group);
                 }
         }
-        // construct meta pipelines
-        // TODO: the following should be a part of the loop.
-        VkPhysicalDeviceProperties properties;
-        vkGetPhysicalDeviceProperties(device->physicalDevice, &properties);
-        size_t minUboAlignment = properties.limits.minUniformBufferOffsetAlignment;
-
-        dynamicAlignment = sizeof(UniformBuffer_Dynamic);
-        if (minUboAlignment > 0) {
-                dynamicAlignment = (dynamicAlignment + minUboAlignment - 1) & ~(minUboAlignment - 1);
-        }
-
-        size_t staticAlignment = sizeof(UniformBuffer_Static);
 
         // uniform buffer allocation
         {
@@ -67,14 +57,14 @@ void MeshRenderManager::PrepareRendering(
                                 for (int i = 0; i < numFrameInFlight; i++) {
                                         // allocate static ubo
                                         group.staticUbo[i] = device->CreateBuffer(
-                                                staticAlignment,
+                                                group.staticUboSize,
                                                 VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                                                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
                                                         | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
                                         );
                                         // allocate dynamic ubo
                                         group.dynamicUbo[i] = device->CreateBuffer(
-                                                dynamicAlignment * group.dynamicUboCount,
+                                                group.dynamicUboSize * group.dynamicUboCount,
                                                 VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                                                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
                                                         | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
@@ -93,8 +83,6 @@ void MeshRenderManager::PrepareRendering(
                         renderData.metaPipeline = CreateGenericMetaPipeline(
                                 device,
                                 numFrameInFlight,
-                                staticAlignment,
-                                dynamicAlignment,
                                 renderData.renderGroups,
                                 "../shaders/vert_test.vert.spv",
                                 "../shaders/frag_test.frag.spv",
