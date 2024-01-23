@@ -90,6 +90,12 @@ void VQDevice::CreateGraphicsCommandPool()
 
 void VQDevice::CreateGraphicsCommandBuffer(uint32_t commandBufferCount)
 {
+        if (graphicsCommandPool == VK_NULL_HANDLE) {
+                FATAL("Graphics command pool not initialized! Call CreateGraphicsCommandPool().");
+        }
+        if (!graphicsCommandBuffers.empty()) {
+                FATAL("Graphics command buffers already initialized!");
+        }
         this->graphicsCommandBuffers.resize(commandBufferCount);
 
         VkCommandBufferAllocateInfo allocInfo{};

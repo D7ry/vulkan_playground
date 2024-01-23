@@ -43,7 +43,11 @@ class MeshRenderer
                 ImGui::Separator();
                 ImGui::Text("Mesh: %s", this->meshFilePath.data());
                 ImGui::Text("Texture: %s", this->textureFilePath.data());
-                if (ImGui::BeginChild(fmt::format("{}", (void*)this).data()), 0, ImGuiWindowFlags_AlwaysAutoResize) {
+                if (ImGui::BeginChild(
+                            fmt::format("{}", (void*)this).data(),
+                            ImVec2(ImGui::GetWindowWidth() * 0.9, ImGui::GetWindowHeight() * 0.2),
+                            0
+                    )) {
                         transform.DrawImguiControllers();
                 }
                 ImGui::EndChild();

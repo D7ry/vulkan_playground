@@ -55,7 +55,7 @@ void VulkanEngine::createDevice()
         this->_device->InitQueueFamilyIndices(this->_surface);
         this->_device->CreateLogicalDeviceAndQueue(DEVICE_EXTENSIONS);
         this->_device->CreateGraphicsCommandPool();
-        this->_device->CreateGraphicsCommandBuffer(INTER_FRAMES);
+        this->_device->CreateGraphicsCommandBuffer(NUM_INTERMEDIATE_FRAMES);
         this->_deletionStack.push([this]() { this->_device->Cleanup(); });
 }
 
@@ -77,7 +77,7 @@ void VulkanEngine::initVulkan()
         this->createFramebuffers();
 
         this->_imguiManager.InitializeImgui();
-        this->_imguiManager.InitializeDescriptorPool(INTER_FRAMES, _device->logicalDevice);
+        this->_imguiManager.InitializeDescriptorPool(NUM_INTERMEDIATE_FRAMES, _device->logicalDevice);
         this->_imguiManager.BindVulkanResources(
                 _window,
                 _instance,
@@ -88,7 +88,7 @@ void VulkanEngine::initVulkan()
                 _swapChainFrameBuffers.size()
         );
         this->_imguiManager.InitializeCommandPoolAndBuffers(
-                INTER_FRAMES, _device->logicalDevice, _device->queueFamilyIndices.graphicsFamily.value()
+                NUM_INTERMEDIATE_FRAMES, _device->logicalDevice, _device->queueFamilyIndices.graphicsFamily.value()
         );
 
         this->_deletionStack.push([this]() { this->_imguiManager.Cleanup(_device->logicalDevice); });
@@ -534,9 +534,9 @@ void VulkanEngine::createImageViews()
 void VulkanEngine::createSynchronizationObjects()
 {
         INFO("Creating synchronization objects...");
-        this->_semaImageAvailable.resize(INTER_FRAMES);
-        this->_semaRenderFinished.resize(INTER_FRAMES);
-        this->_fenceInFlight.resize(INTER_FRAMES);
+        this->_semaImageAvailable.resize(NUM_INTERMEDIATE_FRAMES);
+        this->_semaRenderFinished.resize(NUM_INTERMEDIATE_FRAMES);
+        this->_fenceInFlight.resize(NUM_INTERMEDIATE_FRAMES);
 
         VkSemaphoreCreateInfo semaphoreInfo{};
         semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -544,7 +544,7 @@ void VulkanEngine::createSynchronizationObjects()
         fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
         fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT; // create with a signaled bit so that the
                                                         // 1st frame can start right away
-        for (size_t i = 0; i < INTER_FRAMES; i++) {
+        for (size_t i = 0; i < NUM_INTERMEDIATE_FRAMES; i++) {
                 if (vkCreateSemaphore(_device->logicalDevice, &semaphoreInfo, nullptr, &_semaImageAvailable[i])
                             != VK_SUCCESS
                     || vkCreateSemaphore(_device->logicalDevice, &semaphoreInfo, nullptr, &_semaRenderFinished[i])
@@ -554,7 +554,7 @@ void VulkanEngine::createSynchronizationObjects()
                 }
         }
         this->_deletionStack.push([this]() {
-                for (size_t i = 0; i < INTER_FRAMES; i++) {
+                for (size_t i = 0; i < NUM_INTERMEDIATE_FRAMES; i++) {
                         vkDestroySemaphore(this->_device->logicalDevice, this->_semaRenderFinished[i], nullptr);
                         vkDestroySemaphore(this->_device->logicalDevice, this->_semaImageAvailable[i], nullptr);
                         vkDestroyFence(this->_device->logicalDevice, this->_fenceInFlight[i], nullptr);
@@ -858,7 +858,7 @@ void VulkanEngine::drawFrame()
                 FATAL("Failed to present swap chain image!");
         }
         //  Advance to the next frame
-        _currentFrame = (_currentFrame + 1) % INTER_FRAMES;
+        _currentFrame = (_currentFrame + 1) % NUM_INTERMEDIATE_FRAMES;
 }
 
 void VulkanEngine::SetImguiRenderCallback(std::function<void()> imguiFunction)
@@ -871,7 +871,7 @@ void VulkanEngine::Prepare()
         for (MeshRenderer* renderer : this->_meshes) {
                 _meshRenderManager->RegisterMeshRenderer(renderer, MeshRenderManager::RenderMethod::Generic);
         }
-        this->_meshRenderManager->PrepareRendering(INTER_FRAMES, _renderPass, _device);
+        this->_meshRenderManager->PrepareRendering(NUM_INTERMEDIATE_FRAMES, _renderPass, _device);
 }
 
 void VulkanEngine::AddMesh(MeshRenderer* renderer) { _meshes.push_back(renderer); }

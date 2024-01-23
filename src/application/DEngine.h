@@ -34,10 +34,10 @@ class DEngine
                 render4->transform.position = glm::vec3(0, 0, -10);
                 render4->transform.rotation = {0, 0, 180};
 
-                _vulkanEngine->AddMesh(render);
-                _vulkanEngine->AddMesh(render2);
+                // _vulkanEngine->AddMesh(render);
+                // _vulkanEngine->AddMesh(render2);
                 _vulkanEngine->AddMesh(render3);
-                _vulkanEngine->AddMesh(render4);
+                //_vulkanEngine->AddMesh(render4);
         }
 
         void Init()

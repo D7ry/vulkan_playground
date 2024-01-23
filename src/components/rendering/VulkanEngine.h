@@ -38,6 +38,13 @@ class VulkanEngine
         void DrawImgui()
         {
                 if (ImGui::Begin("Render Manager")) {
+                        if (ImGui::Button("add test mesh")) {
+                                MeshRenderer* spotBoy = new MeshRenderer(
+                                        "../resources/meshes/spot.obj", "../resources/textures/spot.png"
+                                );
+                                _meshes.push_back(spotBoy);
+                                _meshRenderManager->TestAddRenderer(spotBoy);
+                        }
                         for (MeshRenderer* mesh : _meshes) {
                                 mesh->DrawImguiController();
                         }

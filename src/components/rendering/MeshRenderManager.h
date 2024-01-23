@@ -25,6 +25,8 @@ class MeshRenderManager
 
         void Render() {}
 
+        void TestAddRenderer(MeshRenderer* renderer);
+
         void RegisterMeshRenderer(MeshRenderer* meshRenderer, RenderMethod renderMethod)
         {
                 _rendererToProcess[renderMethod].push_back(meshRenderer);

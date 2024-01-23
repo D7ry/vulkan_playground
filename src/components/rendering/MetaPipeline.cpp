@@ -2,12 +2,12 @@
 #include "MeshRenderManager.h"
 #include "components/ShaderUtils.h"
 #include "components/TextureManager.h"
+#include "constants.h"
 #include "structs/Vertex.h"
 #include <vulkan/vulkan_core.h>
 
 MetaPipeline CreateGenericMetaPipeline(
         std::shared_ptr<VQDevice> device,
-        uint32_t numFrameInFlight,
         std::vector<RenderGroup>& renderGroups,
         std::string vertexShader,
         std::string fragmentShader,
@@ -64,14 +64,13 @@ MetaPipeline CreateGenericMetaPipeline(
         // check UBO allocation
         {
                 for (RenderGroup& group : renderGroups) {
-                        ASSERT(group.staticUbo.size() == numFrameInFlight);
-                        ASSERT(group.dynamicUbo.size() == numFrameInFlight);
+                        ASSERT(group.staticUbo.size() == NUM_INTERMEDIATE_FRAMES);
+                        ASSERT(group.dynamicUbo.size() == NUM_INTERMEDIATE_FRAMES);
                 }
         }
         // descriptor pool
-        {
-                uint32_t numDescriptorPerType
-                        = numFrameInFlight * renderGroups.size(); // each render group has its own set of descriptors
+        { // TODO: either dynamically resize descriptor pool on render group creation, or allocate a fat pool at start.
+                uint32_t numDescriptorPerType = 5000; // each render group has its own set of descriptors
                 VkDescriptorPoolSize poolSizes[]
                         = {{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, static_cast<uint32_t>(numDescriptorPerType)},
                            {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, static_cast<uint32_t>(numDescriptorPerType)},
@@ -81,7 +80,7 @@ MetaPipeline CreateGenericMetaPipeline(
                 poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
                 poolInfo.poolSizeCount = sizeof(poolSizes) / sizeof(VkDescriptorPoolSize); // number of pool sizes
                 poolInfo.pPoolSizes = poolSizes;
-                poolInfo.maxSets = numFrameInFlight * poolInfo.poolSizeCount;
+                poolInfo.maxSets = NUM_INTERMEDIATE_FRAMES * poolInfo.poolSizeCount;
                 poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
 
                 if (vkCreateDescriptorPool(device->logicalDevice, &poolInfo, nullptr, &m.descriptorPool)
@@ -89,27 +88,28 @@ MetaPipeline CreateGenericMetaPipeline(
                         FATAL("Failed to create descriptor pool!");
                 }
         }
-        // descriptor set
-        {
-                std::vector<VkDescriptorSetLayout> layouts(numFrameInFlight, m.descriptorSetLayout);
-                VkDescriptorSetAllocateInfo allocInfo{};
-                allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-                allocInfo.descriptorPool = m.descriptorPool;
-                allocInfo.descriptorSetCount = numFrameInFlight;
-                allocInfo.pSetLayouts = layouts.data();
+        // // descriptor set
+        // {
+        //         std::vector<VkDescriptorSetLayout> layouts(NUM_INTERMEDIATE_FRAMES, m.descriptorSetLayout);
+        //         VkDescriptorSetAllocateInfo allocInfo{};
+        //         allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        //         allocInfo.descriptorPool = m.descriptorPool;
+        //         allocInfo.descriptorSetCount = NUM_INTERMEDIATE_FRAMES;
+        //         allocInfo.pSetLayouts = layouts.data();
 
-                // each render group has its own descriptor sets
-                for (RenderGroup& group : renderGroups) {
-                        group.descriptorSets.resize(numFrameInFlight);
+        //         // each render group has its own descriptor sets
+        //         for (RenderGroup& group :
+        //              renderGroups) { // TODO: dynamically allocate descriptor set on new render group creation.
+        //                 group.descriptorSets.resize(NUM_INTERMEDIATE_FRAMES);
 
-                        if (vkAllocateDescriptorSets(device->logicalDevice, &allocInfo, group.descriptorSets.data())
-                            != VK_SUCCESS) {
-                                FATAL("Failed to allocate descriptor sets!");
-                        }
+        //                 if (vkAllocateDescriptorSets(device->logicalDevice, &allocInfo, group.descriptorSets.data())
+        //                     != VK_SUCCESS) {
+        //                         FATAL("Failed to allocate descriptor sets!");
+        //                 }
 
-                        group.descriptorPool = m.descriptorPool;
-                }
-        }
+        //                 group.descriptorPool = m.descriptorPool;
+        //         }
+        // }
 
         // pipeline
         // {

@@ -82,7 +82,6 @@ void MeshRenderManager::PrepareRendering(
                         // TODO: shader should be a part of metapipeline
                         renderData.metaPipeline = CreateGenericMetaPipeline(
                                 device,
-                                numFrameInFlight,
                                 renderData.renderGroups,
                                 "../shaders/vert_test.vert.spv",
                                 "../shaders/frag_test.frag.spv",
@@ -90,6 +89,7 @@ void MeshRenderManager::PrepareRendering(
                         );
 
                         for (auto& group : renderData.renderGroups) {
+                                renderData.metaPipeline.AllocateDescriptorSets(group);
                                 group.InitUniformbuffers();
                         }
                 }

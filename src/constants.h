@@ -1,2 +1,2 @@
 #pragma once
-const int INTER_FRAMES = 2; // how many frames to pipeline
+const int NUM_INTERMEDIATE_FRAMES = 2; // how many frames to pipeline

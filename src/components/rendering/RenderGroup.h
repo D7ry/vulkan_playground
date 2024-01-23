@@ -1,6 +1,7 @@
 #pragma once
 
 #include "components/TextureManager.h"
+#include "constants.h"
 #include "lib/VQBuffer.h"
 #include "lib/VQDevice.h"
 class MeshRenderer;
@@ -27,9 +28,8 @@ struct RenderGroup
                 this->staticUboSize = staticUboSize;
                 this->dynamicUboSize = dynamicUboSize;
                 this->device = device;
-                this->staticUbo.resize(INTER_FRAMES);
-                this->dynamicUbo.resize(INTER_FRAMES);
-
+                this->staticUbo.resize(NUM_INTERMEDIATE_FRAMES);
+                this->dynamicUbo.resize(NUM_INTERMEDIATE_FRAMES);
                 this->dynamicUboCount = initialDynamicUboCount;
         }
 
@@ -38,7 +38,7 @@ struct RenderGroup
                 resizeDynamicUbo(this->dynamicUboCount);
 
                 // allocate static UBO
-                for (int i = 0; i < INTER_FRAMES; i++) {
+                for (int i = 0; i < NUM_INTERMEDIATE_FRAMES; i++) {
                         // allocate static ubo
                         staticUbo[i] = device->CreateBuffer(
                                 staticUboSize,
@@ -48,7 +48,7 @@ struct RenderGroup
                 }
 
                 // update all descriptor sets.
-                for (size_t i = 0; i < INTER_FRAMES; i++) {
+                for (size_t i = 0; i < NUM_INTERMEDIATE_FRAMES; i++) {
                         VkDescriptorBufferInfo descriptorBufferInfo_static{};
                         descriptorBufferInfo_static.buffer = this->staticUbo[i].buffer;
                         descriptorBufferInfo_static.offset = 0;
@@ -87,7 +87,17 @@ struct RenderGroup
                 }
         }
 
+        struct FrameData
+        {
+                VQBuffer staticUBO;
+                VQBuffer dynamicUBO;
+                VkDescriptorSet descriptorSet;
+        };
+
+        FrameData frameData[NUM_INTERMEDIATE_FRAMES];
+
         std::string texturePath;
+
         uint32_t dynamicUboCount;
         std::vector<MeshRenderer*> meshRenderers;
         VQBuffer vertexBuffer;
@@ -105,7 +115,7 @@ struct RenderGroup
 
         inline void resizeDynamicUbo(size_t dynamicUboCount)
         {
-                for (int i = 0; i < INTER_FRAMES; i++) {
+                for (int i = 0; i < NUM_INTERMEDIATE_FRAMES; i++) {
                         dynamicUbo[i].Cleanup();
                         dynamicUbo[i] = device->CreateBuffer(
                                 dynamicUboSize * dynamicUboCount,
@@ -115,7 +125,7 @@ struct RenderGroup
                 }
                 this->dynamicUboCount = dynamicUboCount;
 
-                for (size_t i = 0; i < INTER_FRAMES; i++) {
+                for (size_t i = 0; i < NUM_INTERMEDIATE_FRAMES; i++) {
                         VkDescriptorBufferInfo descriptorBufferInfo_dynamic{};
                         descriptorBufferInfo_dynamic.buffer = this->dynamicUbo[i].buffer;
                         descriptorBufferInfo_dynamic.offset = 0;
@@ -159,7 +169,8 @@ struct RenderGroup
                 meshRenderers.push_back(renderer);
                 INFO("MeshRenderers size: {}", meshRenderers.size());
                 if (meshRenderers.size() > dynamicUboCount) {
-                        dynamicUboCount = fmax(meshRenderers.size(), dynamicUboCount * 1.5);
+                        dynamicUboCount
+                                = std::max(meshRenderers.size(), static_cast<size_t>(std::ceil(dynamicUboCount * 1.5)));
                         INFO("Resizing dynamic UBO to {}", dynamicUboCount);
                         resizeDynamicUbo(dynamicUboCount); // every time we resize, we add 50% more space
                 }

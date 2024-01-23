@@ -7,9 +7,9 @@ struct VQBuffer
 {
         VkDevice device = VK_NULL_HANDLE;
         VkBuffer buffer = VK_NULL_HANDLE;
-        VkDeviceMemory bufferMemory;
-        VkDeviceSize size;
-        void* bufferAddress;
+        VkDeviceMemory bufferMemory = VK_NULL_HANDLE;
+        VkDeviceSize size = 0;
+        void* bufferAddress = nullptr;
 
         /**
          * @brief Clean up all the resources held by this buffer.
