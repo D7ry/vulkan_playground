@@ -153,6 +153,17 @@ struct RenderGroup
                         device->logicalDevice, descriptorPool, descriptorSets.size(), descriptorSets.data()
                 );
         }
+
+        inline void addRenderer(MeshRenderer* renderer)
+        {
+                meshRenderers.push_back(renderer);
+                INFO("MeshRenderers size: {}", meshRenderers.size());
+                if (meshRenderers.size() > dynamicUboCount) {
+                        dynamicUboCount = fmax(meshRenderers.size(), dynamicUboCount * 1.5);
+                        INFO("Resizing dynamic UBO to {}", dynamicUboCount);
+                        resizeDynamicUbo(dynamicUboCount); // every time we resize, we add 50% more space
+                }
+        }
 };
 
 template <typename DynamicUBO_T, typename StaticUBO_T>
