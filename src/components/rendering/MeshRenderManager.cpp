@@ -158,7 +158,7 @@ void MeshRenderManager::RecordRenderCommands(VkCommandBuffer commandBuffer, int 
                         vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipeline);
 
                         for (int i = 0; i < renderGroup.meshRenderers.size(); i++) {
-                                uint32_t dynamicOffset = i * static_cast<uint32_t>(dynamicAlignment);
+                                uint32_t dynamicOffset = i * static_cast<uint32_t>(renderGroup.dynamicUboSize);
 
                                 MeshRenderer* renderer = renderGroup.meshRenderers[i];
 
@@ -189,5 +189,18 @@ void MeshRenderManager::Cleanup()
                         renderGroup.cleanup();
                 }
                 data.metaPipeline.Cleanup();
+        }
+}
+
+void MeshRenderManager::TestAddRenderer(MeshRenderer* renderer)
+{
+
+        ASSERT(!renderer->meshFilePath.empty() && !renderer->textureFilePath.empty());
+        for (auto& group : _runtimeRenderData[RenderMethod::Generic].renderGroups) {
+                if (group.texturePath == renderer->textureFilePath) {
+                        INFO("added new mesh renderer to text file path {}", renderer->textureFilePath);
+                        group.addRenderer(renderer);
+                        return;
+                }
         }
 }
