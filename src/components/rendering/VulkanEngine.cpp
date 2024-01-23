@@ -544,7 +544,7 @@ void VulkanEngine::createSynchronizationObjects()
         fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
         fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT; // create with a signaled bit so that the
                                                         // 1st frame can start right away
-        for (size_t i = 0; i < this->INTER_FRAMES; i++) {
+        for (size_t i = 0; i < INTER_FRAMES; i++) {
                 if (vkCreateSemaphore(_device->logicalDevice, &semaphoreInfo, nullptr, &_semaImageAvailable[i])
                             != VK_SUCCESS
                     || vkCreateSemaphore(_device->logicalDevice, &semaphoreInfo, nullptr, &_semaRenderFinished[i])

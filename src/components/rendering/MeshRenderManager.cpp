@@ -33,10 +33,10 @@ void MeshRenderManager::PrepareRendering(
                         }
                 }
                 for (auto& it : uniqueModlesTextures) {
-                        RenderGroup group = CreateRenderGroup<UniformBuffer_Dynamic, UniformBuffer_Static>(device);
+                        RenderGroup group = CreateRenderGroup<UniformBuffer_Dynamic, UniformBuffer_Static>(
+                                device, it.second[0]->textureFilePath, it.second.size()
+                        );
                         group.meshRenderers = it.second;
-                        group.texturePath = it.second[0]->textureFilePath;
-                        group.dynamicUboCount = it.second.size();
                         VQUtils::meshToBuffer(
                                 it.second[0]->meshFilePath.data(), *device, group.vertexBuffer, group.indexBuffer
                         );
@@ -45,34 +45,34 @@ void MeshRenderManager::PrepareRendering(
         }
 
         // uniform buffer allocation
-        {
-                INFO("Allocating uniform buffers...");
-                for (auto& it : this->_runtimeRenderData) {
-                        RuntimeRenderData& renderData = it.second;
-                        for (RenderGroup& group : renderData.renderGroups) {
-                                ASSERT(group.staticUbo.empty());
-                                ASSERT(group.dynamicUbo.empty());
-                                group.staticUbo.resize(numFrameInFlight);
-                                group.dynamicUbo.resize(numFrameInFlight);
-                                for (int i = 0; i < numFrameInFlight; i++) {
-                                        // allocate static ubo
-                                        group.staticUbo[i] = device->CreateBuffer(
-                                                group.staticUboSize,
-                                                VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                                                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
-                                                        | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-                                        );
-                                        // allocate dynamic ubo
-                                        group.dynamicUbo[i] = device->CreateBuffer(
-                                                group.dynamicUboSize * group.dynamicUboCount,
-                                                VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                                                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
-                                                        | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-                                        );
-                                }
-                        }
-                }
-        }
+        // {
+        //         INFO("Allocating uniform buffers...");
+        //         for (auto& it : this->_runtimeRenderData) {
+        //                 RuntimeRenderData& renderData = it.second;
+        //                 for (RenderGroup& group : renderData.renderGroups) {
+        //                         ASSERT(group.staticUbo.empty());
+        //                         ASSERT(group.dynamicUbo.empty());
+        //                         group.staticUbo.resize(numFrameInFlight);
+        //                         group.dynamicUbo.resize(numFrameInFlight);
+        //                         for (int i = 0; i < numFrameInFlight; i++) {
+        //                                 // allocate static ubo
+        //                                 group.staticUbo[i] = device->CreateBuffer(
+        //                                         group.staticUboSize,
+        //                                         VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+        //                                         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+        //                                                 | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+        //                                 );
+        //                                 // allocate dynamic ubo
+        //                                 group.dynamicUbo[i] = device->CreateBuffer(
+        //                                         group.dynamicUboSize * group.dynamicUboCount,
+        //                                         VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+        //                                         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+        //                                                 | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+        //                                 );
+        //                         }
+        //                 }
+        //         }
+        // }
 
         // pipeline creation
         {
@@ -88,6 +88,10 @@ void MeshRenderManager::PrepareRendering(
                                 "../shaders/frag_test.frag.spv",
                                 renderPass
                         );
+
+                        for (auto& group : renderData.renderGroups) {
+                                group.InitUniformbuffers();
+                        }
                 }
         }
 }

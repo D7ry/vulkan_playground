@@ -1,7 +1,9 @@
 #pragma once
 
+#include "components/TextureManager.h"
 #include "lib/VQBuffer.h"
 #include "lib/VQDevice.h"
+class MeshRenderer;
 
 /**
  * @brief A render group is a set of meshes that shares the same texture, render pipeline, and therefore shaders.
@@ -9,16 +11,80 @@
  * There are exactly NUMFRAMEINFLIGHT static UBO and dynamic UBO.
  * Render groups that share the render pipeline must share the same buffer layout.
  */
-class MeshRenderer;
-
 struct RenderGroup
 {
         RenderGroup() = delete;
 
-        RenderGroup(size_t staticUboSize, size_t dynamicUboSize)
+        RenderGroup(
+                size_t staticUboSize,
+                size_t dynamicUboSize,
+                size_t initialDynamicUboCount,
+                const std::string& texturePath,
+                std::shared_ptr<VQDevice> device
+        )
         {
+                this->texturePath = texturePath;
                 this->staticUboSize = staticUboSize;
                 this->dynamicUboSize = dynamicUboSize;
+                this->device = device;
+                this->staticUbo.resize(INTER_FRAMES);
+                this->dynamicUbo.resize(INTER_FRAMES);
+
+                this->dynamicUboCount = initialDynamicUboCount;
+        }
+
+        void InitUniformbuffers()
+        {
+                resizeDynamicUbo(this->dynamicUboCount);
+
+                // allocate static UBO
+                for (int i = 0; i < INTER_FRAMES; i++) {
+                        // allocate static ubo
+                        staticUbo[i] = device->CreateBuffer(
+                                staticUboSize,
+                                VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+                        );
+                }
+
+                // update all descriptor sets.
+                for (size_t i = 0; i < INTER_FRAMES; i++) {
+                        VkDescriptorBufferInfo descriptorBufferInfo_static{};
+                        descriptorBufferInfo_static.buffer = this->staticUbo[i].buffer;
+                        descriptorBufferInfo_static.offset = 0;
+                        descriptorBufferInfo_static.range = this->staticUboSize;
+
+                        VkDescriptorBufferInfo descriptorBufferInfo_dynamic{};
+                        descriptorBufferInfo_dynamic.buffer = this->dynamicUbo[i].buffer;
+                        descriptorBufferInfo_dynamic.offset = 0;
+                        descriptorBufferInfo_dynamic.range = this->dynamicUboSize;
+                        INFO("Dynamic descriptor range: {}", descriptorBufferInfo_dynamic.range);
+                        // TODO: make a more fool-proof abstraction
+                        VkDescriptorImageInfo descriptorImageInfo{};
+                        TextureManager::GetSingleton()->GetDescriptorImageInfo(this->texturePath, descriptorImageInfo);
+
+                        std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
+
+                        descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+                        descriptorWrites[0].dstSet = this->descriptorSets[i];
+                        descriptorWrites[0].dstBinding = 0;
+                        descriptorWrites[0].dstArrayElement = 0;
+                        descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+                        descriptorWrites[0].descriptorCount = 1;
+                        descriptorWrites[0].pBufferInfo = &descriptorBufferInfo_static;
+
+                        descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+                        descriptorWrites[1].dstSet = this->descriptorSets[i];
+                        descriptorWrites[1].dstBinding = 2;
+                        descriptorWrites[1].dstArrayElement = 0;
+                        descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+                        descriptorWrites[1].descriptorCount = 1;
+                        descriptorWrites[1].pImageInfo = &descriptorImageInfo;
+
+                        vkUpdateDescriptorSets(
+                                device->logicalDevice, descriptorWrites.size(), descriptorWrites.data(), 0, nullptr
+                        );
+                }
         }
 
         std::string texturePath;
@@ -34,8 +100,44 @@ struct RenderGroup
         size_t staticUboSize;
         size_t dynamicUboSize;
 
-        VkDevice descriptorSetDevice;
+        std::shared_ptr<VQDevice> device;
         VkDescriptorPool descriptorPool;
+
+        inline void resizeDynamicUbo(size_t dynamicUboCount)
+        {
+                for (int i = 0; i < INTER_FRAMES; i++) {
+                        dynamicUbo[i].Cleanup();
+                        dynamicUbo[i] = device->CreateBuffer(
+                                dynamicUboSize * dynamicUboCount,
+                                VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+                        );
+                }
+                this->dynamicUboCount = dynamicUboCount;
+
+                for (size_t i = 0; i < INTER_FRAMES; i++) {
+                        VkDescriptorBufferInfo descriptorBufferInfo_dynamic{};
+                        descriptorBufferInfo_dynamic.buffer = this->dynamicUbo[i].buffer;
+                        descriptorBufferInfo_dynamic.offset = 0;
+                        descriptorBufferInfo_dynamic.range = this->dynamicUboSize;
+                        INFO("Dynamic descriptor range: {}", descriptorBufferInfo_dynamic.range);
+                        VkDescriptorImageInfo descriptorImageInfo{};
+                        TextureManager::GetSingleton()->GetDescriptorImageInfo(this->texturePath, descriptorImageInfo);
+
+                        std::array<VkWriteDescriptorSet, 1> descriptorWrites{};
+                        descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+                        descriptorWrites[0].dstSet = this->descriptorSets[i]; // FIXME: segfault here
+                        descriptorWrites[0].dstBinding = 1;
+                        descriptorWrites[0].dstArrayElement = 0;
+                        descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+                        descriptorWrites[0].descriptorCount = 1;
+                        descriptorWrites[0].pBufferInfo = &descriptorBufferInfo_dynamic;
+
+                        vkUpdateDescriptorSets(
+                                device->logicalDevice, descriptorWrites.size(), descriptorWrites.data(), 0, nullptr
+                        );
+                }
+        }
 
         inline void cleanup()
         {
@@ -47,12 +149,18 @@ struct RenderGroup
                 for (VQBuffer& buffer : dynamicUbo) {
                         buffer.Cleanup();
                 }
-                vkFreeDescriptorSets(descriptorSetDevice, descriptorPool, descriptorSets.size(), descriptorSets.data());
+                vkFreeDescriptorSets(
+                        device->logicalDevice, descriptorPool, descriptorSets.size(), descriptorSets.data()
+                );
         }
 };
 
 template <typename DynamicUBO_T, typename StaticUBO_T>
-RenderGroup CreateRenderGroup(std::shared_ptr<VQDevice> device)
+RenderGroup CreateRenderGroup(
+        std::shared_ptr<VQDevice> device,
+        std::string& texturePath,
+        size_t initialDynamicUboCount = 1
+)
 {
         VkPhysicalDeviceProperties properties;
         vkGetPhysicalDeviceProperties(device->physicalDevice, &properties);
@@ -62,5 +170,5 @@ RenderGroup CreateRenderGroup(std::shared_ptr<VQDevice> device)
         if (minUboAlignment > 0) {
                 dynamicAlignment = (dynamicAlignment + minUboAlignment - 1) & ~(minUboAlignment - 1);
         }
-        return RenderGroup(sizeof(StaticUBO_T), dynamicAlignment);
+        return RenderGroup(sizeof(StaticUBO_T), dynamicAlignment, initialDynamicUboCount, texturePath, device);
 }

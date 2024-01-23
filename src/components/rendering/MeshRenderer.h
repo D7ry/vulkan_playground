@@ -9,19 +9,24 @@
 
 /**
  * @brief Mesh renderer object for game object. Exposed to engine user.
- * 
+ *
  */
-class MeshRenderer {
+class MeshRenderer
+{
       public:
         MeshRenderer() = delete;
-        MeshRenderer(const char* meshFilePath, const char* textureFilePath) {
+
+        MeshRenderer(const char* meshFilePath, const char* textureFilePath)
+        {
                 this->meshFilePath = meshFilePath;
                 this->textureFilePath = textureFilePath;
         }
 
-        void RegisterRenderManager(MeshRenderManager* manager) {
+        void RegisterRenderManager(MeshRenderManager* manager)
+        {
                 manager->RegisterMeshRenderer(this, MeshRenderManager::RenderMethod::Generic);
         }
+
         void Rotate(float x, float y, float z);
         ~MeshRenderer();
         glm::mat4 GetModelMatrix();
@@ -33,7 +38,8 @@ class MeshRenderer {
 
         Transform transform = Transform{{0, 0, 0}, {0, 0, 0}, {1, 1, 1}};
 
-        void DrawImguiController() {
+        void DrawImguiController()
+        {
                 ImGui::Separator();
                 ImGui::Text("Mesh: %s", this->meshFilePath.data());
                 ImGui::Text("Texture: %s", this->textureFilePath.data());
@@ -41,8 +47,6 @@ class MeshRenderer {
                         transform.DrawImguiControllers();
                 }
                 ImGui::EndChild();
-
-
         }
 
         // transform

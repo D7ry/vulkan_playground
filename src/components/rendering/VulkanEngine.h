@@ -166,7 +166,6 @@ class VulkanEngine
         static inline const char* ENGINE_NAME = "No Engine";
         static inline const uint32_t ENGINE_VERSION = VK_MAKE_VERSION(1, 0, 0);
         static inline const uint32_t API_VERSION = VK_API_VERSION_1_0;
-        static inline const int INTER_FRAMES = 2;
 
         static void framebufferResizeCallback(GLFWwindow* window, int width, int height);
 

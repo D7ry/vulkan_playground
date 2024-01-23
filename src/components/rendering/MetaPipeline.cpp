@@ -107,60 +107,7 @@ MetaPipeline CreateGenericMetaPipeline(
                                 FATAL("Failed to allocate descriptor sets!");
                         }
 
-                        group.descriptorSetDevice = device->logicalDevice;
                         group.descriptorPool = m.descriptorPool;
-
-                        for (size_t i = 0; i < numFrameInFlight; i++) {
-                                VkDescriptorBufferInfo descriptorBufferInfo_static{};
-                                descriptorBufferInfo_static.buffer = group.staticUbo[i].buffer;
-                                descriptorBufferInfo_static.offset = 0;
-                                descriptorBufferInfo_static.range = group.staticUboSize;
-
-                                VkDescriptorBufferInfo descriptorBufferInfo_dynamic{};
-                                descriptorBufferInfo_dynamic.buffer = group.dynamicUbo[i].buffer;
-                                descriptorBufferInfo_dynamic.offset = 0;
-                                descriptorBufferInfo_dynamic.range = group.dynamicUboSize;
-                                INFO("Dynamic descriptor range: {}", descriptorBufferInfo_dynamic.range);
-                                // TODO: make a more fool-proof abstraction
-                                VkDescriptorImageInfo descriptorImageInfo{};
-                                TextureManager::GetSingleton()->GetDescriptorImageInfo(
-                                        group.texturePath, descriptorImageInfo
-                                );
-
-                                std::array<VkWriteDescriptorSet, 3> descriptorWrites{};
-
-                                descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-                                descriptorWrites[0].dstSet = group.descriptorSets[i];
-                                descriptorWrites[0].dstBinding = 0;
-                                descriptorWrites[0].dstArrayElement = 0;
-                                descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-                                descriptorWrites[0].descriptorCount = 1;
-                                descriptorWrites[0].pBufferInfo = &descriptorBufferInfo_static;
-
-                                descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-                                descriptorWrites[1].dstSet = group.descriptorSets[i];
-                                descriptorWrites[1].dstBinding = 1;
-                                descriptorWrites[1].dstArrayElement = 0;
-                                descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-                                descriptorWrites[1].descriptorCount = 1;
-                                descriptorWrites[1].pBufferInfo = &descriptorBufferInfo_dynamic;
-
-                                descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-                                descriptorWrites[2].dstSet = group.descriptorSets[i];
-                                descriptorWrites[2].dstBinding = 2;
-                                descriptorWrites[2].dstArrayElement = 0;
-                                descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-                                descriptorWrites[2].descriptorCount = 1;
-                                descriptorWrites[2].pImageInfo = &descriptorImageInfo;
-
-                                vkUpdateDescriptorSets(
-                                        device->logicalDevice,
-                                        descriptorWrites.size(),
-                                        descriptorWrites.data(),
-                                        0,
-                                        nullptr
-                                );
-                        }
                 }
         }
 
