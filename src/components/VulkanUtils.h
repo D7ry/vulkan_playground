@@ -2,45 +2,46 @@
 #pragma once
 #include "structs/Vertex.h"
 #include <vulkan/vulkan_core.h>
+
 namespace VulkanUtils
 {
 
 VkCommandBuffer beginSingleTimeCommands(VkDevice device, VkCommandPool commandPool);
 void endSingleTimeCommands(
-        VkCommandBuffer commandBuffer,
-        VkDevice device,
-        VkQueue graphicsQueue,
-        VkCommandPool commandPool
+    VkCommandBuffer commandBuffer,
+    VkDevice device,
+    VkQueue graphicsQueue,
+    VkCommandPool commandPool
 );
 
 void createCommandPool(
-        VkCommandPool* commandPool,
-        VkCommandPoolCreateFlags flags,
-        uint32_t queueFamilyIndex,
-        VkDevice device
+    VkCommandPool* commandPool,
+    VkCommandPoolCreateFlags flags,
+    uint32_t queueFamilyIndex,
+    VkDevice device
 );
 
 void createCommandBuffers(
-        VkCommandBuffer* commandBuffer,
-        uint32_t commandBufferCount,
-        VkCommandPool commandPool,
-        VkDevice device
+    VkCommandBuffer* commandBuffer,
+    uint32_t commandBufferCount,
+    VkCommandPool commandPool,
+    VkDevice device
 );
 
 void createCommandBuffers(
-        std::vector<VkCommandBuffer>& commandBufferes,
-        uint32_t commandBufferCount,
-        VkCommandPool commandPool,
-        VkDevice device
+    std::vector<VkCommandBuffer>& commandBufferes,
+    uint32_t commandBufferCount,
+    VkCommandPool commandPool,
+    VkDevice device
 );
 
 void createCommandPoolAndBuffers(
-        VkCommandPool& commandPool,
-        VkCommandBuffer& commandBuffer,
-        uint32_t commandBufferCount,
-        VkCommandPoolCreateFlags flags,
-        uint32_t queueFamilyIndex,
-        VkDevice device
+    VkCommandPool& commandPool,
+    VkCommandBuffer& commandBuffer,
+    uint32_t commandBufferCount,
+    VkCommandPoolCreateFlags flags,
+    uint32_t queueFamilyIndex,
+    VkDevice device
 );
 
 /**
@@ -54,58 +55,58 @@ void createCommandPoolAndBuffers(
 uint32_t findMemoryType(VkPhysicalDevice physicalDevice, uint32_t typeFilter, VkMemoryPropertyFlags properties);
 
 void createBuffer(
-        VkPhysicalDevice physicalDevice,
-        VkDevice device,
-        VkDeviceSize size,
-        VkBufferUsageFlags usage,
-        VkMemoryPropertyFlags properties,
-        VkBuffer& buffer,
-        VkDeviceMemory& bufferMemory
+    VkPhysicalDevice physicalDevice,
+    VkDevice device,
+    VkDeviceSize size,
+    VkBufferUsageFlags usage,
+    VkMemoryPropertyFlags properties,
+    VkBuffer& buffer,
+    VkDeviceMemory& bufferMemory
 );
 
 void vkMemCopy(void* src, VkDeviceMemory dstMemory, VkDeviceSize size, VkDevice dstDevice);
 
 void copyBuffer(
-        VkDevice device,
-        VkCommandPool commandPool,
-        VkQueue queue,
-        VkBuffer srcBuffer,
-        VkBuffer dstBuffer,
-        VkDeviceSize size
+    VkDevice device,
+    VkCommandPool commandPool,
+    VkQueue queue,
+    VkBuffer srcBuffer,
+    VkBuffer dstBuffer,
+    VkDeviceSize size
 );
 
 VkImageView createImageView(
-        VkImage& textureImage,
-        VkDevice& logicalDevice,
-        VkFormat format = VK_FORMAT_R8G8B8A8_SRGB,
-        VkImageAspectFlags flags = VK_IMAGE_ASPECT_COLOR_BIT
+    VkImage& textureImage,
+    VkDevice& logicalDevice,
+    VkFormat format = VK_FORMAT_R8G8B8A8_SRGB,
+    VkImageAspectFlags flags = VK_IMAGE_ASPECT_COLOR_BIT
 );
 
 VkFormat findBestFormat(
-        const std::vector<VkFormat>& candidates,
-        VkImageTiling tiling,
-        VkFormatFeatureFlags features,
-        VkPhysicalDevice physicalDevice
+    const std::vector<VkFormat>& candidates,
+    VkImageTiling tiling,
+    VkFormatFeatureFlags features,
+    VkPhysicalDevice physicalDevice
 );
 
 VkFormat findDepthFormat(VkPhysicalDevice physicalDevice);
 
 void createImage(
-        uint32_t width,
-        uint32_t height,
-        VkFormat format,
-        VkImageTiling tiling,
-        VkImageUsageFlags usage,
-        VkMemoryPropertyFlags properties,
-        VkImage& image,
-        VkDeviceMemory& imageMemory,
-        VkPhysicalDevice physicalDevice,
-        VkDevice logicalDevice
+    uint32_t width,
+    uint32_t height,
+    VkFormat format,
+    VkImageTiling tiling,
+    VkImageUsageFlags usage,
+    VkMemoryPropertyFlags properties,
+    VkImage& image,
+    VkDeviceMemory& imageMemory,
+    VkPhysicalDevice physicalDevice,
+    VkDevice logicalDevice
 );
 
 std::pair<VkBuffer, VkDeviceMemory> createStagingBuffer(
-        VkPhysicalDevice physicalDevice,
-        VkDevice device,
-        VkDeviceSize bufferSize
+    VkPhysicalDevice physicalDevice,
+    VkDevice device,
+    VkDeviceSize bufferSize
 );
 } // namespace VulkanUtils

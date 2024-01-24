@@ -15,41 +15,40 @@ class MeshRenderer;
 
 class MeshRenderManager
 {
-      public:
-        enum class RenderMethod
-        {
-                Generic
-        };
+  public:
+    enum class RenderMethod
+    {
+        Generic
+    };
 
-        MeshRenderManager(){};
+    MeshRenderManager(){};
 
-        void Render() {}
+    void Render() {}
 
-        void TestAddRenderer(MeshRenderer* renderer);
+    void TestAddRenderer(MeshRenderer* renderer);
 
-        void RegisterMeshRenderer(MeshRenderer* meshRenderer, RenderMethod renderMethod)
-        {
-                _rendererToProcess[renderMethod].push_back(meshRenderer);
-        }
+    void RegisterMeshRenderer(MeshRenderer* meshRenderer, RenderMethod renderMethod) {
+        _rendererToProcess[renderMethod].push_back(meshRenderer);
+    }
 
-        void PrepareRendering(uint32_t numFrameInFlight, VkRenderPass renderPass, std::shared_ptr<VQDevice> device);
+    void PrepareRendering(uint32_t numFrameInFlight, VkRenderPass renderPass, std::shared_ptr<VQDevice> device);
 
-        void UpdateUniformBuffers(int32_t frameIndex, glm::mat4 view, glm::mat4 proj);
+    void UpdateUniformBuffers(int32_t frameIndex, glm::mat4 view, glm::mat4 proj);
 
-        void RecordRenderCommands(VkCommandBuffer commandBuffer, int currentFrame);
+    void RecordRenderCommands(VkCommandBuffer commandBuffer, int currentFrame);
 
-        void Cleanup();
+    void Cleanup();
 
-      private:
-        struct RuntimeRenderData
-        {
-                MetaPipeline metaPipeline;
-                std::vector<RenderGroup> renderGroups;
-        };
+  private:
+    struct RuntimeRenderData
+    {
+        MetaPipeline metaPipeline;
+        std::vector<RenderGroup> renderGroups;
+    };
 
-        std::unordered_map<RenderMethod, std::vector<MeshRenderer*>>
-                _rendererToProcess; // list of renderers to prepare for rendering
+    std::unordered_map<RenderMethod, std::vector<MeshRenderer*>>
+        _rendererToProcess; // list of renderers to prepare for rendering
 
-        std::unordered_map<RenderMethod, RuntimeRenderData> _runtimeRenderData; // pipeline type -> pipeline objects
-        // TODO: support dynamic addition/deletion of meshRenderer.
+    std::unordered_map<RenderMethod, RuntimeRenderData> _runtimeRenderData; // pipeline type -> pipeline objects
+    // TODO: support dynamic addition/deletion of meshRenderer.
 };

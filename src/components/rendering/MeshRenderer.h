@@ -13,48 +13,45 @@
  */
 class MeshRenderer
 {
-      public:
-        MeshRenderer() = delete;
+  public:
+    MeshRenderer() = delete;
 
-        MeshRenderer(const char* meshFilePath, const char* textureFilePath)
-        {
-                this->meshFilePath = meshFilePath;
-                this->textureFilePath = textureFilePath;
+    MeshRenderer(const char* meshFilePath, const char* textureFilePath) {
+        this->meshFilePath = meshFilePath;
+        this->textureFilePath = textureFilePath;
+    }
+
+    void RegisterRenderManager(MeshRenderManager* manager) {
+        manager->RegisterMeshRenderer(this, MeshRenderManager::RenderMethod::Generic);
+    }
+
+    void Rotate(float x, float y, float z);
+    ~MeshRenderer();
+    glm::mat4 GetModelMatrix();
+    void Update();
+    void Render();
+
+    std::vector<Vertex> vertices;
+    std::vector<uint32_t> indices;
+
+    Transform transform = Transform{{0, 0, 0}, {0, 0, 0}, {1, 1, 1}};
+
+    void DrawImguiController() {
+        ImGui::Separator();
+        ImGui::Text("Mesh: %s", this->meshFilePath.data());
+        ImGui::Text("Texture: %s", this->textureFilePath.data());
+        if (ImGui::BeginChild(
+                fmt::format("{}", (void*)this).data(),
+                ImVec2(ImGui::GetWindowWidth() * 0.9, ImGui::GetWindowHeight() * 0.2),
+                0
+            )) {
+            transform.DrawImguiControllers();
         }
+        ImGui::EndChild();
+    }
 
-        void RegisterRenderManager(MeshRenderManager* manager)
-        {
-                manager->RegisterMeshRenderer(this, MeshRenderManager::RenderMethod::Generic);
-        }
-
-        void Rotate(float x, float y, float z);
-        ~MeshRenderer();
-        glm::mat4 GetModelMatrix();
-        void Update();
-        void Render();
-
-        std::vector<Vertex> vertices;
-        std::vector<uint32_t> indices;
-
-        Transform transform = Transform{{0, 0, 0}, {0, 0, 0}, {1, 1, 1}};
-
-        void DrawImguiController()
-        {
-                ImGui::Separator();
-                ImGui::Text("Mesh: %s", this->meshFilePath.data());
-                ImGui::Text("Texture: %s", this->textureFilePath.data());
-                if (ImGui::BeginChild(
-                            fmt::format("{}", (void*)this).data(),
-                            ImVec2(ImGui::GetWindowWidth() * 0.9, ImGui::GetWindowHeight() * 0.2),
-                            0
-                    )) {
-                        transform.DrawImguiControllers();
-                }
-                ImGui::EndChild();
-        }
-
-        // transform
-        bool isVisible = true;
-        std::string meshFilePath;
-        std::string textureFilePath;
+    // transform
+    bool isVisible = true;
+    std::string meshFilePath;
+    std::string textureFilePath;
 };

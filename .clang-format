@@ -1,6 +1,6 @@
 BasedOnStyle: LLVM
-IndentWidth: 8
-ContinuationIndentWidth: 8
+IndentWidth: 4
+ContinuationIndentWidth: 4
 PointerAlignment: Left
 ColumnLimit: 120
 
@@ -29,7 +29,7 @@ BraceWrapping:
   AfterClass: true
   AfterEnum: true
   AfterStruct: true
-  AfterFunction: true
+  AfterFunction: false
   AfterNamespace: true
   SplitEmptyFunction: true
 
