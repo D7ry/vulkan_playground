@@ -25,9 +25,11 @@ struct VQBuffer
             vkDestroyBuffer(device, buffer, nullptr);
         }
         if (bufferMemory) {
+            if (bufferAddress != nullptr) {
+                vkUnmapMemory(device, bufferMemory);
+            }
             vkFreeMemory(device, bufferMemory, nullptr);
         }
-        bufferAddress = nullptr;
     }
 };
 

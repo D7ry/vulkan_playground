@@ -1,3 +1,4 @@
+#include "lib/VQBuffer.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "TextureManager.h"
 #include "VulkanUtils.h"
@@ -46,22 +47,14 @@ void TextureManager::LoadTexture(const std::string& texturePath) {
         FATAL("Failed to load texture {}", texturePath);
     }
 
-    // create staging buffer and copy over the pixels
-    VkBuffer stagingBuffer;
-    VkDeviceMemory stagingBufferMemory;
-
-    VulkanUtils::createBuffer(
-        _device->physicalDevice,
-        _device->logicalDevice,
+    VQBuffer stagingBuffer = this->_device->CreateBuffer(
         vkTextureSize,
         VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-        stagingBuffer,
-        stagingBufferMemory
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
     );
-
-    VulkanUtils::vkMemCopy(pixels, stagingBufferMemory, vkTextureSize, _device->logicalDevice);
-
+    
+    // copy memory to staging buffer. we can directly copy because staging buffer is host visible and mapped.
+    memcpy(stagingBuffer.bufferAddress, pixels, static_cast<size_t>(vkTextureSize));
     stbi_image_free(pixels);
 
     // create image object
@@ -86,7 +79,7 @@ void TextureManager::LoadTexture(const std::string& texturePath) {
     transitionImageLayout(
         textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
     );
-    copyBufferToImage(stagingBuffer, textureImage, static_cast<uint32_t>(width), static_cast<uint32_t>(height));
+    copyBufferToImage(stagingBuffer.buffer, textureImage, static_cast<uint32_t>(width), static_cast<uint32_t>(height));
     // transition again for shader read
     transitionImageLayout(
         textureImage,
@@ -131,9 +124,7 @@ void TextureManager::LoadTexture(const std::string& texturePath) {
         texturePath, __TextureInternal{textureImage, textureImageView, textureImageMemory, textureSampler}
     ));
 
-    // clean up staging buffer
-    vkDestroyBuffer(_device->logicalDevice, stagingBuffer, nullptr);
-    vkFreeMemory(_device->logicalDevice, stagingBufferMemory, nullptr);
+    stagingBuffer.Cleanup();// clean up staging buffer
 }
 
 void TextureManager::transitionImageLayout(

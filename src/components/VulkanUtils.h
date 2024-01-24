@@ -54,16 +54,6 @@ void createCommandPoolAndBuffers(
  */
 uint32_t findMemoryType(VkPhysicalDevice physicalDevice, uint32_t typeFilter, VkMemoryPropertyFlags properties);
 
-void createBuffer(
-    VkPhysicalDevice physicalDevice,
-    VkDevice device,
-    VkDeviceSize size,
-    VkBufferUsageFlags usage,
-    VkMemoryPropertyFlags properties,
-    VkBuffer& buffer,
-    VkDeviceMemory& bufferMemory
-);
-
 void vkMemCopy(void* src, VkDeviceMemory dstMemory, VkDeviceSize size, VkDevice dstDevice);
 
 void copyBuffer(
@@ -104,9 +94,4 @@ void createImage(
     VkDevice logicalDevice
 );
 
-std::pair<VkBuffer, VkDeviceMemory> createStagingBuffer(
-    VkPhysicalDevice physicalDevice,
-    VkDevice device,
-    VkDeviceSize bufferSize
-);
 } // namespace VulkanUtils

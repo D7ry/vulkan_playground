@@ -110,41 +110,6 @@ uint32_t VulkanUtils::findMemoryType(
     FATAL("Failed to find suitable memory type!");
 }
 
-// TODO: abstract them into VQDevice
-void VulkanUtils::createBuffer(
-    VkPhysicalDevice physicalDevice,
-    VkDevice device,
-    VkDeviceSize size,
-    VkBufferUsageFlags usage,
-    VkMemoryPropertyFlags properties,
-    VkBuffer& buffer,
-    VkDeviceMemory& bufferMemory
-) {
-    VkBufferCreateInfo bufferInfo{};
-    bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufferInfo.size = size;
-    bufferInfo.usage = usage;
-    bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-    if (vkCreateBuffer(device, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
-        FATAL("Failed to create VK buffer!");
-    }
-
-    VkMemoryRequirements memRequirements;
-    vkGetBufferMemoryRequirements(device, buffer, &memRequirements);
-
-    VkMemoryAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = findMemoryType(physicalDevice, memRequirements.memoryTypeBits, properties);
-
-    if (vkAllocateMemory(device, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
-        FATAL("Failed to allocate device memory for buffer creation!");
-    }
-
-    vkBindBufferMemory(device, buffer, bufferMemory, 0);
-}
-
 void VulkanUtils::vkMemCopy(void* src, VkDeviceMemory dstMemory, VkDeviceSize size, VkDevice dstDevice) {
     void* data;
     vkMapMemory(dstDevice, dstMemory, 0, size, 0, &data);
@@ -269,21 +234,3 @@ VkFormat VulkanUtils::findBestFormat(
     return VK_FORMAT_R8G8B8A8_SRGB; // unreacheable
 };
 
-std::pair<VkBuffer, VkDeviceMemory> VulkanUtils::createStagingBuffer(
-    VkPhysicalDevice physicalDevice,
-    VkDevice device,
-    VkDeviceSize bufferSize
-) {
-    VkBuffer stagingBuffer;
-    VkDeviceMemory stagingBufferMemory;
-    VulkanUtils::createBuffer(
-        physicalDevice,
-        device,
-        bufferSize,
-        VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-        stagingBuffer,
-        stagingBufferMemory
-    );
-    return {stagingBuffer, stagingBufferMemory};
-}
