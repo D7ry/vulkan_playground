@@ -132,9 +132,12 @@ VQDevice::VQDevice(VkPhysicalDevice physicalDevice) {
     }
 }
 
-VQBuffer VQDevice::CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties) {
-    VQBuffer vqBuffer{};
-
+void VQDevice::CreateBufferInPlace(
+    VkDeviceSize size,
+    VkBufferUsageFlags usage,
+    VkMemoryPropertyFlags properties,
+    VQBuffer& vqBuffer
+) {
     vqBuffer.device = this->logicalDevice;
     vqBuffer.size = size;
 
@@ -163,7 +166,11 @@ VQBuffer VQDevice::CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkM
     vkBindBufferMemory(this->logicalDevice, vqBuffer.buffer, vqBuffer.bufferMemory, 0);
 
     vkMapMemory(this->logicalDevice, vqBuffer.bufferMemory, 0, vqBuffer.size, 0, &vqBuffer.bufferAddress);
+}
 
+VQBuffer VQDevice::CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties) {
+    VQBuffer vqBuffer{};
+    CreateBufferInPlace(size, usage, properties, vqBuffer);
     return vqBuffer;
 }
 

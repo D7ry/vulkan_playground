@@ -28,8 +28,6 @@ struct RenderGroup
         this->staticUboSize = staticUboSize;
         this->dynamicUboSize = dynamicUboSize;
         this->device = device;
-        this->staticUbo.resize(NUM_INTERMEDIATE_FRAMES);
-        this->dynamicUbo.resize(NUM_INTERMEDIATE_FRAMES);
         this->dynamicUboCount = initialDynamicUboCount;
     }
 
@@ -39,25 +37,21 @@ struct RenderGroup
         // allocate static UBO
         for (int i = 0; i < NUM_INTERMEDIATE_FRAMES; i++) {
             // allocate static ubo
-            staticUbo[i] = device->CreateBuffer(
+            device->CreateBufferInPlace(
                 staticUboSize,
                 VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                this->frameData[i].staticUBO
             );
         }
 
         // update all descriptor sets.
         for (size_t i = 0; i < NUM_INTERMEDIATE_FRAMES; i++) {
             VkDescriptorBufferInfo descriptorBufferInfo_static{};
-            descriptorBufferInfo_static.buffer = this->staticUbo[i].buffer;
+            descriptorBufferInfo_static.buffer = this->frameData[i].staticUBO.buffer;
             descriptorBufferInfo_static.offset = 0;
             descriptorBufferInfo_static.range = this->staticUboSize;
 
-            VkDescriptorBufferInfo descriptorBufferInfo_dynamic{};
-            descriptorBufferInfo_dynamic.buffer = this->dynamicUbo[i].buffer;
-            descriptorBufferInfo_dynamic.offset = 0;
-            descriptorBufferInfo_dynamic.range = this->dynamicUboSize;
-            INFO("Dynamic descriptor range: {}", descriptorBufferInfo_dynamic.range);
             // TODO: make a more fool-proof abstraction
             VkDescriptorImageInfo descriptorImageInfo{};
             TextureManager::GetSingleton()->GetDescriptorImageInfo(this->texturePath, descriptorImageInfo);
@@ -101,7 +95,6 @@ struct RenderGroup
     VQBufferIndex indexBuffer;
 
     std::vector<VQBuffer> staticUbo;
-    std::vector<VQBuffer> dynamicUbo;
     std::vector<VkDescriptorSet> descriptorSets;
 
     size_t staticUboSize;
@@ -112,27 +105,23 @@ struct RenderGroup
 
     inline void resizeDynamicUbo(size_t dynamicUboCount) {
         for (int i = 0; i < NUM_INTERMEDIATE_FRAMES; i++) {
-            dynamicUbo[i].Cleanup();
-            dynamicUbo[i] = device->CreateBuffer(
+            // reallocate dyamic ubo
+            this->frameData[i].dynamicUBO.Cleanup();
+            this->device->CreateBufferInPlace(
                 dynamicUboSize * dynamicUboCount,
                 VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                this->frameData[i].dynamicUBO
             );
-        }
-        this->dynamicUboCount = dynamicUboCount;
-
-        for (size_t i = 0; i < NUM_INTERMEDIATE_FRAMES; i++) {
+            // point descriptor to newly allocated buffer
             VkDescriptorBufferInfo descriptorBufferInfo_dynamic{};
-            descriptorBufferInfo_dynamic.buffer = this->dynamicUbo[i].buffer;
+            descriptorBufferInfo_dynamic.buffer = this->frameData[i].dynamicUBO.buffer;
             descriptorBufferInfo_dynamic.offset = 0;
             descriptorBufferInfo_dynamic.range = this->dynamicUboSize;
-            INFO("Dynamic descriptor range: {}", descriptorBufferInfo_dynamic.range);
-            VkDescriptorImageInfo descriptorImageInfo{};
-            TextureManager::GetSingleton()->GetDescriptorImageInfo(this->texturePath, descriptorImageInfo);
 
             std::array<VkWriteDescriptorSet, 1> descriptorWrites{};
             descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrites[0].dstSet = this->descriptorSets[i]; // FIXME: segfault here
+            descriptorWrites[0].dstSet = this->descriptorSets[i];
             descriptorWrites[0].dstBinding = 1;
             descriptorWrites[0].dstArrayElement = 0;
             descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
@@ -146,11 +135,9 @@ struct RenderGroup
     inline void cleanup() {
         vertexBuffer.Cleanup();
         indexBuffer.Cleanup();
-        for (VQBuffer& buffer : staticUbo) {
-            buffer.Cleanup();
-        }
-        for (VQBuffer& buffer : dynamicUbo) {
-            buffer.Cleanup();
+        for (FrameData& frame : this->frameData) {
+            frame.staticUBO.Cleanup();
+            frame.dynamicUBO.Cleanup();
         }
         vkFreeDescriptorSets(device->logicalDevice, descriptorPool, descriptorSets.size(), descriptorSets.data());
     }

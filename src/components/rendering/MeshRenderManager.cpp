@@ -100,14 +100,13 @@ void MeshRenderManager::UpdateUniformBuffers(int32_t frameIndex, glm::mat4 view,
             ubs.view = view;
             ubs.proj = proj;
             ubs.proj[1][1] *= -1; // invert y axis
-            memcpy(group.staticUbo[frameIndex].bufferAddress, &ubs, sizeof(UniformBuffer_Static));
+            memcpy(group.frameData[frameIndex].staticUBO.bufferAddress, &ubs, sizeof(UniformBuffer_Static));
 
             // dynamic
             for (int i = 0; i < group.meshRenderers.size(); i++) {
+                int bufferOffset = i * static_cast<uint32_t>(group.dynamicUboSize);
                 void* bufferAddr = reinterpret_cast<void*>(
-                    reinterpret_cast<uintptr_t>(group.dynamicUbo[frameIndex].bufferAddress)
-                    + (i * sizeof(UniformBuffer_Dynamic)
-                    ) // buffer address points to the beginning of the dynamic buffer, add offset.
+                    reinterpret_cast<uintptr_t>(group.frameData[frameIndex].dynamicUBO.bufferAddress) + bufferOffset
                 );
                 UniformBuffer_Dynamic ubd;
                 ubd.model = group.meshRenderers[i]->GetModelMatrix();

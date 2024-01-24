@@ -59,13 +59,6 @@ MetaPipeline CreateGenericMetaPipeline(
             FATAL("Failed to create descriptor set layout!");
         }
     }
-    // check UBO allocation
-    {
-        for (RenderGroup& group : renderGroups) {
-            ASSERT(group.staticUbo.size() == NUM_INTERMEDIATE_FRAMES);
-            ASSERT(group.dynamicUbo.size() == NUM_INTERMEDIATE_FRAMES);
-        }
-    }
     // descriptor pool
     { // TODO: either dynamically resize descriptor pool on render group creation, or allocate a fat pool at start.
         uint32_t numDescriptorPerType = 5000; // each render group has its own set of descriptors

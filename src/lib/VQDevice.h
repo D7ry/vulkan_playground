@@ -88,6 +88,7 @@ struct VQDevice
      * @return VQBuffer
      */
     VQBuffer CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties);
+    void CreateBufferInPlace(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VQBuffer& buffer);
 
     void Cleanup();
 };
