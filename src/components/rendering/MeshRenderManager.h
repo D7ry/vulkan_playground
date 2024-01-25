@@ -27,6 +27,8 @@ class MeshRenderManager
 
     void TestAddRenderer(MeshRenderer* renderer);
 
+    void AddMeshRenderer(MeshRenderer* renderer);
+
     void RegisterMeshRenderer(MeshRenderer* meshRenderer, RenderMethod renderMethod) {
         _rendererToProcess[renderMethod].push_back(meshRenderer);
     }
@@ -51,4 +53,6 @@ class MeshRenderManager
 
     std::unordered_map<RenderMethod, RuntimeRenderData> _runtimeRenderData; // pipeline type -> pipeline objects
     // TODO: support dynamic addition/deletion of meshRenderer.
+
+    std::shared_ptr<VQDevice> _device;
 };

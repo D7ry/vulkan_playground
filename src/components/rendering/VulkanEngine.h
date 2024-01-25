@@ -1,11 +1,11 @@
 #pragma once
 #include <cstdint>
 #include <glm/detail/qualifier.hpp>
+#include <imgui_internal.h>
 #include <memory>
+#include <optional>
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_core.h>
-
-#include <optional>
 
 #include "MeshRenderManager.h"
 #include "MeshRenderer.h"
@@ -17,6 +17,8 @@
 #include <vector>
 
 #include "lib/DeletionStack.h"
+static char meshPath[64] = "../resources/meshes/viking_room.obj";
+static char texturePath[64] = "../resources/textures/viking_room.png";
 
 // TODO: create a serialization scheme for tweakable settings.
 
@@ -43,6 +45,16 @@ class VulkanEngine
                 _meshes.push_back(spotBoy);
                 _meshRenderManager->TestAddRenderer(spotBoy);
             }
+
+            ImGui::InputText("mesh path", (char*)meshPath, 64);
+            ImGui::InputText("texture path", (char*)texturePath, 64);
+
+            if (ImGui::Button("add mesh")) {
+                MeshRenderer* mesh = new MeshRenderer(meshPath, texturePath);
+                _meshes.push_back(mesh);
+                _meshRenderManager->AddMeshRenderer(mesh);
+            }
+
             for (MeshRenderer* mesh : _meshes) {
                 mesh->DrawImguiController();
             }

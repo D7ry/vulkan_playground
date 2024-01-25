@@ -13,6 +13,7 @@ void MeshRenderManager::PrepareRendering(
     VkRenderPass renderPass,
     std::shared_ptr<VQDevice> device
 ) {
+    this->_device = device;
     // construct render groups
     for (auto it = _rendererToProcess.begin(); it != _rendererToProcess.end(); it++) {
         ASSERT(it->first == RenderMethod::Generic); // TODO: add more render methods
@@ -31,10 +32,9 @@ void MeshRenderManager::PrepareRendering(
         }
         for (auto& it : uniqueModlesTextures) {
             RenderGroup group = CreateRenderGroup<UniformBuffer_Dynamic, UniformBuffer_Static>(
-                device, it.second[0]->textureFilePath, it.second.size()
+                device, it.second[0]->textureFilePath, it.second[0]->meshFilePath, it.second.size()
             );
             group.meshRenderers = it.second;
-            VQUtils::meshToBuffer(it.second[0]->meshFilePath.data(), *device, group.vertexBuffer, group.indexBuffer);
             renderData.renderGroups.push_back(group);
         }
     }
@@ -193,4 +193,28 @@ void MeshRenderManager::TestAddRenderer(MeshRenderer* renderer) {
             return;
         }
     }
+}
+
+void MeshRenderManager::AddMeshRenderer(MeshRenderer* renderer) {
+    std::string& texture = renderer->textureFilePath;
+    // check if a render group exists
+    for (auto& group : _runtimeRenderData[RenderMethod::Generic].renderGroups) {
+        if (group.texturePath == texture) { // TODO: use a better way to hash it
+            group.addRenderer(renderer);
+            return;
+        }
+    }
+
+    // TODO: refactor rendergroup into MeshRenderer, and MeshRenderer into meshrendererInstance.
+    // For users, they have access to instance creation. resource management should be handled by the engine.
+    _runtimeRenderData[RenderMethod::Generic].renderGroups.emplace(
+        _runtimeRenderData[RenderMethod::Generic].renderGroups.begin(),
+        CreateRenderGroup<UniformBuffer_Dynamic, UniformBuffer_Static>(
+            this->_device, renderer->textureFilePath, renderer->meshFilePath, 1
+        )
+    );
+    RenderGroup& group = _runtimeRenderData[RenderMethod::Generic].renderGroups[0];
+    group.meshRenderers.push_back(renderer);
+    _runtimeRenderData[RenderMethod::Generic].metaPipeline.AllocateDescriptorSets(group);
+    group.InitUniformbuffers();
 }

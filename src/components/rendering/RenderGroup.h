@@ -5,6 +5,7 @@
 #include "lib/DeletionStack.h"
 #include "lib/VQBuffer.h"
 #include "lib/VQDevice.h"
+#include "lib/VQUtils.h"
 class MeshRenderer;
 
 /**
@@ -160,6 +161,7 @@ template <typename DynamicUBO_T, typename StaticUBO_T>
 RenderGroup CreateRenderGroup(
     std::shared_ptr<VQDevice> device,
     std::string& texturePath,
+    const std::string& meshPath,
     size_t initialDynamicUboCount = 1
 ) {
     VkPhysicalDeviceProperties properties;
@@ -174,5 +176,8 @@ RenderGroup CreateRenderGroup(
             dynamicAlignment += padding;
         }
     }
-    return RenderGroup(sizeof(StaticUBO_T), dynamicAlignment, initialDynamicUboCount, texturePath, device);
+
+    auto ret = RenderGroup(sizeof(StaticUBO_T), dynamicAlignment, initialDynamicUboCount, texturePath, device);
+    VQUtils::meshToBuffer(meshPath.data(), *device, ret.vertexBuffer, ret.indexBuffer);
+    return ret;
 }
