@@ -3,6 +3,9 @@
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_core.h>
 
+/**
+ * @brief A Vulkan buffer wrapper.
+ */
 struct VQBuffer
 {
     VkDevice device = VK_NULL_HANDLE;

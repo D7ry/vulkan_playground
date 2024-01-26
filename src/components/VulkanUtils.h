@@ -1,12 +1,26 @@
 // Utility functions for Vulkan boilterplate functions
 #pragma once
+#include "lib/VQDevice.h"
 #include "structs/Vertex.h"
 #include <vulkan/vulkan_core.h>
 
 namespace VulkanUtils
 {
 
+struct QuickCommandBuffer
+{
+    QuickCommandBuffer(std::shared_ptr<VQDevice> device);
+
+    ~QuickCommandBuffer();
+
+    VkCommandBuffer buffer;
+
+  private:
+    std::shared_ptr<VQDevice> device;
+};
+
 VkCommandBuffer beginSingleTimeCommands(VkDevice device, VkCommandPool commandPool);
+
 void endSingleTimeCommands(
     VkCommandBuffer commandBuffer,
     VkDevice device,

@@ -234,3 +234,32 @@ VkFormat VulkanUtils::findBestFormat(
     return VK_FORMAT_R8G8B8A8_SRGB; // unreacheable
 };
 
+VulkanUtils::QuickCommandBuffer::QuickCommandBuffer(std::shared_ptr<VQDevice> device) : device(device) {
+    VkCommandBufferAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocInfo.commandPool = device->graphicsCommandPool;
+    allocInfo.commandBufferCount = 1;
+
+    vkAllocateCommandBuffers(device->logicalDevice, &allocInfo, &buffer);
+
+    VkCommandBufferBeginInfo beginInfo{};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+    vkBeginCommandBuffer(buffer, &beginInfo);
+}
+
+VulkanUtils::QuickCommandBuffer::~QuickCommandBuffer() {
+    vkEndCommandBuffer(buffer);
+
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &buffer;
+
+    vkQueueSubmit(device->graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+    vkQueueWaitIdle(device->graphicsQueue);
+
+    vkFreeCommandBuffers(device->logicalDevice, device->graphicsCommandPool, 1, &buffer);
+}

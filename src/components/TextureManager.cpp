@@ -52,7 +52,7 @@ void TextureManager::LoadTexture(const std::string& texturePath) {
         VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
     );
-    
+
     // copy memory to staging buffer. we can directly copy because staging buffer is host visible and mapped.
     memcpy(stagingBuffer.bufferAddress, pixels, static_cast<size_t>(vkTextureSize));
     stbi_image_free(pixels);
@@ -124,7 +124,7 @@ void TextureManager::LoadTexture(const std::string& texturePath) {
         texturePath, __TextureInternal{textureImage, textureImageView, textureImageMemory, textureSampler}
     ));
 
-    stagingBuffer.Cleanup();// clean up staging buffer
+    stagingBuffer.Cleanup(); // clean up staging buffer
 }
 
 void TextureManager::transitionImageLayout(
@@ -133,8 +133,7 @@ void TextureManager::transitionImageLayout(
     VkImageLayout oldLayout,
     VkImageLayout newLayout
 ) {
-    VkCommandBuffer commandBuffer
-        = VulkanUtils::beginSingleTimeCommands(_device->logicalDevice, _device->graphicsCommandPool);
+    VulkanUtils::QuickCommandBuffer commandBuffer(this->_device);
 
     // create a barrier to transition layout
     VkImageMemoryBarrier barrier{};
@@ -174,11 +173,7 @@ void TextureManager::transitionImageLayout(
         FATAL("Unsupported texture layout transition!");
     }
 
-    vkCmdPipelineBarrier(commandBuffer, sourceStage, destinationStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
-
-    VulkanUtils::endSingleTimeCommands(
-        commandBuffer, _device->logicalDevice, _device->graphicsQueue, _device->graphicsCommandPool
-    );
+    vkCmdPipelineBarrier(commandBuffer.buffer, sourceStage, destinationStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 }
 
 void TextureManager::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height) {

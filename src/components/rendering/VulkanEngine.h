@@ -16,9 +16,42 @@
 #include "lib/VQDevice.h"
 #include <vector>
 
+#include <filesystem>
+
 #include "lib/DeletionStack.h"
-static char meshPath[64] = "../resources/meshes/viking_room.obj";
-static char texturePath[64] = "../resources/textures/viking_room.png";
+
+/**
+ * @brief Todo: migrate everything inside
+ *
+ */
+namespace TempUtils
+{
+static char meshPathBuf[64] = "../resources/meshes/viking_room.obj";
+static char texturePathBuf[64] = "../resources/textures/viking_room.png";
+
+static void DrawMeshTextureSelector() {
+    ImGui::SeparatorText("Select Mesh and Texture");
+
+    // list all files in the resources/meshes folder
+    ImGui::Text("Meshes:");
+    for (const auto& entry : std::filesystem::directory_iterator("../resources/meshes")) {
+        std::string path = entry.path().string();
+        if (ImGui::Button(path.c_str())) {
+            strcpy(meshPathBuf, path.c_str());
+        }
+    }
+    ImGui::Text("Textures:");
+    // list all files in the resources/textures folder
+    for (const auto& entry : std::filesystem::directory_iterator("../resources/textures")) {
+        std::string path = entry.path().string();
+        if (ImGui::Button(path.c_str())) {
+            strcpy(texturePathBuf, path.c_str());
+        }
+    }
+    ImGui::Text("Mesh: %s", meshPathBuf);
+    ImGui::Text("Texture: %s", texturePathBuf);
+}
+} // namespace TempUtils
 
 // TODO: create a serialization scheme for tweakable settings.
 
@@ -39,18 +72,9 @@ class VulkanEngine
 
     void DrawImgui() {
         if (ImGui::Begin("Render Manager")) {
-            if (ImGui::Button("add test mesh")) {
-                MeshRenderer* spotBoy
-                    = new MeshRenderer("../resources/meshes/spot.obj", "../resources/textures/spot.png");
-                _meshes.push_back(spotBoy);
-                _meshRenderManager->TestAddRenderer(spotBoy);
-            }
-
-            ImGui::InputText("mesh path", (char*)meshPath, 64);
-            ImGui::InputText("texture path", (char*)texturePath, 64);
-
+            TempUtils::DrawMeshTextureSelector();
             if (ImGui::Button("add mesh")) {
-                MeshRenderer* mesh = new MeshRenderer(meshPath, texturePath);
+                MeshRenderer* mesh = new MeshRenderer(TempUtils::meshPathBuf, TempUtils::texturePathBuf);
                 _meshes.push_back(mesh);
                 _meshRenderManager->AddMeshRenderer(mesh);
             }
