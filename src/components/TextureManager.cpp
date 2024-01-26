@@ -173,12 +173,13 @@ void TextureManager::transitionImageLayout(
         FATAL("Unsupported texture layout transition!");
     }
 
-    vkCmdPipelineBarrier(commandBuffer.buffer, sourceStage, destinationStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+    vkCmdPipelineBarrier(
+        commandBuffer.cmdBuffer, sourceStage, destinationStage, 0, 0, nullptr, 0, nullptr, 1, &barrier
+    );
 }
 
 void TextureManager::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height) {
-    VkCommandBuffer commandBuffer
-        = VulkanUtils::beginSingleTimeCommands(_device->logicalDevice, _device->graphicsCommandPool);
+    VulkanUtils::QuickCommandBuffer commandBuffer(this->_device);
 
     VkBufferImageCopy region{};
     region.bufferOffset = 0;
@@ -194,10 +195,7 @@ void TextureManager::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t 
     region.imageOffset = {0, 0, 0};
     region.imageExtent = {width, height, 1};
 
-    vkCmdCopyBufferToImage(commandBuffer, buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
-    VulkanUtils::endSingleTimeCommands(
-        commandBuffer, _device->logicalDevice, _device->graphicsQueue, _device->graphicsCommandPool
-    );
+    vkCmdCopyBufferToImage(commandBuffer.cmdBuffer, buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 }
 
 void TextureManager::Init(std::shared_ptr<VQDevice> device) { this->_device = device; }

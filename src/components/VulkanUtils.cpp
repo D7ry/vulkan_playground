@@ -241,25 +241,25 @@ VulkanUtils::QuickCommandBuffer::QuickCommandBuffer(std::shared_ptr<VQDevice> de
     allocInfo.commandPool = device->graphicsCommandPool;
     allocInfo.commandBufferCount = 1;
 
-    vkAllocateCommandBuffers(device->logicalDevice, &allocInfo, &buffer);
+    vkAllocateCommandBuffers(device->logicalDevice, &allocInfo, &cmdBuffer);
 
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
-    vkBeginCommandBuffer(buffer, &beginInfo);
+    vkBeginCommandBuffer(cmdBuffer, &beginInfo);
 }
 
 VulkanUtils::QuickCommandBuffer::~QuickCommandBuffer() {
-    vkEndCommandBuffer(buffer);
+    vkEndCommandBuffer(cmdBuffer);
 
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &buffer;
+    submitInfo.pCommandBuffers = &cmdBuffer;
 
     vkQueueSubmit(device->graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
     vkQueueWaitIdle(device->graphicsQueue);
 
-    vkFreeCommandBuffers(device->logicalDevice, device->graphicsCommandPool, 1, &buffer);
+    vkFreeCommandBuffers(device->logicalDevice, device->graphicsCommandPool, 1, &cmdBuffer);
 }

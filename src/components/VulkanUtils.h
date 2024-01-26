@@ -6,14 +6,17 @@
 
 namespace VulkanUtils
 {
-
+/**
+ * @brief RAII command buffer wrapper. Use it the same way you do for lock_guard.
+ *
+ */
 struct QuickCommandBuffer
 {
     QuickCommandBuffer(std::shared_ptr<VQDevice> device);
 
     ~QuickCommandBuffer();
 
-    VkCommandBuffer buffer;
+    VkCommandBuffer cmdBuffer;
 
   private:
     std::shared_ptr<VQDevice> device;
