@@ -38,7 +38,10 @@ class MeshInstance
         ImGui::Text("Texture: %s", this->textureFilePath.data());
         if (ImGui::BeginChild(
                 fmt::format("{}", (void*)this).data(),
-                ImVec2(ImGui::GetWindowWidth() * 0.9, ImGui::GetWindowHeight() * 0.2),
+                ImVec2(
+                    ImGui::GetWindowWidth() * 0.9,
+                    ImGui::GetWindowHeight() * 0.2
+                ),
                 0
             )) {
             transform.DrawImguiControllers();

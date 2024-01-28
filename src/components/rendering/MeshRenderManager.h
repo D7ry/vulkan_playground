@@ -27,13 +27,24 @@ class MeshRenderManager
 
     void AddMeshRenderer(MeshInstance* renderer);
 
-    void RegisterMeshRenderer(MeshInstance* meshRenderer, RenderMethod renderMethod) {
+    void RegisterMeshRenderer(
+        MeshInstance* meshRenderer,
+        RenderMethod renderMethod
+    ) {
         _rendererToProcess[renderMethod].push_back(meshRenderer);
     }
 
-    void PrepareRendering(uint32_t numFrameInFlight, VkRenderPass renderPass, std::shared_ptr<VQDevice> device);
+    void PrepareRendering(
+        uint32_t numFrameInFlight,
+        VkRenderPass renderPass,
+        std::shared_ptr<VQDevice> device
+    );
 
-    void UpdateUniformBuffers(int32_t frameIndex, glm::mat4 view, glm::mat4 proj);
+    void UpdateUniformBuffers(
+        int32_t frameIndex,
+        glm::mat4 view,
+        glm::mat4 proj
+    );
 
     void RecordRenderCommands(VkCommandBuffer commandBuffer, int currentFrame);
 
@@ -49,7 +60,8 @@ class MeshRenderManager
     std::unordered_map<RenderMethod, std::vector<MeshInstance*>>
         _rendererToProcess; // list of renderers to prepare for rendering
 
-    std::unordered_map<RenderMethod, RuntimeRenderData> _runtimeRenderData; // pipeline type -> pipeline objects
+    std::unordered_map<RenderMethod, RuntimeRenderData>
+        _runtimeRenderData; // pipeline type -> pipeline objects
     // TODO: support dynamic addition/deletion of meshRenderer.
 
     std::shared_ptr<VQDevice> _device;
