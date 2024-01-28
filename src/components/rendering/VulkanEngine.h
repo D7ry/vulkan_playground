@@ -154,8 +154,6 @@ class VulkanEngine
 
     void createImageViews();
 
-    void middleInit();
-    void postInit();
     void createDepthBuffer();
     void createDevice();
     void createUniformBuffers();

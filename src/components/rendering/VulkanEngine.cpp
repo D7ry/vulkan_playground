@@ -107,8 +107,6 @@ void VulkanEngine::initVulkan() {
         this->_imguiManager.Cleanup(_device->logicalDevice);
     });
     INFO("Vulkan initialized.");
-
-    this->postInit();
 }
 
 bool VulkanEngine::checkValidationLayerSupport() {
@@ -674,14 +672,6 @@ void VulkanEngine::Cleanup() {
     }
     postCleanup();
     INFO("Resource cleaned up.");
-}
-
-void VulkanEngine::middleInit() {}
-
-void VulkanEngine::postInit() {
-    //_inputManager->RegisterCallback(GLFW_KEY_UP,
-    // InputManager::KeyCallbackCondition::HOLD, []() {render4->Rotate(10, 0,
-    // 0);});
 }
 
 void VulkanEngine::createRenderPass() {
