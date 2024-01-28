@@ -42,7 +42,7 @@ add_executable(vulkan_playground
         src/components/ImGuiManager.cpp
         src/components/TextureManager.cpp
         src/components/rendering/MetaPipeline.cpp
-        src/components/rendering/MeshRenderer.cpp
+        src/components/rendering/MeshInstance.cpp
         src/components/rendering/MeshRenderManager.cpp
         src/components/InputManager.cpp
         src/components/Transform.cpp

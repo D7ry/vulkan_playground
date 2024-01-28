@@ -83,26 +83,6 @@ void MeshRenderManager::UpdateUniformBuffers(int32_t frameIndex, glm::mat4 view,
             }
         }
     }
-
-    // void* bufferAddr = _uniformBuffers[frameIndex].staticUniformBuffer.bufferAddress;
-    // UniformBuffer_Static ubs;
-    // ubs.view = view;
-    // ubs.proj = proj;
-    // ubs.proj[1][1] *= -1; // invert y axis
-    // memcpy(bufferAddr, &ubs, sizeof(UniformBuffer_Static));
-
-    // // each dynamic uniform buffer corresponds to a mesh renderer
-    // auto& meshes = _rendererToProcess[RenderMethod::Generic];
-    // for (int i = 0; i < meshes.size(); i++) {
-    //         bufferAddr = reinterpret_cast<void*>(
-    //                 reinterpret_cast<uintptr_t>(_uniformBuffers[frameIndex].dynamicUniformBuffer.bufferAddress)
-    //                 + (i * sizeof(UniformBuffer_Dynamic)) // buffer address points to the beginning of the
-    //                 dynamic buffer, add offset.
-    //         );
-    //         UniformBuffer_Dynamic ubd;
-    //         ubd.model = meshes[i]->GetModelMatrix();
-    //         memcpy(bufferAddr, &ubd, sizeof(UniformBuffer_Dynamic));
-    // }
 }
 
 void MeshRenderManager::RecordRenderCommands(VkCommandBuffer commandBuffer, int currentFrame) {
