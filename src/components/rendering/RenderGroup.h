@@ -171,7 +171,7 @@ struct RenderGroup
         );
     }
 
-    void addRenderer(MeshInstance* renderer) {
+    void addInstance(MeshInstance* renderer) {
         meshRenderers.push_back(renderer);
         INFO("MeshRenderers size: {}", meshRenderers.size());
         if (meshRenderers.size() > dynamicUboCount) {

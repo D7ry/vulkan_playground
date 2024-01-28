@@ -29,6 +29,7 @@ void MeshRenderManager::PrepareRendering(
     }
 }
 
+// TODO: optimize
 void MeshRenderManager::UpdateUniformBuffers(
     int32_t frameIndex,
     glm::mat4 view,
@@ -65,6 +66,7 @@ void MeshRenderManager::UpdateUniformBuffers(
     }
 }
 
+// TODO: optimize
 void MeshRenderManager::RecordRenderCommands(
     VkCommandBuffer commandBuffer,
     int currentFrame
@@ -142,7 +144,7 @@ MeshInstance* MeshRenderManager::CreateMeshInstance(
         if (group.texturePath == textureFilePath
             && group.meshPath == meshFilePath) { // TODO: one rendergroup can
                                                  // handle multiple textures!
-            group.addRenderer(mesh);
+            group.addInstance(mesh);
             return mesh;
         }
     }
@@ -157,6 +159,6 @@ MeshInstance* MeshRenderManager::CreateMeshInstance(
     _runtimeRenderData[RenderMethod::Generic]
         .metaPipeline.AllocateDescriptorSets(group);
     group.InitUniformbuffers();
-    group.addRenderer(mesh);
+    group.addInstance(mesh);
     return mesh;
 };
