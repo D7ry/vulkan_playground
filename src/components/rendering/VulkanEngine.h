@@ -32,7 +32,8 @@ static void DrawMeshTextureSelector() {
 
     // list all files in the resources/meshes folder
     ImGui::Text("Meshes:");
-    for (const auto& entry : std::filesystem::directory_iterator("../resources/meshes")) {
+    for (const auto& entry :
+         std::filesystem::directory_iterator("../resources/meshes")) {
         std::string path = entry.path().string();
         if (ImGui::Button(path.c_str())) {
             strcpy(meshPathBuf, path.c_str());
@@ -40,7 +41,8 @@ static void DrawMeshTextureSelector() {
     }
     ImGui::Text("Textures:");
     // list all files in the resources/textures folder
-    for (const auto& entry : std::filesystem::directory_iterator("../resources/textures")) {
+    for (const auto& entry :
+         std::filesystem::directory_iterator("../resources/textures")) {
         std::string path = entry.path().string();
         if (ImGui::Button(path.c_str())) {
             strcpy(texturePathBuf, path.c_str());
@@ -60,7 +62,8 @@ class VulkanEngine
 {
   public:
     /**
-     * @brief Initialize render manager, create necessary vulkan resources and bindings.
+     * @brief Initialize render manager, create necessary vulkan resources and
+     * bindings.
      */
     void Init(GLFWwindow* window);
     void Prepare();
@@ -72,13 +75,9 @@ class VulkanEngine
         if (ImGui::Begin("Render Manager")) {
             TempUtils::DrawMeshTextureSelector();
             if (ImGui::Button("add mesh")) {
-                MeshInstance* mesh = new MeshInstance(TempUtils::meshPathBuf, TempUtils::texturePathBuf);
-                _meshes.push_back(mesh);
-                _meshRenderManager->AddMeshRenderer(mesh);
-            }
-
-            for (MeshInstance* mesh : _meshes) {
-                mesh->DrawImguiController();
+                MeshInstance* mesh = _meshRenderManager->CreateMeshInstance(
+                    TempUtils::meshPathBuf, TempUtils::texturePathBuf
+                );
             }
         }
         ImGui::End();
@@ -103,7 +102,9 @@ class VulkanEngine
         std::optional<uint32_t> graphicsFamily;
         std::optional<uint32_t> presentationFamily;
 
-        inline bool isComplete() { return graphicsFamily.has_value() && presentationFamily.has_value(); }
+        inline bool isComplete() {
+            return graphicsFamily.has_value() && presentationFamily.has_value();
+        }
     };
 
     struct SwapChainSupportDetails
@@ -132,14 +133,18 @@ class VulkanEngine
 
     SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
 
-    VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
+    VkSurfaceFormatKHR chooseSwapSurfaceFormat(
+        const std::vector<VkSurfaceFormatKHR>& availableFormats
+    );
 
-    VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
+    VkPresentModeKHR chooseSwapPresentMode(
+        const std::vector<VkPresentModeKHR>& availablePresentModes
+    );
 
     VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
 
-    /** @brief Internally calls createSwapChain, but also pushes a swapchain cleanup function once, to clean up the
-     * last swapchain created.*/
+    /** @brief Internally calls createSwapChain, but also pushes a swapchain
+     * cleanup function once, to clean up the last swapchain created.*/
     void initSwapChain();
 
     void createSwapChain();
@@ -156,7 +161,10 @@ class VulkanEngine
     void createRenderPass();
     void createFramebuffers();
 
-    void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
+    void recordCommandBuffer(
+        VkCommandBuffer commandBuffer,
+        uint32_t imageIndex
+    );
     void renderImGui();
     void updateUniformBufferData(uint32_t frameIndex);
 
@@ -178,8 +186,10 @@ class VulkanEngine
 #else
     const bool enableValidationLayers = true;
 #endif
-    static inline const std::vector<const char*> VALIDATION_LAYERS = {"VK_LAYER_KHRONOS_validation"};
-    static inline const std::vector<const char*> DEVICE_EXTENSIONS = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
+    static inline const std::vector<const char*> VALIDATION_LAYERS
+        = {"VK_LAYER_KHRONOS_validation"};
+    static inline const std::vector<const char*> DEVICE_EXTENSIONS
+        = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
     bool checkValidationLayerSupport();
 
     // debug messenger setup
@@ -189,7 +199,9 @@ class VulkanEngine
         const VkAllocationCallbacks* pAllocator,
         VkDebugUtilsMessengerEXT* pDebugMessenger
     );
-    void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
+    void populateDebugMessengerCreateInfo(
+        VkDebugUtilsMessengerCreateInfoEXT& createInfo
+    );
     void setupDebugMessenger();
     static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
         VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
@@ -205,7 +217,11 @@ class VulkanEngine
     static inline const uint32_t ENGINE_VERSION = VK_MAKE_VERSION(1, 0, 0);
     static inline const uint32_t API_VERSION = VK_API_VERSION_1_0;
 
-    static void framebufferResizeCallback(GLFWwindow* window, int width, int height);
+    static void framebufferResizeCallback(
+        GLFWwindow* window,
+        int width,
+        int height
+    );
 
     const int SOME_VAR = 0;
 
@@ -232,7 +248,6 @@ class VulkanEngine
     std::vector<VkSemaphore> _semaRenderFinished;
     std::vector<VkFence> _fenceInFlight;
 
-    std::vector<MeshInstance*> _meshes;
     // depth buffer
     VkImage _depthImage;
     VkDeviceMemory _depthImageMemory;

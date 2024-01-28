@@ -27,12 +27,10 @@ class MeshRenderManager
 
     void AddMeshRenderer(MeshInstance* renderer);
 
-    void RegisterMeshRenderer(
-        MeshInstance* meshRenderer,
-        RenderMethod renderMethod
-    ) {
-        _rendererToProcess[renderMethod].push_back(meshRenderer);
-    }
+    MeshInstance* CreateMeshInstance(
+        const char* meshFilePath,
+        const char* textureFilePath
+    );
 
     void PrepareRendering(
         uint32_t numFrameInFlight,

@@ -24,9 +24,11 @@ struct RenderGroup
         size_t dynamicUboSize,
         size_t initialDynamicUboCount,
         const std::string& texturePath,
+        const std::string& meshPath,
         std::shared_ptr<VQDevice> device
     ) {
         this->texturePath = texturePath;
+        this->meshPath = meshPath;
         this->staticUboSize = staticUboSize;
         this->dynamicUboSize = dynamicUboSize;
         this->device = device;
@@ -102,13 +104,13 @@ struct RenderGroup
     FrameData frameData[NUM_INTERMEDIATE_FRAMES];
 
     std::string texturePath;
+    std::string meshPath;
 
     uint32_t dynamicUboCount;
     std::vector<MeshInstance*> meshRenderers;
     VQBuffer vertexBuffer;
     VQBufferIndex indexBuffer;
 
-    std::vector<VQBuffer> staticUbo;
     std::vector<VkDescriptorSet> descriptorSets;
 
     size_t staticUboSize;
@@ -170,7 +172,7 @@ struct RenderGroup
         );
     }
 
-    inline void addRenderer(MeshInstance* renderer) {
+    void addRenderer(MeshInstance* renderer) {
         meshRenderers.push_back(renderer);
         INFO("MeshRenderers size: {}", meshRenderers.size());
         if (meshRenderers.size() > dynamicUboCount) {
@@ -191,7 +193,7 @@ struct RenderGroup
 template <typename DynamicUBO_T, typename StaticUBO_T>
 RenderGroup CreateRenderGroup(
     std::shared_ptr<VQDevice> device,
-    std::string& texturePath,
+    const std::string& texturePath,
     const std::string& meshPath,
     size_t initialDynamicUboCount = 1
 ) {
@@ -213,6 +215,7 @@ RenderGroup CreateRenderGroup(
         dynamicAlignment,
         initialDynamicUboCount,
         texturePath,
+        meshPath,
         device
     );
     VQUtils::meshToBuffer(

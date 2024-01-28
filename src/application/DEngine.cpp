@@ -1,24 +1,16 @@
 #include "DEngine.h"
 
 void DEngine::addExperimentalMesh() {
-    const std::string SAMPLE_TEXTURE_PATH = "../resources/textures/viking_room.png";
+    const std::string SAMPLE_TEXTURE_PATH
+        = "../resources/textures/viking_room.png";
     const std::string SAMPLE_MESH_PATH = "../resources/meshes/viking_room.obj";
-    MeshInstance* render = new MeshInstance(SAMPLE_MESH_PATH.data(), SAMPLE_TEXTURE_PATH.data());
-    MeshInstance* render2 = new MeshInstance(SAMPLE_MESH_PATH.data(), SAMPLE_TEXTURE_PATH.data());
-    MeshInstance* render3 = new MeshInstance("../resources/meshes/spot.obj", "../resources/textures/spot.png");
-    MeshInstance* render4 = new MeshInstance("../resources/meshes/wall.obj", "../resources/textures/wall.png");
-    render2->transform.position = glm::vec3(0, 0, 2);
+    // MeshInstance* render3 =
 
-    render3->transform.position = glm::vec3(0, 2, 2);
+    //     render3->transform.position = glm::vec3(0, 2, 2);
 
-    render3->transform.position = glm::vec3(0, 2, 2);
-
-    render4->transform.position = glm::vec3(0, 0, -10);
-    render4->transform.rotation = {0, 0, 180};
-
-    // _vulkanEngine->AddMesh(render);
-    // _vulkanEngine->AddMesh(render2);
-    _vulkanEngine->AddMesh(render3);
+    // // _vulkanEngine->AddMesh(render);
+    // // _vulkanEngine->AddMesh(render2);
+    // _vulkanEngine->AddMesh(render3);
     //_vulkanEngine->AddMesh(render4);
 }
 
@@ -28,23 +20,32 @@ void DEngine::Init() {
     { // render manager
         _vulkanEngine = std::make_unique<VulkanEngine>();
         _vulkanEngine->Init(_window);
-        _vulkanEngine->SetImguiRenderCallback([this]() { this->renderImgui(); });
+        _vulkanEngine->SetImguiRenderCallback([this]() { this->renderImgui(); }
+        );
         addExperimentalMesh();
         _vulkanEngine->Prepare();
     }
     { // input manager
         this->_inputManager = std::make_unique<InputManager>();
-        auto keyCallback = [](GLFWwindow* window, int key, int scancode, int action, int mods) {
-            auto app = reinterpret_cast<DEngine*>(glfwGetWindowUserPointer(window));
+        auto keyCallback = [](GLFWwindow* window,
+                              int key,
+                              int scancode,
+                              int action,
+                              int mods) {
+            auto app
+                = reinterpret_cast<DEngine*>(glfwGetWindowUserPointer(window));
             app->_inputManager->OnKeyInput(window, key, scancode, action, mods);
             ImGui_ImplGlfw_KeyCallback(window, key, scancode, action, mods);
         };
         glfwSetKeyCallback(this->_window, keyCallback);
         this->bindInputs(); // register key callbacks
     }
-    { // don't have a mouse input manager yet, so manually bind cursor pos callback
-        auto cursorPosCallback = [](GLFWwindow* window, double xpos, double ypos) {
-            auto app = reinterpret_cast<DEngine*>(glfwGetWindowUserPointer(window));
+    { // don't have a mouse input manager yet, so manually bind cursor pos
+      // callback
+        auto cursorPosCallback = [](GLFWwindow* window, double xpos, double ypos
+                                 ) {
+            auto app
+                = reinterpret_cast<DEngine*>(glfwGetWindowUserPointer(window));
             app->cursorPosCallback(window, xpos, ypos);
             ImGui_ImplGlfw_CursorPosCallback(window, xpos, ypos);
         };
@@ -114,4 +115,3 @@ void DEngine::renderImgui() {
     ImGui::End();
     _vulkanEngine->DrawImgui();
 }
-

@@ -14,64 +14,18 @@ void MeshRenderManager::PrepareRendering(
     std::shared_ptr<VQDevice> device
 ) {
     this->_device = device;
-    // construct render groups
-    for (auto it = _rendererToProcess.begin(); it != _rendererToProcess.end();
-         it++) {
-        ASSERT(
-            it->first == RenderMethod::Generic
-        ); // TODO: add more render methods
-        _runtimeRenderData[it->first] = RuntimeRenderData();
-        RuntimeRenderData& renderData = _runtimeRenderData.at(it->first);
-        // hash mesh + texture
-        std::unordered_map<std::string, std::vector<MeshInstance*>>
-            uniqueModlesTextures;
-        for (MeshInstance* renderer : it->second) {
-            ASSERT(
-                !renderer->meshFilePath.empty()
-                && !renderer->textureFilePath.empty()
-            );
-            std::string meshTexture
-                = renderer->meshFilePath + renderer->textureFilePath;
-            if (uniqueModlesTextures.find(meshTexture)
-                != uniqueModlesTextures.end()) {
-                uniqueModlesTextures[meshTexture].push_back(renderer);
-            } else {
-                uniqueModlesTextures[meshTexture]
-                    = std::vector<MeshInstance*>{renderer};
-            }
-        }
-        for (auto& it : uniqueModlesTextures) {
-            RenderGroup group = CreateRenderGroup<
-                UniformBuffer_Dynamic,
-                UniformBuffer_Static>(
-                device,
-                it.second[0]->textureFilePath,
-                it.second[0]->meshFilePath,
-                it.second.size()
-            );
-            group.meshRenderers = it.second;
-            renderData.renderGroups.push_back(group);
-        }
-    }
     // pipeline creation
     {
         INFO("Creating metapipeline...");
-        for (auto& it : this->_runtimeRenderData) {
-            RuntimeRenderData& renderData = it.second;
-            // TODO: shader should be a part of metapipeline
-            renderData.metaPipeline = CreateGenericMetaPipeline(
+        std::vector<RenderGroup> gg;
+        this->_runtimeRenderData[RenderMethod::Generic].metaPipeline
+            = CreateGenericMetaPipeline(
                 device,
-                renderData.renderGroups,
+                gg,
                 "../shaders/vert_test.vert.spv",
                 "../shaders/frag_test.frag.spv",
                 renderPass
             );
-
-            for (auto& group : renderData.renderGroups) {
-                renderData.metaPipeline.AllocateDescriptorSets(group);
-                group.InitUniformbuffers();
-            }
-        }
     }
 }
 
@@ -179,29 +133,31 @@ void MeshRenderManager::Cleanup() {
     }
 }
 
-void MeshRenderManager::AddMeshRenderer(MeshInstance* renderer) {
-    std::string& texture = renderer->textureFilePath;
-    // check if a render group exists
+MeshInstance* MeshRenderManager::CreateMeshInstance(
+    const char* meshFilePath,
+    const char* textureFilePath
+) {
+
+    MeshInstance* mesh = new MeshInstance();
     for (auto& group : _runtimeRenderData[RenderMethod::Generic].renderGroups) {
-        if (group.texturePath == texture) { // TODO: use a better way to hash it
-            group.addRenderer(renderer);
-            return;
+        if (group.texturePath == textureFilePath
+            && group.meshPath == meshFilePath) { // TODO: one rendergroup can
+                                                 // handle multiple textures!
+            group.addRenderer(mesh);
+            return mesh;
         }
     }
-
-    // TODO: refactor rendergroup into MeshRenderer, and MeshRenderer into
-    // meshrendererInstance. For users, they have access to instance creation.
-    // resource management should be handled by the engine.
     _runtimeRenderData[RenderMethod::Generic].renderGroups.emplace(
         _runtimeRenderData[RenderMethod::Generic].renderGroups.begin(),
         CreateRenderGroup<UniformBuffer_Dynamic, UniformBuffer_Static>(
-            this->_device, renderer->textureFilePath, renderer->meshFilePath, 1
+            this->_device, textureFilePath, meshFilePath, 1
         )
     );
     RenderGroup& group
         = _runtimeRenderData[RenderMethod::Generic].renderGroups[0];
-    group.meshRenderers.push_back(renderer);
     _runtimeRenderData[RenderMethod::Generic]
         .metaPipeline.AllocateDescriptorSets(group);
     group.InitUniformbuffers();
-}
+    group.addRenderer(mesh);
+    return mesh;
+};

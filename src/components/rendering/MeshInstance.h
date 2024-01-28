@@ -1,5 +1,6 @@
 #pragma once
 #include "components/Transform.h"
+#include "components/rendering/RenderGroup.h"
 #include "imgui.h"
 #include "structs/Vertex.h"
 #include <glm/ext/matrix_transform.hpp>
@@ -14,28 +15,20 @@
 class MeshInstance
 {
   public:
-    MeshInstance() = delete;
-
-    MeshInstance(const char* meshFilePath, const char* textureFilePath) {
-        this->meshFilePath = meshFilePath;
-        this->textureFilePath = textureFilePath;
-    }
-
+    friend class RenderGroup;
+    friend class MeshRenderManager;
     void Rotate(float x, float y, float z);
     ~MeshInstance();
     glm::mat4 GetModelMatrix();
     void Update();
     void Render();
 
-    std::vector<Vertex> vertices;
-    std::vector<uint32_t> indices;
-
     Transform transform = Transform{{0, 0, 0}, {0, 0, 0}, {1, 1, 1}};
 
     void DrawImguiController() {
         ImGui::Separator();
-        ImGui::Text("Mesh: %s", this->meshFilePath.data());
-        ImGui::Text("Texture: %s", this->textureFilePath.data());
+        // ImGui::Text("Mesh: %s", this->meshFilePath.data());
+        // ImGui::Text("Texture: %s", this->textureFilePath.data());
         if (ImGui::BeginChild(
                 fmt::format("{}", (void*)this).data(),
                 ImVec2(
@@ -51,6 +44,8 @@ class MeshInstance
 
     // transform
     bool isVisible = true;
-    std::string meshFilePath;
-    std::string textureFilePath;
+
+  private:
+    MeshInstance(){}; // default constructor is hidden from public
+    uint32_t _index;  // index of the instance in the renderGroup.
 };
