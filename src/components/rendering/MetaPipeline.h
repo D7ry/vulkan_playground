@@ -9,8 +9,9 @@
 #include "RenderGroup.h"
 
 /**
- * @brief A graphics pipeline with its own descriptor set layout, descriptor sets, descriptor pool, pipeline layout,
- * shaders. This is extremely under-optimized.
+ * @brief A graphics pipeline with its own descriptor set layout, descriptor
+ * sets, descriptor pool, pipeline layout, shaders. This is extremely
+ * under-optimized.
  *
  */
 struct MetaPipeline
@@ -33,7 +34,9 @@ struct MetaPipeline
 
     inline void AllocateDescriptorSets(RenderGroup& renderGroup) {
 
-        std::vector<VkDescriptorSetLayout> layouts(NUM_INTERMEDIATE_FRAMES, this->descriptorSetLayout);
+        std::vector<VkDescriptorSetLayout> layouts(
+            NUM_INTERMEDIATE_FRAMES, this->descriptorSetLayout
+        );
         VkDescriptorSetAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
         allocInfo.descriptorPool = this->descriptorPool;
@@ -42,7 +45,10 @@ struct MetaPipeline
 
         renderGroup.descriptorSets.resize(NUM_INTERMEDIATE_FRAMES);
 
-        if (vkAllocateDescriptorSets(this->device, &allocInfo, renderGroup.descriptorSets.data()) != VK_SUCCESS) {
+        if (vkAllocateDescriptorSets(
+                this->device, &allocInfo, renderGroup.descriptorSets.data()
+            )
+            != VK_SUCCESS) {
             FATAL("Failed to allocate descriptor sets!");
         }
 

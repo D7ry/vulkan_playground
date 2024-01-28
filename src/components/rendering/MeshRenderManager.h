@@ -27,6 +27,15 @@ class MeshRenderManager
 
     void AddMeshRenderer(MeshInstance* renderer);
 
+    /**
+     * @brief Create a Mesh instance. The creator can control the instance's
+     * transform.
+     *
+     * The render manager handles instancing of multiple meshes.
+     * @param meshFilePath path to the mesh file
+     * @param textureFilePath path to the texture file
+     * @return MeshInstance* pointer to the created mesh instance
+     */
     MeshInstance* CreateMeshInstance(
         const char* meshFilePath,
         const char* textureFilePath
