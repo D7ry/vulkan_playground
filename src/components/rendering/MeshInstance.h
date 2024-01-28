@@ -27,8 +27,6 @@ class MeshInstance
 
     void DrawImguiController() {
         ImGui::Separator();
-        // ImGui::Text("Mesh: %s", this->meshFilePath.data());
-        // ImGui::Text("Texture: %s", this->textureFilePath.data());
         if (ImGui::BeginChild(
                 fmt::format("{}", (void*)this).data(),
                 ImVec2(
