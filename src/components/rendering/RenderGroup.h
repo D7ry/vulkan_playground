@@ -46,7 +46,7 @@ struct RenderGroup
                 VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
                     | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                this->frameData[i].staticUBO
+                this->uniformBuffers[i].staticUBO
             );
         }
 
@@ -54,7 +54,7 @@ struct RenderGroup
         for (size_t i = 0; i < NUM_INTERMEDIATE_FRAMES; i++) {
             VkDescriptorBufferInfo descriptorBufferInfo_static{};
             descriptorBufferInfo_static.buffer
-                = this->frameData[i].staticUBO.buffer;
+                = this->uniformBuffers[i].staticUBO.buffer;
             descriptorBufferInfo_static.offset = 0;
             descriptorBufferInfo_static.range = this->staticUboSize;
 
@@ -94,14 +94,13 @@ struct RenderGroup
         }
     }
 
-    struct FrameData
+    struct Uniformbuffers
     {
         VQBuffer staticUBO;
         VQBuffer dynamicUBO;
-        VkDescriptorSet descriptorSet;
     };
 
-    FrameData frameData[NUM_INTERMEDIATE_FRAMES];
+    Uniformbuffers uniformBuffers[NUM_INTERMEDIATE_FRAMES];
 
     std::string texturePath;
     std::string meshPath;
@@ -122,18 +121,18 @@ struct RenderGroup
     inline void resizeDynamicUbo(size_t dynamicUboCount) {
         for (int i = 0; i < NUM_INTERMEDIATE_FRAMES; i++) {
             // reallocate dyamic ubo
-            this->frameData[i].dynamicUBO.Cleanup();
+            this->uniformBuffers[i].dynamicUBO.Cleanup();
             this->device->CreateBufferInPlace(
                 dynamicUboSize * dynamicUboCount,
                 VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
                     | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                this->frameData[i].dynamicUBO
+                this->uniformBuffers[i].dynamicUBO
             );
             // point descriptor to newly allocated buffer
             VkDescriptorBufferInfo descriptorBufferInfo_dynamic{};
             descriptorBufferInfo_dynamic.buffer
-                = this->frameData[i].dynamicUBO.buffer;
+                = this->uniformBuffers[i].dynamicUBO.buffer;
             descriptorBufferInfo_dynamic.offset = 0;
             descriptorBufferInfo_dynamic.range = this->dynamicUboSize;
 
@@ -160,7 +159,7 @@ struct RenderGroup
     inline void cleanup() {
         vertexBuffer.Cleanup();
         indexBuffer.Cleanup();
-        for (FrameData& frame : this->frameData) {
+        for (Uniformbuffers& frame : this->uniformBuffers) {
             frame.staticUBO.Cleanup();
             frame.dynamicUBO.Cleanup();
         }

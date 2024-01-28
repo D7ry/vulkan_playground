@@ -43,7 +43,7 @@ void MeshRenderManager::UpdateUniformBuffers(
             ubs.proj = proj;
             ubs.proj[1][1] *= -1; // invert y axis
             memcpy(
-                group.frameData[frameIndex].staticUBO.bufferAddress,
+                group.uniformBuffers[frameIndex].staticUBO.bufferAddress,
                 &ubs,
                 sizeof(UniformBuffer_Static)
             );
@@ -53,9 +53,8 @@ void MeshRenderManager::UpdateUniformBuffers(
                 int bufferOffset
                     = i * static_cast<uint32_t>(group.dynamicUboSize);
                 void* bufferAddr = reinterpret_cast<void*>(
-                    reinterpret_cast<uintptr_t>(
-                        group.frameData[frameIndex].dynamicUBO.bufferAddress
-                    )
+                    reinterpret_cast<uintptr_t>(group.uniformBuffers[frameIndex]
+                                                    .dynamicUBO.bufferAddress)
                     + bufferOffset
                 );
                 UniformBuffer_Dynamic ubd;
