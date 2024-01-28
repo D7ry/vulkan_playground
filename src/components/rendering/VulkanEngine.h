@@ -79,6 +79,7 @@ class VulkanEngine
                     TempUtils::meshPathBuf, TempUtils::texturePathBuf
                 );
             }
+            _meshRenderManager->DrawImgui();
         }
         ImGui::End();
     }

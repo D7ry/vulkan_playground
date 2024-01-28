@@ -6,10 +6,10 @@
 #include <cstdint>
 #include <cstring>
 #include <glm/fwd.hpp>
+#include <imgui.h>
 #include <unordered_map>
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_core.h>
-
 class VQDevice;
 class MeshInstance;
 
@@ -56,6 +56,8 @@ class MeshRenderManager
     void RecordRenderCommands(VkCommandBuffer commandBuffer, int currentFrame);
 
     void Cleanup();
+
+    void DrawImgui();
 
   private:
     struct RuntimeRenderData

@@ -162,3 +162,28 @@ MeshInstance* MeshRenderManager::CreateMeshInstance(
     group.addInstance(mesh);
     return mesh;
 };
+
+void MeshRenderManager::DrawImgui() {
+    ImGui::Begin("MeshRenderManager");
+    ImGui::Text("MeshRenderManager");
+    ImGui::Text("Renderers:");
+    for (auto& elem : _runtimeRenderData) {
+        std::vector<RenderGroup>& groups = elem.second.renderGroups;
+        for (RenderGroup& group : groups) {
+            ImGui::Text(
+                "Mesh: %s, Texture: %s",
+                group.meshPath.data(),
+                group.texturePath.data()
+            );
+            int i = 0;
+            for (MeshInstance* renderer : group.meshRenderers) {
+                ImGui::Text("Renderer %d", i);
+                renderer->DrawImguiController();
+                i++;
+            }
+            i = 0;
+            ImGui::Separator();
+        }
+    }
+    ImGui::End();
+}
