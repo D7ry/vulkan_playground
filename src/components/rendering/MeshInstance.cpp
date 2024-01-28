@@ -1,8 +1,8 @@
 #include <glm/ext/matrix_transform.hpp>
 
-#include "MeshRenderer.h"
+#include "MeshInstance.h"
 
-glm::mat4 MeshRenderer::GetModelMatrix() {
+glm::mat4 MeshInstance::GetModelMatrix() {
     // calculate from transform's position, rotation, and scale
     auto position = transform.position;
     auto rotation = transform.rotation;
@@ -16,7 +16,7 @@ glm::mat4 MeshRenderer::GetModelMatrix() {
     return model;
 }
 
-void MeshRenderer::Rotate(float x, float y, float z) {
+void MeshInstance::Rotate(float x, float y, float z) {
     transform.rotation.x += x;
     transform.rotation.y += y;
     transform.rotation.z += z;

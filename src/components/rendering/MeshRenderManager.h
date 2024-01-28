@@ -11,7 +11,7 @@
 #include <vulkan/vulkan_core.h>
 
 class VQDevice;
-class MeshRenderer;
+class MeshInstance;
 
 class MeshRenderManager
 {
@@ -25,11 +25,11 @@ class MeshRenderManager
 
     void Render() {}
 
-    void TestAddRenderer(MeshRenderer* renderer);
+    void TestAddRenderer(MeshInstance* renderer);
 
-    void AddMeshRenderer(MeshRenderer* renderer);
+    void AddMeshRenderer(MeshInstance* renderer);
 
-    void RegisterMeshRenderer(MeshRenderer* meshRenderer, RenderMethod renderMethod) {
+    void RegisterMeshRenderer(MeshInstance* meshRenderer, RenderMethod renderMethod) {
         _rendererToProcess[renderMethod].push_back(meshRenderer);
     }
 
@@ -48,7 +48,7 @@ class MeshRenderManager
         std::vector<RenderGroup> renderGroups;
     };
 
-    std::unordered_map<RenderMethod, std::vector<MeshRenderer*>>
+    std::unordered_map<RenderMethod, std::vector<MeshInstance*>>
         _rendererToProcess; // list of renderers to prepare for rendering
 
     std::unordered_map<RenderMethod, RuntimeRenderData> _runtimeRenderData; // pipeline type -> pipeline objects

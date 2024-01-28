@@ -1,5 +1,5 @@
 #pragma once
-#include "MeshRenderer.h"
+#include "MeshInstance.h"
 #include "components/Transform.h"
 #include <glm/glm.hpp>
 

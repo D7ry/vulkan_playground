@@ -3,10 +3,10 @@
 void DEngine::addExperimentalMesh() {
     const std::string SAMPLE_TEXTURE_PATH = "../resources/textures/viking_room.png";
     const std::string SAMPLE_MESH_PATH = "../resources/meshes/viking_room.obj";
-    MeshRenderer* render = new MeshRenderer(SAMPLE_MESH_PATH.data(), SAMPLE_TEXTURE_PATH.data());
-    MeshRenderer* render2 = new MeshRenderer(SAMPLE_MESH_PATH.data(), SAMPLE_TEXTURE_PATH.data());
-    MeshRenderer* render3 = new MeshRenderer("../resources/meshes/spot.obj", "../resources/textures/spot.png");
-    MeshRenderer* render4 = new MeshRenderer("../resources/meshes/wall.obj", "../resources/textures/wall.png");
+    MeshInstance* render = new MeshInstance(SAMPLE_MESH_PATH.data(), SAMPLE_TEXTURE_PATH.data());
+    MeshInstance* render2 = new MeshInstance(SAMPLE_MESH_PATH.data(), SAMPLE_TEXTURE_PATH.data());
+    MeshInstance* render3 = new MeshInstance("../resources/meshes/spot.obj", "../resources/textures/spot.png");
+    MeshInstance* render4 = new MeshInstance("../resources/meshes/wall.obj", "../resources/textures/wall.png");
     render2->transform.position = glm::vec3(0, 0, 2);
 
     render3->transform.position = glm::vec3(0, 2, 2);

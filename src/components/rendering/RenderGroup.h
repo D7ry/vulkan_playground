@@ -6,7 +6,7 @@
 #include "lib/VQBuffer.h"
 #include "lib/VQDevice.h"
 #include "lib/VQUtils.h"
-class MeshRenderer;
+class MeshInstance;
 
 /**
  * @brief A render group is a set of meshes that shares the same texture, render pipeline, and therefore shaders.
@@ -91,7 +91,7 @@ struct RenderGroup
     std::string texturePath;
 
     uint32_t dynamicUboCount;
-    std::vector<MeshRenderer*> meshRenderers;
+    std::vector<MeshInstance*> meshRenderers;
     VQBuffer vertexBuffer;
     VQBufferIndex indexBuffer;
 
@@ -143,7 +143,7 @@ struct RenderGroup
         vkFreeDescriptorSets(device->logicalDevice, descriptorPool, descriptorSets.size(), descriptorSets.data());
     }
 
-    inline void addRenderer(MeshRenderer* renderer) {
+    inline void addRenderer(MeshInstance* renderer) {
         meshRenderers.push_back(renderer);
         INFO("MeshRenderers size: {}", meshRenderers.size());
         if (meshRenderers.size() > dynamicUboCount) {

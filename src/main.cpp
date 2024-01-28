@@ -11,19 +11,3 @@ int main(int argc, char** argv) {
     return 0;
 }
 
-void fib(int n, int& ret) {
-    if (n == 0) {
-        ret = 0;
-        return;
-    } else if (n == 1) {
-        ret = 1;
-        return;
-    } else {
-        int ret1 = 0;
-        int ret2 = 0;
-        fib(n - 1, ret1);
-        fib(n - 2, ret2);
-        ret = ret1 + ret2;
-        return;
-    }
-}

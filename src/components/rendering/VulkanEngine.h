@@ -7,8 +7,8 @@
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_core.h>
 
+#include "MeshInstance.h"
 #include "MeshRenderManager.h"
-#include "MeshRenderer.h"
 #include "components/Camera.h"
 #include "components/ImGuiManager.h"
 #include "components/InputManager.h"
@@ -68,18 +68,18 @@ class VulkanEngine
     void Prepare();
     void Tick(float deltaTime);
     void Cleanup();
-    void AddMesh(MeshRenderer* renderer);
+    void AddMesh(MeshInstance* renderer);
 
     void DrawImgui() {
         if (ImGui::Begin("Render Manager")) {
             TempUtils::DrawMeshTextureSelector();
             if (ImGui::Button("add mesh")) {
-                MeshRenderer* mesh = new MeshRenderer(TempUtils::meshPathBuf, TempUtils::texturePathBuf);
+                MeshInstance* mesh = new MeshInstance(TempUtils::meshPathBuf, TempUtils::texturePathBuf);
                 _meshes.push_back(mesh);
                 _meshRenderManager->AddMeshRenderer(mesh);
             }
 
-            for (MeshRenderer* mesh : _meshes) {
+            for (MeshInstance* mesh : _meshes) {
                 mesh->DrawImguiController();
             }
         }
@@ -234,7 +234,7 @@ class VulkanEngine
     std::vector<VkSemaphore> _semaRenderFinished;
     std::vector<VkFence> _fenceInFlight;
 
-    std::vector<MeshRenderer*> _meshes;
+    std::vector<MeshInstance*> _meshes;
     // depth buffer
     VkImage _depthImage;
     VkDeviceMemory _depthImageMemory;

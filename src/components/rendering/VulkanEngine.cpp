@@ -11,8 +11,8 @@
 
 #include <cstddef>
 #define GLFW_INCLUDE_VULKAN
+#include "MeshInstance.h"
 #include "MeshRenderManager.h"
-#include "MeshRenderer.h"
 #include <GLFW/glfw3.h>
 #include <vulkan/vulkan_core.h>
 
@@ -821,13 +821,13 @@ void VulkanEngine::SetImguiRenderCallback(std::function<void()> imguiFunction) {
 }
 
 void VulkanEngine::Prepare() {
-    for (MeshRenderer* renderer : this->_meshes) {
+    for (MeshInstance* renderer : this->_meshes) {
         _meshRenderManager->RegisterMeshRenderer(renderer, MeshRenderManager::RenderMethod::Generic);
     }
     this->_meshRenderManager->PrepareRendering(NUM_INTERMEDIATE_FRAMES, _renderPass, _device);
 }
 
-void VulkanEngine::AddMesh(MeshRenderer* renderer) { _meshes.push_back(renderer); }
+void VulkanEngine::AddMesh(MeshInstance* renderer) { _meshes.push_back(renderer); }
 
 void VulkanEngine::initSwapChain() {
     createSwapChain();

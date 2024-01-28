@@ -8,25 +8,21 @@
 #include "MeshRenderManager.h"
 
 /**
- * @brief Mesh renderer object for game object. Exposed to engine user.
+ * @brief One instance of a mesh to be rendered.
  *
  */
-class MeshRenderer
+class MeshInstance
 {
   public:
-    MeshRenderer() = delete;
+    MeshInstance() = delete;
 
-    MeshRenderer(const char* meshFilePath, const char* textureFilePath) {
+    MeshInstance(const char* meshFilePath, const char* textureFilePath) {
         this->meshFilePath = meshFilePath;
         this->textureFilePath = textureFilePath;
     }
 
-    void RegisterRenderManager(MeshRenderManager* manager) {
-        manager->RegisterMeshRenderer(this, MeshRenderManager::RenderMethod::Generic);
-    }
-
     void Rotate(float x, float y, float z);
-    ~MeshRenderer();
+    ~MeshInstance();
     glm::mat4 GetModelMatrix();
     void Update();
     void Render();

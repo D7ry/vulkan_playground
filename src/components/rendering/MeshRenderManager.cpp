@@ -1,5 +1,5 @@
 #include "MeshRenderManager.h"
-#include "MeshRenderer.h"
+#include "MeshInstance.h"
 #include "MetaPipeline.h"
 #include "components/rendering/RenderGroup.h"
 #include "lib/VQDevice.h"
@@ -20,14 +20,14 @@ void MeshRenderManager::PrepareRendering(
         _runtimeRenderData[it->first] = RuntimeRenderData();
         RuntimeRenderData& renderData = _runtimeRenderData.at(it->first);
         // hash mesh + texture
-        std::unordered_map<std::string, std::vector<MeshRenderer*>> uniqueModlesTextures;
-        for (MeshRenderer* renderer : it->second) {
+        std::unordered_map<std::string, std::vector<MeshInstance*>> uniqueModlesTextures;
+        for (MeshInstance* renderer : it->second) {
             ASSERT(!renderer->meshFilePath.empty() && !renderer->textureFilePath.empty());
             std::string meshTexture = renderer->meshFilePath + renderer->textureFilePath;
             if (uniqueModlesTextures.find(meshTexture) != uniqueModlesTextures.end()) {
                 uniqueModlesTextures[meshTexture].push_back(renderer);
             } else {
-                uniqueModlesTextures[meshTexture] = std::vector<MeshRenderer*>{renderer};
+                uniqueModlesTextures[meshTexture] = std::vector<MeshInstance*>{renderer};
             }
         }
         for (auto& it : uniqueModlesTextures) {
@@ -38,37 +38,6 @@ void MeshRenderManager::PrepareRendering(
             renderData.renderGroups.push_back(group);
         }
     }
-
-    // uniform buffer allocation
-    // {
-    //         INFO("Allocating uniform buffers...");
-    //         for (auto& it : this->_runtimeRenderData) {
-    //                 RuntimeRenderData& renderData = it.second;
-    //                 for (RenderGroup& group : renderData.renderGroups) {
-    //                         ASSERT(group.staticUbo.empty());
-    //                         ASSERT(group.dynamicUbo.empty());
-    //                         group.staticUbo.resize(numFrameInFlight);
-    //                         group.dynamicUbo.resize(numFrameInFlight);
-    //                         for (int i = 0; i < numFrameInFlight; i++) {
-    //                                 // allocate static ubo
-    //                                 group.staticUbo[i] = device->CreateBuffer(
-    //                                         group.staticUboSize,
-    //                                         VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-    //                                         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
-    //                                                 | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-    //                                 );
-    //                                 // allocate dynamic ubo
-    //                                 group.dynamicUbo[i] = device->CreateBuffer(
-    //                                         group.dynamicUboSize * group.dynamicUboCount,
-    //                                         VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-    //                                         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
-    //                                                 | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-    //                                 );
-    //                         }
-    //                 }
-    //         }
-    // }
-
     // pipeline creation
     {
         INFO("Creating metapipeline...");
@@ -152,7 +121,7 @@ void MeshRenderManager::RecordRenderCommands(VkCommandBuffer commandBuffer, int 
             for (int i = 0; i < renderGroup.meshRenderers.size(); i++) {
                 uint32_t dynamicOffset = i * static_cast<uint32_t>(renderGroup.dynamicUboSize);
 
-                MeshRenderer* renderer = renderGroup.meshRenderers[i];
+                MeshInstance* renderer = renderGroup.meshRenderers[i];
 
                 vkCmdBindDescriptorSets(
                     commandBuffer,
@@ -183,7 +152,7 @@ void MeshRenderManager::Cleanup() {
     }
 }
 
-void MeshRenderManager::TestAddRenderer(MeshRenderer* renderer) {
+void MeshRenderManager::TestAddRenderer(MeshInstance* renderer) {
 
     ASSERT(!renderer->meshFilePath.empty() && !renderer->textureFilePath.empty());
     for (auto& group : _runtimeRenderData[RenderMethod::Generic].renderGroups) {
@@ -195,7 +164,7 @@ void MeshRenderManager::TestAddRenderer(MeshRenderer* renderer) {
     }
 }
 
-void MeshRenderManager::AddMeshRenderer(MeshRenderer* renderer) {
+void MeshRenderManager::AddMeshRenderer(MeshInstance* renderer) {
     std::string& texture = renderer->textureFilePath;
     // check if a render group exists
     for (auto& group : _runtimeRenderData[RenderMethod::Generic].renderGroups) {
