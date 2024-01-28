@@ -25,8 +25,6 @@ class MeshRenderManager
 
     void Render() {}
 
-    void TestAddRenderer(MeshInstance* renderer);
-
     void AddMeshRenderer(MeshInstance* renderer);
 
     void RegisterMeshRenderer(MeshInstance* meshRenderer, RenderMethod renderMethod) {

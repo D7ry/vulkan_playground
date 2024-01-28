@@ -9,9 +9,7 @@
 
 #include "MeshInstance.h"
 #include "MeshRenderManager.h"
-#include "components/Camera.h"
 #include "components/ImGuiManager.h"
-#include "components/InputManager.h"
 #include "imgui.h"
 #include "lib/VQDevice.h"
 #include <vector>

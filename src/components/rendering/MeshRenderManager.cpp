@@ -132,18 +132,6 @@ void MeshRenderManager::Cleanup() {
     }
 }
 
-void MeshRenderManager::TestAddRenderer(MeshInstance* renderer) {
-
-    ASSERT(!renderer->meshFilePath.empty() && !renderer->textureFilePath.empty());
-    for (auto& group : _runtimeRenderData[RenderMethod::Generic].renderGroups) {
-        if (group.texturePath == renderer->textureFilePath) {
-            INFO("added new mesh renderer to text file path {}", renderer->textureFilePath);
-            group.addRenderer(renderer);
-            return;
-        }
-    }
-}
-
 void MeshRenderManager::AddMeshRenderer(MeshInstance* renderer) {
     std::string& texture = renderer->textureFilePath;
     // check if a render group exists
