@@ -209,7 +209,7 @@ RenderGroup CreateRenderGroup(
         }
     }
 
-    auto ret = RenderGroup(
+    RenderGroup ret = RenderGroup(
         sizeof(StaticUBO_T),
         dynamicAlignment,
         initialDynamicUboCount,

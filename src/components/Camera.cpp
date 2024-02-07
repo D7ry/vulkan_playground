@@ -8,8 +8,10 @@ Camera::Camera(glm::vec3 position, glm::vec3 rotation) {
 };
 
 void Camera::ModRotation(float yaw, float pitch, float roll) {
-    // TODO: current rotation does not take into account roll angles when modifying yaw and pitch
-    // TODO: adapt to different configurations of yaw, pitch, and roll dependency
+    // TODO: current rotation does not take into account roll angles when
+    // modifying yaw and pitch
+    // TODO: adapt to different configurations of yaw, pitch, and roll
+    // dependency
     this->_rotation.y += yaw;
     // wrap yaw between -180 and 180
     if (this->_rotation.y < -180.0f) {
@@ -19,7 +21,8 @@ void Camera::ModRotation(float yaw, float pitch, float roll) {
     }
     this->_rotation.x = std::clamp(this->_rotation.x + pitch, -89.0f, 89.0f);
     this->_rotation.z = fmod(this->_rotation.z + roll, 180.0f);
-    // INFO("Yaw: {}, Pitch: {}, Roll: {}", this->_rotation.y, this->_rotation.x, this->_rotation.z);
+    // INFO("Yaw: {}, Pitch: {}, Roll: {}", this->_rotation.y,
+    // this->_rotation.x, this->_rotation.z);
 };
 
 #define INDEPENDENT_Z 1
@@ -30,16 +33,22 @@ void Camera::Move(float x, float y, float z) {
 
 #if INDEPENDENT_Z == 0
     // linera algebra mystery
-    glm::vec3 xyz = glm::rotate(glm::mat4(1.0f), rotationRad.y, glm::vec3(0, 0, 1))
-                    * glm::rotate(glm::mat4(1.0f), rotationRad.x, glm::vec3(0, -1, 0)) // y axis is flipped in Vulkan
-                    * glm::rotate(glm::mat4(1.0f), rotationRad.z, glm::vec3(1, 0, 0)) * glm::vec4(x, y, z, 0);
+    glm::vec3 xyz
+        = glm::rotate(glm::mat4(1.0f), rotationRad.y, glm::vec3(0, 0, 1))
+          * glm::rotate(
+              glm::mat4(1.0f), rotationRad.x, glm::vec3(0, -1, 0)
+          ) // y axis is flipped in Vulkan
+          * glm::rotate(glm::mat4(1.0f), rotationRad.z, glm::vec3(1, 0, 0))
+          * glm::vec4(x, y, z, 0);
 
     this->_position += xyz;
 #else
-    glm::vec3 xy = glm::rotate(glm::mat4(1.0f), rotationRad.y, glm::vec3(0, 0, 1))
-                   //* glm::rotate(glm::mat4(1.0f), rotationRad.x, glm::vec3(0, -1, 0)) // y axis is flipped in Vulkan
-                   //// uncomment this line for pitch to affect XY motion
-                   * glm::vec4(x, y, 0, 0);
+    glm::vec3 xy
+        = glm::rotate(glm::mat4(1.0f), rotationRad.y, glm::vec3(0, 0, 1))
+          //* glm::rotate(glm::mat4(1.0f), rotationRad.x, glm::vec3(0, -1, 0))
+          //// y axis is flipped in Vulkan
+          //// uncomment this line for pitch to affect XY motion
+          * glm::vec4(x, y, 0, 0);
 
     // Z motion is independent of X rotation (pitch)
     glm::vec3 zOnly = glm::vec3(0, 0, z);
@@ -68,11 +77,13 @@ glm::mat4 Camera::GetViewMatrix() {
     glm::vec3 up = glm::cross(direction, right);
 
     // Include roll in the up vector calculation
-    glm::mat4 rollMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(_rotation.z), direction);
+    glm::mat4 rollMatrix
+        = glm::rotate(glm::mat4(1.0f), glm::radians(_rotation.z), direction);
     up = glm::vec3(rollMatrix * glm::vec4(up, 0.0f));
 
-    // INFO("Camera position: ({}, {}, {})", _position.x, _position.y, _position.z);
-    // INFO("Camera direction: ({}, {}, {})", direction.x, direction.y, direction.z);
+    // INFO("Camera position: ({}, {}, {})", _position.x, _position.y,
+    // _position.z); INFO("Camera direction: ({}, {}, {})", direction.x,
+    // direction.y, direction.z);
 
     // Create view matrix
     return glm::lookAt(_position, _position + direction, up);
