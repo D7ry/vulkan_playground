@@ -1,18 +1,5 @@
 #include "DEngine.h"
 
-void DEngine::addExperimentalMesh() {
-    const std::string SAMPLE_TEXTURE_PATH
-        = "../resources/textures/viking_room.png";
-    const std::string SAMPLE_MESH_PATH = "../resources/meshes/viking_room.obj";
-    // MeshInstance* render3 =
-
-    //     render3->transform.position = glm::vec3(0, 2, 2);
-
-    // // _vulkanEngine->AddMesh(render);
-    // // _vulkanEngine->AddMesh(render2);
-    // _vulkanEngine->AddMesh(render3);
-    //_vulkanEngine->AddMesh(render4);
-}
 
 void DEngine::Init() {
     INFO("Initializing dEngine...");
@@ -22,7 +9,6 @@ void DEngine::Init() {
         _vulkanEngine->Init(_window);
         _vulkanEngine->SetImguiRenderCallback([this]() { this->renderImgui(); }
         );
-        addExperimentalMesh();
         _vulkanEngine->Prepare();
     }
     { // input manager

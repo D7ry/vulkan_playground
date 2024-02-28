@@ -15,8 +15,6 @@ class DEngine
   public:
     DEngine(){};
 
-    void addExperimentalMesh();
-
     void Init();
 
     void Run();
