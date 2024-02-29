@@ -41,12 +41,12 @@ void DEngine::Init() {
 
 void DEngine::Run() {
     while (!glfwWindowShouldClose(_window)) {
-        Tick();
+        tick();
     }
     cleanup();
 }
 
-void DEngine::Tick() {
+void DEngine::tick() {
     glfwPollEvents();
     _deltaTimer.Tick();
     float deltaTime = _deltaTimer.GetDeltaTime();

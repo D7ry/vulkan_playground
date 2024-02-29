@@ -17,12 +17,17 @@ class DEngine
 
     void Init();
 
+    /**
+     * @brief Run the engine in the main loop. 
+     * The engine will keep ticking until exception, or window closes.
+     */
     void Run();
 
-    // main update function
-    void Tick();
 
   private:
+    // main update function
+    void tick();
+    
     DeltaTimer _deltaTimer;
     Camera _mainCamera = Camera(0, 0, 0, 0, 0, 0);
 
