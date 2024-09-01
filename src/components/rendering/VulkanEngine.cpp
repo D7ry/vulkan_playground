@@ -350,7 +350,7 @@ bool VulkanEngine::isDeviceSuitable(VkPhysicalDevice device) {
     if (
 #if !__APPLE__
         deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU &&
-        deviceFeatures.geometryShader
+        deviceFeatures.geometryShader &&
 #endif
         true) {
         QueueFamilyIndices indices
