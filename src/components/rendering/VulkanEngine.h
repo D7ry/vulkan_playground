@@ -6,6 +6,9 @@
 #include <optional>
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_core.h>
+#if __APPLE__
+#include <vulkan/vulkan_beta.h> // VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME
+#endif
 
 #include "MeshInstance.h"
 #include "MeshRenderManager.h"
@@ -177,7 +180,7 @@ class VulkanEngine
 
     virtual void drawFrame();
 
-    virtual void postCleanup(){};
+    virtual void postCleanup() {};
 
     // validation layers, enable under debug mode only
 #ifdef NDEBUG
@@ -188,7 +191,12 @@ class VulkanEngine
     static inline const std::vector<const char*> VALIDATION_LAYERS
         = {"VK_LAYER_KHRONOS_validation"};
     static inline const std::vector<const char*> DEVICE_EXTENSIONS
-        = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
+        = {
+            VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+#if __APPLE__
+            VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME
+#endif // __APPLE__
+        };
     bool checkValidationLayerSupport();
 
     // debug messenger setup

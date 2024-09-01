@@ -92,3 +92,8 @@ target_link_libraries(vulkan_playground
     spdlog::spdlog 
     glfw
 )
+
+# debug flag for unix
+if(CMAKE_BUILD_TYPE MATCHES Release)
+    add_compile_definitions(NDEBUG)
+endif()

@@ -85,7 +85,7 @@ void MeshRenderManager::RecordRenderCommands(
                 VK_INDEX_TYPE_UINT32
             );
             MetaPipeline& pipeline = elem.second.metaPipeline;
-            DEBUG_ASSERT(pipeline.pipeline != VK_NULL_HANDLE);
+            ASSERT(pipeline.pipeline != VK_NULL_HANDLE);
             vkCmdBindPipeline(
                 commandBuffer,
                 VK_PIPELINE_BIND_POINT_GRAPHICS,

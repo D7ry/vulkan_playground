@@ -14,6 +14,7 @@
 #include "MeshInstance.h"
 #include "MeshRenderManager.h"
 #include <GLFW/glfw3.h>
+#include <vulkan/vk_enum_string_helper.h>
 #include <vulkan/vulkan_core.h>
 
 #include "VulkanEngine.h"
@@ -155,19 +156,26 @@ void VulkanEngine::createInstance() {
     VkInstanceCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     createInfo.pApplicationInfo = &appInfo;
+
+    std::vector<const char*> instanceExtensions;
     // get glfw Extensions
-    uint32_t glfwExtensionCount = 0;
-
-    INFO("Getting GLFW extensions...");
-    const char** glfwExtensions;
-    glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-    createInfo.enabledExtensionCount = glfwExtensionCount;
-    createInfo.ppEnabledExtensionNames = glfwExtensions;
-
-    INFO("GLFW extensions:");
-    for (uint32_t i = 0; i < glfwExtensionCount; i++) {
-        INFO("{}", glfwExtensions[i]);
+    {
+        uint32_t glfwExtensionCount = 0;
+        const char** glfwExtensions
+            = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+        for (int i = 0; i < glfwExtensionCount; i++) {
+            instanceExtensions.push_back(glfwExtensions[i]);
+        }
     }
+// https://stackoverflow.com/questions/72789012/why-does-vkcreateinstance-return-vk-error-incompatible-driver-on-macos-despite
+#if __APPLE__
+    // enable extensions for apple vulkan translation
+    instanceExtensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+    createInfo.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
+#endif // __APPLE__
+
+    createInfo.enabledExtensionCount = instanceExtensions.size();
+    createInfo.ppEnabledExtensionNames = instanceExtensions.data();
 
     VkDebugUtilsMessengerCreateInfoEXT debugMessengerCreateInfo{};
 
@@ -187,7 +195,10 @@ void VulkanEngine::createInstance() {
     VkResult result = vkCreateInstance(&createInfo, nullptr, &this->_instance);
 
     if (result != VK_SUCCESS) {
-        FATAL("Failed to create Vulkan instance.");
+        FATAL(
+            "Failed to create Vulkan instance; Result: {}",
+            string_VkResult(result)
+        );
     }
     _deletionStack.push([this]() {
         vkDestroyInstance(this->_instance, nullptr);
@@ -336,8 +347,12 @@ bool VulkanEngine::isDeviceSuitable(VkPhysicalDevice device) {
     vkGetPhysicalDeviceProperties(device, &deviceProperties);
     vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
 
-    if (deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU
-        && deviceFeatures.geometryShader) {
+    if (
+#if !__APPLE__
+        deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU &&
+        deviceFeatures.geometryShader
+#endif
+        true) {
         QueueFamilyIndices indices
             = this->findQueueFamilies(device); // look for queue familieis
         return indices.isComplete()
@@ -347,6 +362,7 @@ bool VulkanEngine::isDeviceSuitable(VkPhysicalDevice device) {
     }
 }
 
+// pick a physical device that satisfies `isDeviceSuitable()`
 VkPhysicalDevice VulkanEngine::pickPhysicalDevice() {
     INFO("Picking physical device ");
     VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
