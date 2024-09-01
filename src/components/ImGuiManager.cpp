@@ -1,6 +1,6 @@
 #include "ImGuiManager.h"
 #include "imgui.h"
-#include "imgui_impl_glfw.h"
+#include "backends/imgui_impl_glfw.h"
 
 void ImGuiManager::InitializeImgui() {
     INFO("Initializing imgui...");
@@ -40,7 +40,8 @@ void ImGuiManager::BindVulkanResources(
     initInfo.MinImageCount = 2;
     initInfo.ImageCount = imageCount;
     initInfo.CheckVkResultFn = nullptr;
-    ImGui_ImplVulkan_Init(&initInfo, _imGuiRenderPass);
+    initInfo.RenderPass = this->_imGuiRenderPass;
+    ImGui_ImplVulkan_Init(&initInfo);
 };
 
 void ImGuiManager::InitializeRenderPass(VkDevice logicalDevice, VkFormat swapChainImageFormat) {

@@ -6,7 +6,6 @@
 #include "components/rendering/VulkanEngine.h"
 
 #include "imgui.h"
-#include "imgui_impl_glfw.h"
 #include <GLFW/glfw3.h>
 #include <memory>
 

@@ -1,5 +1,4 @@
 #include "lib/VQBuffer.h"
-#define STB_IMAGE_IMPLEMENTATION
 #include "TextureManager.h"
 #include "VulkanUtils.h"
 #include "lib/VQDevice.h"

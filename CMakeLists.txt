@@ -1,34 +1,40 @@
 cmake_minimum_required(VERSION 3.22)
-set(CMAKE_C_COMPILER "/usr/bin/clang")
-set(CMAKE_CXX_COMPILER "/usr/bin/clang++")
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
-set(spdlog_DIR /home/d7ry/lib/linux_x86_64/spdlog/build)
-set(IMGUI_DIR /home/d7ry/lib/linux_x86_64/imgui)
-set(STB_DIR /home/d7ry/lib/common/stb)
-set(TinyObjectLoader_DIR /home/d7ry/lib/common/tinyobjloader)
-
-project(vulkan_playground)
 set(CMAKE_CXX_STANDARD 17)
+ 
+# imgui
+set(IMGUI_INCLUDE extern/imgui)
+set(IMGUI_SRC 
+    extern/imgui/imgui.cpp
+    extern/imgui/imgui_draw.cpp
+    extern/imgui/imgui_demo.cpp
+    extern/imgui/imgui_widgets.cpp
+    extern/imgui/imgui_tables.cpp
+    extern/imgui/backends/imgui_impl_glfw.cpp
+    extern/imgui/backends/imgui_impl_vulkan.cpp
+)
 
-find_package(Vulkan REQUIRED)
+# stb
+set(STB_INCLUDE extern/stb)
+set(STB_IMG_SRC extern/stb/stb_image_impl.cpp)
 
 # spdlog
-find_package(spdlog REQUIRED)
+add_subdirectory(extern/spdlog)
+set(SPDLOG_INCLUDE extern/spdlog/include)
 
-#imgui
-add_library(
-        imgui
-        ${IMGUI_DIR}/imgui.cpp
-        ${IMGUI_DIR}/imgui_demo.cpp
-        ${IMGUI_DIR}/imgui_draw.cpp
-        ${IMGUI_DIR}/imgui_widgets.cpp
-        ${IMGUI_DIR}/imgui_tables.cpp
-        ${IMGUI_DIR}/backends/imgui_impl_glfw.cpp
-        ${IMGUI_DIR}/backends/imgui_impl_vulkan.cpp
-)
-target_include_directories(imgui PUBLIC ${IMGUI_DIR} ${IMGUI_DIR}/backends)
+# glfw
+add_subdirectory(extern/glfw)
+set(GLFW_INCLUDE extern/glfw/include)
+
+# glm
+set(GLM_INCLUDE extern/glm)
+
+# tinyobjloader
+set(TINY_OBJ_LOADER_INCLUDE extern/tinyobjloader)
+
+
+project(vulkan_playground)
 
 add_executable(vulkan_playground 
         src/main.cpp
@@ -50,14 +56,39 @@ add_executable(vulkan_playground
         src/lib/VQUtils.cpp
         src/components/rendering/VulkanEngine.cpp
         src/application/DEngine.cpp
-
 )
-# std directory
-target_include_directories(vulkan_playground PUBLIC ${STB_DIR})
-target_include_directories(vulkan_playground PUBLIC ${TinyObjectLoader_DIR})
-target_include_directories(vulkan_playground PUBLIC src)
+
+target_sources(${PROJECT_NAME} 
+    PRIVATE ${IMGUI_SRC}
+    PRIVATE ${STB_IMG_SRC}
+)
+
+target_include_directories(vulkan_playground
+    PRIVATE ${STB_INCLUDE}
+    PRIVATE ${IMGUI_INCLUDE}
+    PRIVATE ${SPDLOG_INCLUDE}
+    PRIVATE ${GLFW_INCLUDE}
+    PRIVATE ${GLM_INCLUDE}
+    PRIVATE ${TINY_OBJ_LOADER_INCLUDE}
+    PRIVATE src
+)
 
 
 target_precompile_headers(vulkan_playground PUBLIC src/PCH.h)
-target_link_libraries(vulkan_playground Vulkan::Vulkan glfw dl pthread X11 Xxf86vm Xrandr Xi spdlog::spdlog imgui)
 
+# vulkan
+if(APPLE)
+    set(VULKAN_LIB_PATH $ENV{HOME}/lib/VulkanSDK/1.3.290.1/macOS/lib/libvulkan.1.3.290.dylib)
+    include_directories(~/lib/VulkanSDK/1.3.290.1/macOS/include)
+    target_link_libraries(vulkan_playground 
+        ${VULKAN_LIB_PATH}
+    )
+else()
+    find_package(Vulkan REQUIRED)
+    target_link_libraries(vulkan_playground Vulkan::Vulkan)
+endif()
+
+target_link_libraries(vulkan_playground 
+    spdlog::spdlog 
+    glfw
+)
