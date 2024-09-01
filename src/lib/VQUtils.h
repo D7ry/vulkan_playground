@@ -37,7 +37,7 @@ uint32_t findMemoryType(VkPhysicalDevice physicalDevice, uint32_t typeFilter, Vk
 
 template <typename T>
 void createIndexBuffer(const std::vector<T>& indices, VQBufferIndex& vqBuffer, VQDevice& vqDevice) {
-    INFO("Creating index buffer...");
+    DEBUG("Creating index buffer...");
     VkDeviceSize indexBufferSize = sizeof(T) * indices.size();
 
     std::pair<VkBuffer, VkDeviceMemory> res

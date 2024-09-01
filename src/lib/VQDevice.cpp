@@ -14,7 +14,7 @@ void VQDevice::CreateLogicalDeviceAndQueue(const std::vector<const char*>& exten
     uniqueQueueFamilyIndices.insert(this->queueFamilyIndices.graphicsFamily.value());
     uniqueQueueFamilyIndices.insert(this->queueFamilyIndices.presentationFamily.value());
 
-    INFO("Found {} unique queue families.", uniqueQueueFamilyIndices.size());
+    DEBUG("Found {} unique queue families.", uniqueQueueFamilyIndices.size());
 
     VkPhysicalDeviceFeatures deviceFeatures{}; // no features for no
     VkDeviceCreateInfo createInfo{};
@@ -42,7 +42,7 @@ void VQDevice::CreateLogicalDeviceAndQueue(const std::vector<const char*>& exten
 }
 
 void VQDevice::InitQueueFamilyIndices(VkSurfaceKHR surface) {
-    INFO("Finding graphics and presentation queue families...");
+    DEBUG("Finding graphics and presentation queue families...");
     uint32_t queueFamilyCount = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, nullptr);
     std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount); // initialize vector to store queue familieis
@@ -52,12 +52,12 @@ void VQDevice::InitQueueFamilyIndices(VkSurfaceKHR surface) {
         VkBool32 presentationSupport = false;
         if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
             this->queueFamilyIndices.graphicsFamily = i;
-            INFO("Graphics family found at {}", i);
+            DEBUG("Graphics family found at {}", i);
         }
         vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, i, surface, &presentationSupport);
         if (presentationSupport) {
             this->queueFamilyIndices.presentationFamily = i;
-            INFO("Presentation family found at {}", i);
+            DEBUG("Presentation family found at {}", i);
         }
         if (this->queueFamilyIndices.isComplete()) {
             break;

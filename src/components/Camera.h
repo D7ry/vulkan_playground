@@ -22,4 +22,8 @@ class Camera
   private:
     glm::vec3 _position; // world position of the camera
     glm::vec3 _rotation; // pitch, yaw, roll
+    glm::mat4 _viewMatrix; // view matrix
+
+    // update the view matrix, must be called when `_position` or `_rotation` are modified
+    void updateViewMatrix();
 };

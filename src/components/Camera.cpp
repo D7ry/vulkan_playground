@@ -5,6 +5,7 @@
 Camera::Camera(glm::vec3 position, glm::vec3 rotation) {
     this->_position = position;
     this->_rotation = rotation;
+    updateViewMatrix();
 };
 
 void Camera::ModRotation(float yaw, float pitch, float roll) {
@@ -21,8 +22,7 @@ void Camera::ModRotation(float yaw, float pitch, float roll) {
     }
     this->_rotation.x = std::clamp(this->_rotation.x + pitch, -89.0f, 89.0f);
     this->_rotation.z = fmod(this->_rotation.z + roll, 180.0f);
-    // INFO("Yaw: {}, Pitch: {}, Roll: {}", this->_rotation.y,
-    // this->_rotation.x, this->_rotation.z);
+    updateViewMatrix();
 };
 
 #define INDEPENDENT_Z 1
@@ -56,9 +56,20 @@ void Camera::Move(float x, float y, float z) {
     // Combine XY and Z movements
     this->_position += xy + zOnly;
 #endif
+    updateViewMatrix();
 };
 
 glm::mat4 Camera::GetViewMatrix() {
+    return _viewMatrix;
+};
+
+Camera::Camera(float x, float y, float z, float yaw, float pitch, float roll) {
+    _position = glm::vec3(x, y, z);
+    _rotation = glm::vec3(pitch, yaw, roll);
+    updateViewMatrix();
+}
+
+void Camera::updateViewMatrix() {
     // Convert angles (assumed to be in degrees) to radians
     glm::vec3 anglesRad = glm::radians(_rotation);
 
@@ -81,15 +92,6 @@ glm::mat4 Camera::GetViewMatrix() {
         = glm::rotate(glm::mat4(1.0f), glm::radians(_rotation.z), direction);
     up = glm::vec3(rollMatrix * glm::vec4(up, 0.0f));
 
-    // INFO("Camera position: ({}, {}, {})", _position.x, _position.y,
-    // _position.z); INFO("Camera direction: ({}, {}, {})", direction.x,
-    // direction.y, direction.z);
-
     // Create view matrix
-    return glm::lookAt(_position, _position + direction, up);
-};
-
-Camera::Camera(float x, float y, float z, float yaw, float pitch, float roll) {
-    _position = glm::vec3(x, y, z);
-    _rotation = glm::vec3(pitch, yaw, roll);
+    _viewMatrix = glm::lookAt(_position, _position + direction, up);
 }
