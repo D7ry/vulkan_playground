@@ -46,6 +46,7 @@ class PhongRenderSystem : public ISystem
     virtual void Cleanup() override;
 
   private:
+    // spir-v source to vertex and fragment shader, relative to compiled binary
     const char* VERTEX_SHADER_SRC = "../shaders/phong.vert.spv";
     const char* FRAGMENT_SHADER_SRC = "../shaders/phong.frag.spv";
 
@@ -53,11 +54,9 @@ class PhongRenderSystem : public ISystem
     VkPipeline _pipeline = VK_NULL_HANDLE;
     VkPipelineLayout _pipelineLayout = VK_NULL_HANDLE;
 
-    // sysetm holds layout and pool
-    VkDescriptorSetLayout _descriptorSetLayout
-        = VK_NULL_HANDLE; // describes layout of descriptor set
-    VkDescriptorPool _descriptorPool
-        = VK_NULL_HANDLE; // TODO: can we use a global descriptor pool?
+    // sysetm holds its own descriptor pool
+    VkDescriptorSetLayout _descriptorSetLayout = VK_NULL_HANDLE;
+    VkDescriptorPool _descriptorPool = VK_NULL_HANDLE;
 
     struct UBO
     {
@@ -67,8 +66,8 @@ class PhongRenderSystem : public ISystem
 
     size_t _numDynamicUBO;  // how many dynamic UBOs do we have
     size_t _currDynamicUBO; // dynamic ubo that is to be allocated
+    size_t _dynamicUBOAlignmentSize; // actual size of the dynamic UBO that satisfies device alignment
 
-    int getDynamicUBOAlignmentSize();
     std::array<VkDescriptorSet, NUM_INTERMEDIATE_FRAMES> _descriptorSets;
     std::array<UBO, NUM_INTERMEDIATE_FRAMES> _UBO;
     void resizeDynamicUbo(size_t dynamicUboCount);

@@ -1,5 +1,4 @@
 #include "components/ShaderUtils.h"
-#include "components/ShaderUtils.h"
 #include "components/VulkanUtils.h"
 #include "lib/VQDevice.h"
 #include "lib/VQUtils.h"
@@ -11,10 +10,11 @@
 #include "PhongRenderSystem.h"
 #include "ecs/component/TransformComponent.h"
 
-
 void PhongRenderSystem::Init(const InitData* initData) {
     _device = initData->device;
     _textureManager = initData->textureManager;
+    _dynamicUBOAlignmentSize
+        = _device->GetDynamicUBOAlignedSize(sizeof(PhongUBODynamic));
     // create the phong render pass
     this->createRenderPass(_device, initData->swapChainImageFormat);
     // create graphics pipeline
@@ -42,13 +42,15 @@ void PhongRenderSystem::Cleanup() {
     vkDestroyPipelineLayout(_device->logicalDevice, _pipelineLayout, nullptr);
 
     // clean up descriptors
-    vkDestroyDescriptorSetLayout(_device->logicalDevice, _descriptorSetLayout, nullptr);
+    vkDestroyDescriptorSetLayout(
+        _device->logicalDevice, _descriptorSetLayout, nullptr
+    );
     // descriptor sets automatically cleaned up
     vkDestroyDescriptorPool(_device->logicalDevice, _descriptorPool, nullptr);
 
     // clean up render pass
     vkDestroyRenderPass(_device->logicalDevice, _renderPass, nullptr);
-    
+
     DEBUG("phong rendering system cleaned up.");
     // note: texture is handled by TextureManager so no need to clean that up
 }
@@ -100,15 +102,13 @@ void PhongRenderSystem::Tick(const TickData* tickData) {
 
     { // update static ubo with model view matrix
         PhongUBOStatic ubo{
-            tickData->mainCamera->GetViewMatrix(), // view mat
-            tickData->graphics.mainProjectionMatrix         // proj mat
+            tickData->mainCamera->GetViewMatrix(),  // view mat
+            tickData->graphics.mainProjectionMatrix // proj mat
         };
 
         memcpy(_UBO[frameIdx].staticUBO.bufferAddress, &ubo, sizeof(ubo));
     }
 
-    // FIXME: make this into a field.
-    static int dynamicAlignment = getDynamicUBOAlignmentSize();
     // loop through entities and render them
     for (Entity* entity : this->_entities) {
         PhongMeshInstanceComponent* meshInstance
@@ -120,7 +120,7 @@ void PhongRenderSystem::Tick(const TickData* tickData) {
         // actual render logic
 
         uint32_t dynamicUBOOffset
-            = meshInstance->dynamicUBOId * dynamicAlignment;
+            = meshInstance->dynamicUBOId * _dynamicUBOAlignmentSize;
         { // bind descriptor set to the correct dynamic ubo
             // note that we use the same descriptor set for all phong meshes
             // need to rebind because offset to dynamic UBO is different
@@ -137,8 +137,9 @@ void PhongRenderSystem::Tick(const TickData* tickData) {
         }
 
         { // update dynamic UBO
-            // TODO: may be a little expensive to do; given dynamic ubo only needs 
-            // to be updated when relevant data structures of the instance changes
+            // TODO: may be a little expensive to do; given dynamic ubo only
+            // needs to be updated when relevant data structures of the instance
+            // changes
             void* dynamicUBOAddr = reinterpret_cast<void*>(
                 reinterpret_cast<uintptr_t>(
                     _UBO[frameIdx].dynamicUBO.bufferAddress
@@ -701,7 +702,7 @@ PhongMeshInstanceComponent* PhongRenderSystem::MakePhongMeshInstanceComponent(
     // FIXME: on component cleanup, the dynamic ubo should be flagged as free
     // implement something like a CleanUpPhongMeshInstanceComponent()
     {
-        dynamicUBOId =_currDynamicUBO;
+        dynamicUBOId = _currDynamicUBO;
         _currDynamicUBO++;
         if (_currDynamicUBO >= _numDynamicUBO) {
             resizeDynamicUbo(_numDynamicUBO * 1.5);
@@ -718,15 +719,12 @@ PhongMeshInstanceComponent* PhongRenderSystem::MakePhongMeshInstanceComponent(
 
 // reallocate dynamic UBO array, updating the descriptors as well
 // note that contents from the old UBO array aren't copied over
-void PhongRenderSystem::resizeDynamicUbo(
-    size_t dynamicUboCount
-) {
-    size_t dynamicUboSize = getDynamicUBOAlignmentSize();
+void PhongRenderSystem::resizeDynamicUbo(size_t dynamicUboCount) {
     for (int i = 0; i < NUM_INTERMEDIATE_FRAMES; i++) {
         // reallocate dyamic ubo
         this->_UBO[i].dynamicUBO.Cleanup();
         this->_device->CreateBufferInPlace(
-            dynamicUboSize * dynamicUboCount,
+            _dynamicUBOAlignmentSize * dynamicUboCount,
             VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
                 | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
@@ -736,7 +734,7 @@ void PhongRenderSystem::resizeDynamicUbo(
         VkDescriptorBufferInfo descriptorBufferInfo_dynamic{};
         descriptorBufferInfo_dynamic.buffer = this->_UBO[i].dynamicUBO.buffer;
         descriptorBufferInfo_dynamic.offset = 0;
-        descriptorBufferInfo_dynamic.range = dynamicUboSize;
+        descriptorBufferInfo_dynamic.range = _dynamicUBOAlignmentSize;
 
         std::array<VkWriteDescriptorSet, 1> descriptorWrites{};
         descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -769,7 +767,9 @@ void PhongRenderSystem::updateTextureDescriptorSet() {
         descriptorWrites[0].dstArrayElement = 0;
         descriptorWrites[0].descriptorType
             = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        descriptorWrites[0].descriptorCount = _textureDescriptorInfoIdx; // descriptors are 0-indexed, +1 for the # of valid samplers
+        descriptorWrites[0].descriptorCount
+            = _textureDescriptorInfoIdx; // descriptors are 0-indexed, +1 for
+                                         // the # of valid samplers
         descriptorWrites[0].pImageInfo = _textureDescriptorInfo.data();
 
         DEBUG("descriptor cont: {}", descriptorWrites[0].descriptorCount);
@@ -783,21 +783,3 @@ void PhongRenderSystem::updateTextureDescriptorSet() {
         );
     }
 };
-
-int PhongRenderSystem::getDynamicUBOAlignmentSize() {
-    // figure out actual alignment of dynamic UBO
-    size_t dynamicAlignment = sizeof(PhongUBODynamic);
-    VkPhysicalDeviceProperties properties;
-    vkGetPhysicalDeviceProperties(_device->physicalDevice, &properties);
-    size_t minUboAlignment = properties.limits.minUniformBufferOffsetAlignment;
-
-    if (minUboAlignment > 0) {
-        size_t remainder = dynamicAlignment % minUboAlignment;
-        if (remainder > 0) {
-            size_t padding = minUboAlignment - remainder;
-            dynamicAlignment += padding;
-        }
-    }
-    return dynamicAlignment;
-}
-

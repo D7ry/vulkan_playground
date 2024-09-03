@@ -52,6 +52,10 @@ struct VQDevice
     explicit VQDevice(VkPhysicalDevice physicalDevice);
     ~VQDevice();
 
+    // get the minimum required size for a dynamic UBO that satisifes
+    // the alignment of this device.
+    size_t GetDynamicUBOAlignedSize(size_t dynamicUBOSize);
+
     /**
      * @brief Query Vulkan API to find the queue family indices that support graphics and presentation.
      *

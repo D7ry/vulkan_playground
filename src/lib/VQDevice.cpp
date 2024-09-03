@@ -187,3 +187,20 @@ void VQDevice::Cleanup() {
     }
     vkDestroyDevice(logicalDevice, nullptr);
 }
+
+size_t VQDevice::GetDynamicUBOAlignedSize(size_t dynamicUBOSize) {
+    // figure out actual alignment of dynamic UBO
+    size_t dynamicAlignment = dynamicUBOSize;
+    VkPhysicalDeviceProperties properties;
+    vkGetPhysicalDeviceProperties(this->physicalDevice, &properties);
+    size_t minUboAlignment = properties.limits.minUniformBufferOffsetAlignment;
+
+    if (minUboAlignment > 0) {
+        size_t remainder = dynamicAlignment % minUboAlignment;
+        if (remainder > 0) {
+            size_t padding = minUboAlignment - remainder;
+            dynamicAlignment += padding;
+        }
+    }
+    return dynamicAlignment;
+}
