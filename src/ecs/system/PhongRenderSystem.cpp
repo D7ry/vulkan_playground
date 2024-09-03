@@ -353,7 +353,7 @@ void PhongRenderSystem::createGraphicsPipeline() {
         descriptorBufferInfo_static.offset = 0;
         descriptorBufferInfo_static.range = sizeof(PhongUBOStatic);
 
-        std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
+        std::array<VkWriteDescriptorSet, 1> descriptorWrites{};
 
         descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         descriptorWrites[0].dstSet = this->_descriptorSets[i];
@@ -402,14 +402,15 @@ void PhongRenderSystem::createGraphicsPipeline() {
 
     VkPipelineVertexInputStateCreateInfo vertexInputInfo
         = {}; // describes the format of the vertex data.
+
+    // set up vertex descriptions
+    VkVertexInputBindingDescription bindingDescription
+        = Vertex::GetBindingDescription();
+    std::unique_ptr<std::vector<VkVertexInputAttributeDescription>>
+        attributeDescriptions = Vertex::GetAttributeDescriptions();
     {
         vertexInputInfo.sType
             = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-        // set up vertex descriptions
-        VkVertexInputBindingDescription bindingDescription
-            = Vertex::GetBindingDescription();
-        std::unique_ptr<std::vector<VkVertexInputAttributeDescription>>
-            attributeDescriptions = Vertex::GetAttributeDescriptions();
 
         vertexInputInfo.vertexBindingDescriptionCount = 1;
         vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;

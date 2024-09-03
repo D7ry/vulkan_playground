@@ -44,8 +44,8 @@ class PhongRenderSystem : public ISystem
     }
 
   private:
-    const char* VERTEX_SHADER_SRC = "../shaders/vert_test.vert.spv";
-    const char* FRAGMENT_SHADER_SRC = "../shaders/frag_test.frag.spv";
+    const char* VERTEX_SHADER_SRC = "../shaders/phong.vert.spv";
+    const char* FRAGMENT_SHADER_SRC = "../shaders/phong.frag.spv";
 
     VkRenderPass _renderPass = VK_NULL_HANDLE;
     VkPipeline _pipeline = VK_NULL_HANDLE;
