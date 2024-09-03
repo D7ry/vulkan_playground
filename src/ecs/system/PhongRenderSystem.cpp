@@ -4,6 +4,7 @@
 #include "structs/Vertex.h"
 
 #include "components/Camera.h"
+#include "components/TextureManager.h"
 
 #include "PhongRenderSystem.h"
 #include "ecs/component/ModelComponent.h"
@@ -11,6 +12,7 @@
 
 void PhongRenderSystem::Init(const InitData* initData) {
     _device = initData->device;
+    _textureManager = initData->textureManager;
     // create the phong render pass
     this->createRenderPass(_device, initData->swapChainImageFormat);
 }
@@ -79,16 +81,6 @@ void PhongRenderSystem::Tick(const TickData* tickData) {
         ASSERT(transform != nullptr)
         // actual render logic
 
-        { // bind vertex & index buffer
-            VkDeviceSize offsets[] = {0};
-
-            VkBuffer vertexBuffers[]
-                = {meshInstance->mesh->vertexBuffer.buffer};
-            VkBuffer indexBufffer = meshInstance->mesh->indexBuffer.buffer;
-            vkCmdBindVertexBuffers(CB, 0, 1, vertexBuffers, offsets);
-            vkCmdBindIndexBuffer(CB, indexBufffer, 0, VK_INDEX_TYPE_UINT32);
-        }
-
         uint32_t dynamicUBOOffset
             = meshInstance->dynamicUBOId * sizeof(PhongUBODynamic);
         { // bind descriptor set to the correct dynamic ubo
@@ -107,7 +99,7 @@ void PhongRenderSystem::Tick(const TickData* tickData) {
         }
 
         { // update dynamic UBO
-            // TODO: implement copy in resizeDynamicUbo() so that 
+            // TODO: implement copy in resizeDynamicUbo() so that
             // only need to update dynamic UBO on data change
             void* dynamicUBOAddr = reinterpret_cast<void*>(
                 reinterpret_cast<uintptr_t>(
@@ -115,14 +107,26 @@ void PhongRenderSystem::Tick(const TickData* tickData) {
                 )
                 + dynamicUBOOffset
             );
-            PhongUBODynamic dynamicUBO {
-                transform->GetModelMatrix(),
-                meshInstance->textureOffset
+            PhongUBODynamic dynamicUBO{
+                transform->GetModelMatrix(), meshInstance->textureOffset
             };
             memcpy(dynamicUBOAddr, &dynamicUBO, sizeof(PhongUBODynamic));
         }
 
-        // issue draw call
+        { // bind vertex & index buffer
+            VkDeviceSize offsets[] = {0};
+            VkBuffer vertexBuffers[]
+                = {meshInstance->mesh->vertexBuffer.buffer};
+            VkBuffer indexBufffer = meshInstance->mesh->indexBuffer.buffer;
+            vkCmdBindVertexBuffers(CB, 0, 1, vertexBuffers, offsets);
+            vkCmdBindIndexBuffer(CB, indexBufffer, 0, VK_INDEX_TYPE_UINT32);
+        }
+
+        { // issue draw call
+            vkCmdDrawIndexed(
+                CB, meshInstance->mesh->indexBuffer.numIndices, 1, 0, 0, 0
+            );
+        }
     }
 
     vkCmdEndRenderPass(CB); // end phong render pass
@@ -311,18 +315,16 @@ void PhongRenderSystem::createGraphicsPipeline() {
         );
     }
 
-    // update descripto sets
+    // allocate for dynamic ubo
+    // FIXME: add adaptive resizing
+    resizeDynamicUbo(10, sizeof(PhongUBODynamic));
+
+    // update descriptor sets
     for (size_t i = 0; i < NUM_INTERMEDIATE_FRAMES; i++) {
         VkDescriptorBufferInfo descriptorBufferInfo_static{};
         descriptorBufferInfo_static.buffer = this->_UBO[i].staticUBO.buffer;
         descriptorBufferInfo_static.offset = 0;
         descriptorBufferInfo_static.range = sizeof(PhongUBOStatic);
-
-        // FIXME: fix texture array
-        VkDescriptorImageInfo descriptorImageInfo{};
-        TextureManager::GetSingleton()->GetDescriptorImageInfo(
-            this->texturePath, descriptorImageInfo
-        );
 
         std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
 
@@ -336,12 +338,11 @@ void PhongRenderSystem::createGraphicsPipeline() {
 
         descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         descriptorWrites[1].dstSet = this->_descriptorSets[i];
-        descriptorWrites[1].dstBinding = 2;
+        descriptorWrites[1].dstBinding = 3;
         descriptorWrites[1].dstArrayElement = 0;
-        descriptorWrites[1].descriptorType
-            = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        descriptorWrites[1].descriptorCount = 1;
-        descriptorWrites[1].pImageInfo = &descriptorImageInfo;
+        descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+        descriptorWrites[1].descriptorCount = _textureDescriptorInfo.size();
+        descriptorWrites[1].pImageInfo = _textureDescriptorInfo.data();
 
         vkUpdateDescriptorSets(
             _device->logicalDevice,
@@ -606,23 +607,46 @@ PhongMeshInstanceComponent* PhongRenderSystem::MakePhongMeshInstanceComponent(
     size_t dynamicUBOId = 0;
     int textureOffset = 0;
 
-    auto it = _meshes.find(meshPath);
-    if (it == _meshes.end()) { // construct phong mesh
-        PhongMesh newMesh;
-        VQDevice& device = *_device;
-        VQUtils::meshToBuffer(
-            meshPath.c_str(), device, newMesh.vertexBuffer, newMesh.indexBuffer
-        );
-        auto result = _meshes.insert({meshPath, newMesh});
-        ASSERT(result.second)
-        mesh = &(result.first->second);
-    } else {
-        mesh = &it->second;
+    { // load or create new mesh
+        auto it = _meshes.find(meshPath);
+        if (it == _meshes.end()) { // construct phong mesh
+            PhongMesh newMesh;
+            VQDevice& device = *_device;
+            VQUtils::meshToBuffer(
+                meshPath.c_str(),
+                device,
+                newMesh.vertexBuffer,
+                newMesh.indexBuffer
+            );
+            auto result = _meshes.insert({meshPath, newMesh});
+            ASSERT(result.second)
+            mesh = &(result.first->second);
+        } else {
+            mesh = &it->second;
+        }
     }
 
-    // load texture into textures[textureOffset]
+    { // load or create new texture
+        auto it = _textureDescriptorIndices.find(texturePath);
+        if (it == _textureDescriptorIndices.end()) {
+            // load texture into textures[textureOffset]
+            _textureManager->GetDescriptorImageInfo(
+                texturePath, _textureDescriptorInfo[_textureDescriptorInfoIdx]
+            );
+            textureOffset = _textureDescriptorInfoIdx;
+            _textureDescriptorInfoIdx++;
+        } else {
+            textureOffset = it->second;
+        }
+    }
+    // FIXME: update descriptor set to reflect the new descriptor
 
     // reserve a dynamic UBO for this instance
+    // note each instance has to have a dynamic ubo, for storing instance data
+    // such as texture index and model mat
+    {
+
+    }
 
     // return new component
     PhongMeshInstanceComponent* ret = new PhongMeshInstanceComponent();
@@ -636,6 +660,22 @@ void PhongRenderSystem::resizeDynamicUbo(
     size_t dynamicUboCount,
     size_t dynamicUboSize
 ) {
+    { // figure out alignment
+        size_t dynamicAlignment = dynamicUboSize;
+        VkPhysicalDeviceProperties properties;
+        vkGetPhysicalDeviceProperties(_device->physicalDevice, &properties);
+        size_t minUboAlignment
+            = properties.limits.minUniformBufferOffsetAlignment;
+
+        if (minUboAlignment > 0) {
+            size_t remainder = dynamicAlignment % minUboAlignment;
+            if (remainder > 0) {
+                size_t padding = minUboAlignment - remainder;
+                dynamicAlignment += padding;
+            }
+        }
+        dynamicUboSize = dynamicAlignment;
+    }
     for (int i = 0; i < NUM_INTERMEDIATE_FRAMES; i++) {
         // reallocate dyamic ubo
         this->_UBO[i].dynamicUBO.Cleanup();

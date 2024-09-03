@@ -22,9 +22,11 @@ struct TickData
 };
 
 class VQDevice;
+class TextureManager;
 
 struct InitData
 {
     VQDevice* device;
     VkFormat swapChainImageFormat;
+    TextureManager* textureManager;
 };

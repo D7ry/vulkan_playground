@@ -1,4 +1,5 @@
 #pragma once
+#include <map>
 #include <vulkan/vulkan_core.h>
 
 #include "ecs/System.h"
@@ -7,6 +8,7 @@
 #include "ecs/component/TransformComponent.h"
 #include "structs/UniformBuffer.h"
 
+#define TEXTURE_ARRAY_SIZE 8
 struct PhongMesh
 {
     VQBuffer vertexBuffer;
@@ -76,4 +78,10 @@ class PhongRenderSystem : public ISystem
 
     std::unordered_map<std::string, PhongMesh> _meshes;
 
+    TextureManager* _textureManager;
+
+    // a huge array of texture descriptors that gets filled up as textures are loaded in
+    std::array<VkDescriptorImageInfo, TEXTURE_ARRAY_SIZE> _textureDescriptorInfo;
+    size_t _textureDescriptorInfoIdx = 0; // idx to the current texture descriptor that can be written in
+    std::unordered_map<std::string, int> _textureDescriptorIndices; // texture name, index into the texture descriptor array
 };
