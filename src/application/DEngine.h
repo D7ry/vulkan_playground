@@ -93,10 +93,11 @@ class DEngine
             _lockCursor = !_lockCursor;
             if (_lockCursor) {
                 glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-                ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NoMouse;
+                ImGui::GetIO().ConfigFlags |= (ImGuiConfigFlags_NoMouse | ImGuiConfigFlags_NoKeyboard);
             } else {
                 glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
                 ImGui::GetIO().ConfigFlags &= ~ImGuiConfigFlags_NoMouse;
+                ImGui::GetIO().ConfigFlags &= ~ImGuiConfigFlags_NoKeyboard;
             }
         });
         _inputManager->RegisterCallback(GLFW_KEY_ESCAPE, InputManager::KeyCallbackCondition::PRESS, [this]() {
