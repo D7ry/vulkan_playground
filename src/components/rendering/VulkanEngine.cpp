@@ -42,6 +42,10 @@ void VulkanEngine::Init(GLFWwindow* window) {
     Entity* thing = new Entity("thing");
     auto phongMeshComponent = _phongSystem->MakePhongMeshInstanceComponent("../resources/spot.obj", "../resources/spot.png");
     thing->AddComponent(phongMeshComponent);
+    TransformComponent* transform = new TransformComponent();
+    *transform = TransformComponent::Identity();
+
+    thing->AddComponent(transform);
 
     _phongSystem->AddEntity(thing);
     //this->_deletionStack.push([this]() { this->_meshRenderManager->Cleanup(); }

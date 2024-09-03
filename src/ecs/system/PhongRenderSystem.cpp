@@ -1,5 +1,6 @@
 #include "components/ShaderUtils.h"
 #include "components/ShaderUtils.h"
+#include "components/VulkanUtils.h"
 #include "lib/VQDevice.h"
 #include "lib/VQUtils.h"
 #include "structs/Vertex.h"
@@ -160,8 +161,6 @@ void PhongRenderSystem::createRenderPass(
     VQDevice* device,
     VkFormat swapChainImageFormat
 ) {
-    DEBUG("Creating phong render pass...");
-
     VkAttachmentDescription colorAttachment{};
     colorAttachment.format = swapChainImageFormat;
     colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -174,49 +173,69 @@ void PhongRenderSystem::createRenderPass(
     colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 
     colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    // colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
     colorAttachment.finalLayout
-        = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR; // note: here we assume we present
-                                           // the image need to change to
-                                           // another layout if we have, for
-                                           // example, an imgui render pass
-                                           // after
+        = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL; // for imgui
 
-    // set up subpass
     VkAttachmentReference colorAttachmentRef{};
     colorAttachmentRef.attachment = 0;
     colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    VkAttachmentDescription depthAttachment{};
+    depthAttachment.format
+        = VulkanUtils::findDepthFormat(_device->physicalDevice);
+    depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+    depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    depthAttachment.finalLayout
+        = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+    VkAttachmentReference depthAttachmentRef{};
+    depthAttachmentRef.attachment = 1;
+    depthAttachmentRef.layout
+        = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    // set up subpass
 
     VkSubpassDescription subpass{};
     subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
     subpass.colorAttachmentCount = 1;
     subpass.pColorAttachments = &colorAttachmentRef;
+    subpass.pDepthStencilAttachment = &depthAttachmentRef;
 
     // dependency to make sure that the render pass waits for the image to be
     // available before drawing
     VkSubpassDependency dependency{};
     dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
     dependency.dstSubpass = 0;
-    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
+                              | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
     dependency.srcAccessMask = 0;
-    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
+                              | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT
+                               | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+
+    std::array<VkAttachmentDescription, 2> attachments
+        = {colorAttachment, depthAttachment};
 
     VkRenderPassCreateInfo renderPassInfo{};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    renderPassInfo.attachmentCount = 1;
-    renderPassInfo.pAttachments = &colorAttachment;
+    renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+    renderPassInfo.pAttachments = attachments.data();
     renderPassInfo.subpassCount = 1;
     renderPassInfo.pSubpasses = &subpass;
     renderPassInfo.dependencyCount = 1;
     renderPassInfo.pDependencies = &dependency;
 
     if (vkCreateRenderPass(
-            device->logicalDevice, &renderPassInfo, nullptr, &this->_renderPass
+            _device->logicalDevice, &renderPassInfo, nullptr, &this->_renderPass
         )
         != VK_SUCCESS) {
         FATAL("Failed to create render pass!");
     }
-    DEBUG("Phong render pass successfully created");
 }
 
 void PhongRenderSystem::createGraphicsPipeline() {
@@ -650,6 +669,7 @@ PhongMeshInstanceComponent* PhongRenderSystem::MakePhongMeshInstanceComponent(
         auto it = _textureDescriptorIndices.find(texturePath);
         if (it == _textureDescriptorIndices.end()) {
             // load texture into textures[textureOffset]
+            DEBUG("loading texture into {}", _textureDescriptorInfoIdx);
             _textureManager->GetDescriptorImageInfo(
                 texturePath, _textureDescriptorInfo[_textureDescriptorInfoIdx]
             );
@@ -726,6 +746,7 @@ void PhongRenderSystem::resizeDynamicUbo(
 }
 
 void PhongRenderSystem::updateTextureDescriptorSet() {
+    DEBUG("updating texture descirptor set");
     for (size_t i = 0; i < NUM_INTERMEDIATE_FRAMES; i++) {
         std::array<VkWriteDescriptorSet, 1> descriptorWrites{};
         descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -734,8 +755,10 @@ void PhongRenderSystem::updateTextureDescriptorSet() {
         descriptorWrites[0].dstArrayElement = 0;
         descriptorWrites[0].descriptorType
             = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        descriptorWrites[0].descriptorCount = _textureDescriptorInfo.size();
+        descriptorWrites[0].descriptorCount = _textureDescriptorInfoIdx; // descriptors are 0-indexed, +1 for the # of valid samplers
         descriptorWrites[0].pImageInfo = _textureDescriptorInfo.data();
+
+        DEBUG("descriptor cont: {}", descriptorWrites[0].descriptorCount);
 
         vkUpdateDescriptorSets(
             _device->logicalDevice,

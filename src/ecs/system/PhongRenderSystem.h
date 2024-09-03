@@ -63,15 +63,13 @@ class PhongRenderSystem : public ISystem
         VQBuffer dynamicUBO;
     };
 
-    size_t _numDynamicUBO; // how many dynamic UBOs do we have
+    size_t _numDynamicUBO;  // how many dynamic UBOs do we have
     size_t _currDynamicUBO; // dynamic ubo that is to be allocated
 
     int getDynamicUBOAlignmentSize();
     std::array<VkDescriptorSet, NUM_INTERMEDIATE_FRAMES> _descriptorSets;
     std::array<UBO, NUM_INTERMEDIATE_FRAMES> _UBO;
-    void resizeDynamicUbo(
-        size_t dynamicUboCount
-    );
+    void resizeDynamicUbo(size_t dynamicUboCount);
 
     VQDevice* _device = nullptr;
 
@@ -93,7 +91,9 @@ class PhongRenderSystem : public ISystem
     std::array<VkDescriptorImageInfo, TEXTURE_ARRAY_SIZE>
         _textureDescriptorInfo;
     size_t _textureDescriptorInfoIdx
-        = 0; // idx to the current texture descriptor that can be written in
+        = 0; // idx to the current texture descriptor that can be written in,
+             // also represents the total # of valid texture descriptors,
+             // starting from the beginning of the _textureDescriptorInfo array
     std::unordered_map<std::string, int>
         _textureDescriptorIndices; // texture name, index into the texture
                                    // descriptor array
@@ -108,5 +108,4 @@ class PhongRenderSystem : public ISystem
         UBO_DYNAMIC = 1,
         TEXTURE_SAMPLER = 2
     };
-
 };

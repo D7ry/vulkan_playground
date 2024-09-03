@@ -29,7 +29,7 @@ void TextureManager::GetDescriptorImageInfo(const std::string& texturePath, VkDe
     __TextureInternal& texture = _textures.at(texturePath);
     imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     imageInfo.imageView = texture.textureImageView;
-    imageInfo.sampler = VK_NULL_HANDLE;
+    imageInfo.sampler = texture.textureSampler;
 }
 
 void TextureManager::LoadTexture(const std::string& texturePath) {

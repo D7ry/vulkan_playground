@@ -83,11 +83,11 @@ class VulkanEngine
         if (ImGui::Begin("Render Manager")) {
             TempUtils::DrawMeshTextureSelector();
             if (ImGui::Button("add mesh")) {
-                MeshInstance* mesh = _meshRenderManager->CreateMeshInstance(
-                    TempUtils::meshPathBuf, TempUtils::texturePathBuf
-                );
+                // MeshInstance* mesh = _meshRenderManager->CreateMeshInstance(
+                //     TempUtils::meshPathBuf, TempUtils::texturePathBuf
+                // );
             }
-            _meshRenderManager->DrawImgui();
+            //_meshRenderManager->DrawImgui();
         }
         ImGui::End();
     }
