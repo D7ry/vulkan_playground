@@ -1,8 +1,8 @@
 [submodule "extern/spdlog"]
 	path = extern/spdlog
 	url = https://github.com/gabime/spdlog
-[submodule "extern/imgui/imgui"]
-	path = extern/imgui/imgui
+[submodule "extern/imgui"]
+	path = extern/imgui
 	url = https://github.com/ocornut/imgui
 [submodule "extern/glfw"]
 	path = extern/glfw

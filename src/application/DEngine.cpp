@@ -9,7 +9,6 @@ void DEngine::Init() {
         _vulkanEngine->Init(_window);
         _vulkanEngine->SetImguiRenderCallback([this]() { this->renderImgui(); }
         );
-        _vulkanEngine->Prepare();
     }
     { // input manager
         this->_inputManager = std::make_unique<InputManager>();

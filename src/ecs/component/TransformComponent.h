@@ -3,9 +3,8 @@
 #include "glm/ext/matrix_transform.hpp"
 #include "glm/glm.hpp"
 
-class TransformComponent : public IComponent
+struct TransformComponent : public IComponent
 {
-  public:
     glm::vec3 position = glm::vec3(0.f);
     glm::vec3 rotation = glm::vec3(0.f); // yaw pitch roll
     glm::vec3 scale = glm::vec3(1.f);    // x y z

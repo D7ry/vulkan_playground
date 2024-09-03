@@ -57,6 +57,7 @@ add_executable(vulkan_playground
         src/components/rendering/VulkanEngine.cpp
         src/application/DEngine.cpp
         src/ecs/system/PhongRenderSystem.cpp
+        src/ecs/system/EntityViewerSystem.cpp
 )
 
 target_sources(${PROJECT_NAME} 

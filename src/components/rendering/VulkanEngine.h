@@ -1,4 +1,5 @@
 #pragma once
+#include "ecs/system/EntityViewerSystem.h"
 #include <cstdint>
 #include <glm/detail/qualifier.hpp>
 #include <imgui_internal.h>
@@ -74,23 +75,11 @@ class VulkanEngine
      * bindings.
      */
     void Init(GLFWwindow* window);
-    void Prepare();
     void Tick(TickData* tickData);
     void Cleanup();
     void AddMesh(MeshInstance* renderer);
 
-    void DrawImgui() {
-        if (ImGui::Begin("Render Manager")) {
-            TempUtils::DrawMeshTextureSelector();
-            if (ImGui::Button("add mesh")) {
-                // MeshInstance* mesh = _meshRenderManager->CreateMeshInstance(
-                //     TempUtils::meshPathBuf, TempUtils::texturePathBuf
-                // );
-            }
-            //_meshRenderManager->DrawImgui();
-        }
-        ImGui::End();
-    }
+    void DrawImgui();
 
     void SetImguiRenderCallback(std::function<void()> imguiFunction);
 
@@ -268,7 +257,6 @@ class VulkanEngine
     std::shared_ptr<VQDevice> _device;
 
     glm::mat4 _viewMatrix;
-    glm::mat4 _perspectiveMatrix;
     bool viewMode = false;
 
     std::function<void()> _imguiRenderCallback;
@@ -279,6 +267,7 @@ class VulkanEngine
 
     
     PhongRenderSystem* _phongSystem;
+    EntityViewerSystem* _entityViewerSystem;
 
     // temporary hacks
   public:

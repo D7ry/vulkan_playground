@@ -9,8 +9,8 @@
 #include "components/TextureManager.h"
 
 #include "PhongRenderSystem.h"
-#include "ecs/component/ModelComponent.h"
 #include "ecs/component/TransformComponent.h"
+
 
 void PhongRenderSystem::Init(const InitData* initData) {
     _device = initData->device;
@@ -22,23 +22,10 @@ void PhongRenderSystem::Init(const InitData* initData) {
 }
 
 void PhongRenderSystem::Tick(const TickData* tickData) {
-    VkCommandBuffer CB = tickData->currentCB;
-    VkFramebuffer FB = tickData->currentFB;
-    VkExtent2D FBExt = tickData->currentFBextend;
-    int frameIdx = tickData->currentFrameInFlight;
-
-    { // begin CB
-        VkCommandBufferBeginInfo beginInfo{};
-        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        beginInfo.flags = 0;                  // Optional
-        beginInfo.pInheritanceInfo = nullptr; // Optional
-        if (vkBeginCommandBuffer(
-                CB, &beginInfo
-            )
-            != VK_SUCCESS) {
-            FATAL("Failed to begin recording command buffer!");
-        }
-    }
+    VkCommandBuffer CB = tickData->graphics.currentCB;
+    VkFramebuffer FB = tickData->graphics.currentFB;
+    VkExtent2D FBExt = tickData->graphics.currentFBextend;
+    int frameIdx = tickData->graphics.currentFrameInFlight;
 
     vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipeline);
 
@@ -82,7 +69,7 @@ void PhongRenderSystem::Tick(const TickData* tickData) {
     { // update static ubo with model view matrix
         PhongUBOStatic ubo{
             tickData->mainCamera->GetViewMatrix(), // view mat
-            tickData->mainProjectionMatrix         // proj mat
+            tickData->graphics.mainProjectionMatrix         // proj mat
         };
 
         memcpy(_UBO[frameIdx].staticUBO.bufferAddress, &ubo, sizeof(ubo));
@@ -111,15 +98,15 @@ void PhongRenderSystem::Tick(const TickData* tickData) {
                 _pipelineLayout,
                 0,
                 1,
-                &_descriptorSets[tickData->currentFrameInFlight],
+                &_descriptorSets[tickData->graphics.currentFrameInFlight],
                 1,
                 &dynamicUBOOffset
             );
         }
 
         { // update dynamic UBO
-            // TODO: implement copy in resizeDynamicUbo() so that
-            // only need to update dynamic UBO on data change
+            // TODO: may be a little expensive to do; given dynamic ubo only needs 
+            // to be updated when relevant data structures of the instance changes
             void* dynamicUBOAddr = reinterpret_cast<void*>(
                 reinterpret_cast<uintptr_t>(
                     _UBO[frameIdx].dynamicUBO.bufferAddress
@@ -149,14 +136,9 @@ void PhongRenderSystem::Tick(const TickData* tickData) {
     }
 
     vkCmdEndRenderPass(CB); // end phong render pass
-
-    { // end CB
-        if (vkEndCommandBuffer(CB) != VK_SUCCESS) {
-            FATAL("Failed to record command buffer!");
-        }
-    }
 }
 
+// TODO: currently PhongRenderSystem uses main swap chain
 void PhongRenderSystem::createRenderPass(
     VQDevice* device,
     VkFormat swapChainImageFormat

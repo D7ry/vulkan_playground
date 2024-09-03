@@ -2,24 +2,28 @@
 #include <map>
 #include <vulkan/vulkan_core.h>
 
+#include "lib/VQBuffer.h"
+
 #include "ecs/System.h"
-#include "ecs/component/ModelComponent.h"
 #include "ecs/component/PhongMeshInstanceComponent.h"
 #include "ecs/component/TransformComponent.h"
 #include "structs/UniformBuffer.h"
 
+// a blinn-phong mesh that lives on GPU
 struct PhongMesh
 {
     VQBuffer vertexBuffer;
     VQBufferIndex indexBuffer;
 };
 
+// static UBO of phong render, we use the same UBO for all mesh instances
 struct PhongUBOStatic
 {
     glm::mat4 view;
     glm::mat4 proj;
 };
 
+// dynamic UBO of phong render, every mesh instance has its own dynamic UBO
 struct PhongUBODynamic
 {
     glm::mat4 model;

@@ -12,7 +12,6 @@
 #include <cstddef>
 #define GLFW_INCLUDE_VULKAN
 #include "MeshInstance.h"
-#include "MeshRenderManager.h"
 #include <GLFW/glfw3.h>
 #include <vulkan/vk_enum_string_helper.h>
 #include <vulkan/vulkan_core.h>
@@ -27,10 +26,10 @@ void VulkanEngine::Init(GLFWwindow* window) {
     this->initVulkan();
     TextureManager::GetSingleton()->Init(_device
     ); // pass device to texture manager for it to start loading
-    // this->_meshRenderManager = std::make_unique<MeshRenderManager>();
     this->_deletionStack.push([this]() {
         TextureManager::GetSingleton()->Cleanup();
     });
+    this->_entityViewerSystem = new EntityViewerSystem();
     this->_phongSystem = new PhongRenderSystem();
     InitData initData;
     initData.device = this->_device.get();
@@ -51,6 +50,7 @@ void VulkanEngine::Init(GLFWwindow* window) {
 
         thing->AddComponent(transform);
         _phongSystem->AddEntity(thing);
+        _entityViewerSystem->AddEntity(thing);
     }
     { // make another entity
         Entity* thing = new Entity("thing2");
@@ -64,10 +64,8 @@ void VulkanEngine::Init(GLFWwindow* window) {
         transform->position.y += 2;
         thing->AddComponent(transform);
         _phongSystem->AddEntity(thing);
+        _entityViewerSystem->AddEntity(thing);
     }
-    // this->_deletionStack.push([this]() { this->_meshRenderManager->Cleanup();
-    // }
-    //);
 }
 
 #define CAMERA_SPEED 3
@@ -853,17 +851,6 @@ void VulkanEngine::recordCommandBuffer(
     uint32_t imageIndex,
     TickData* tickData
 ) { // called every frame
-    VkCommandBufferBeginInfo beginInfo{};
-    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    beginInfo.flags = 0;                  // Optional
-    beginInfo.pInheritanceInfo = nullptr; // Optional
-
-    if (vkBeginCommandBuffer(
-            this->_device->graphicsCommandBuffers[_currentFrame], &beginInfo
-        )
-        != VK_SUCCESS) {
-        FATAL("Failed to begin recording command buffer!");
-    }
 
     // start render pass
     {
@@ -902,14 +889,9 @@ void VulkanEngine::recordCommandBuffer(
         scissor.extent = _swapChainExtent;
         vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-        //_meshRenderManager->RecordRenderCommands(commandBuffer,
-        //_currentFrame);
         vkCmdEndRenderPass(commandBuffer);
     }
 
-    if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
-        FATAL("Failed to record command buffer!");
-    }
 }
 
 void VulkanEngine::createDepthBuffer() {
@@ -981,43 +963,45 @@ void VulkanEngine::drawFrame(TickData* tickData) {
         this->_device->graphicsCommandBuffers[this->_currentFrame], 0
     );
 
-    // populate tickData
-    // TODO: clean up this hack
+    // populate graphics data before ticking graphics systems
 
-    tickData->currentFrameInFlight = _currentFrame;
-    tickData->currentCB
+    auto CB = this->_device->graphicsCommandBuffers[this->_currentFrame];
+
+    { // begin command buffer
+        VkCommandBufferBeginInfo beginInfo{};
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        beginInfo.flags = 0;                  // Optional
+        beginInfo.pInheritanceInfo = nullptr; // Optional
+
+        if (vkBeginCommandBuffer(CB, &beginInfo) != VK_SUCCESS) {
+            FATAL("Failed to begin recording command buffer!");
+        }
+    }
+
+    tickData->graphics.currentFrameInFlight = _currentFrame;
+    tickData->graphics.currentCB
         = this->_device->graphicsCommandBuffers[this->_currentFrame];
-    tickData->currentFB = this->_swapChainFrameBuffers[imageIndex];
-    tickData->currentFBextend = this->_swapChainExtent;
-    tickData->mainProjectionMatrix = this->_perspectiveMatrix;
-    tickData->mainProjectionMatrix = glm::perspective(
+    tickData->graphics.currentFB = this->_swapChainFrameBuffers[imageIndex];
+    tickData->graphics.currentFBextend = this->_swapChainExtent;
+    tickData->graphics.mainProjectionMatrix = glm::perspective(
         glm::radians(90.f),
         _swapChainExtent.width / (float)_swapChainExtent.height,
         0.1f,
         100.f
     );
-    tickData->mainProjectionMatrix[1][1] *= -1; // invert y axis because vulkan
+    tickData->graphics.mainProjectionMatrix[1][1]
+        *= -1; // invert y axis because vulkan
 
     this->_phongSystem->Tick(tickData);
-    // this->recordCommandBuffer(
-    //     this->_device->graphicsCommandBuffers[this->_currentFrame],
-    //     imageIndex, tickData
-    // );
     _imguiManager.RecordCommandBuffer(
         this->_currentFrame, imageIndex, _swapChainExtent
     );
-    //_phongSystem->Tick(tickData);
 
-    // _meshRenderManager->UpdateUniformBuffers(
-    //     _currentFrame,
-    //     _viewMatrix,
-    //     glm::perspective(
-    //         glm::radians(90.f),
-    //         _swapChainExtent.width / (float)_swapChainExtent.height,
-    //         0.1f,
-    //         100.f
-    //     )
-    // );
+    { // end command buffer
+        if (vkEndCommandBuffer(CB) != VK_SUCCESS) {
+            FATAL("Failed to record command buffer!");
+        }
+    }
 
     //  Submit the recorded command buffer
     VkSubmitInfo submitInfo{};
@@ -1091,13 +1075,23 @@ void VulkanEngine::SetImguiRenderCallback(std::function<void()> imguiFunction) {
     this->_imguiManager.BindRenderCallback(imguiFunction);
 }
 
-void VulkanEngine::Prepare() {
-    // this->_meshRenderManager->PrepareRendering(
-    //     NUM_INTERMEDIATE_FRAMES, _renderPass, _device
-    // );
-}
-
 void VulkanEngine::initSwapChain() {
     createSwapChain();
     this->_deletionStack.push([this]() { this->cleanupSwapChain(); });
+}
+
+void VulkanEngine::DrawImgui() {
+    if (ImGui::Begin("Vulkan Engine")) {
+        ImGui::Text("Hello Vulkan!");
+
+        // TempUtils::DrawMeshTextureSelector();
+        // if (ImGui::Button("add mesh")) {
+        //     // MeshInstance* mesh = _meshRenderManager->CreateMeshInstance(
+        //     //     TempUtils::meshPathBuf, TempUtils::texturePathBuf
+        //     // );
+        // }
+        // //_meshRenderManager->DrawImgui();
+    }
+    ImGui::End();
+    _entityViewerSystem->DrawImGui();
 }
