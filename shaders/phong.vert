@@ -36,4 +36,6 @@ void main() {
 
     fragPos = vec3(model * vec4(inPosition, 1.0)); // Transform the vertex position to world space
     fragGlobalLightPos = globalLightPos; // Pass the light position in world space to the fragment shader
+
+    fragTexIndex = uboDynamic.textureId; // tell frag shader which texture from the texture array to sample from
 }
