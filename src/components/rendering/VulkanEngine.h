@@ -23,6 +23,8 @@
 
 #include "lib/DeletionStack.h"
 
+#include "ecs/system/PhongRenderSystem.h"
+
 class TickData;
 /**
  * @brief Todo: migrate everything inside
@@ -73,7 +75,7 @@ class VulkanEngine
      */
     void Init(GLFWwindow* window);
     void Prepare();
-    void Tick(const TickData* tickData);
+    void Tick(TickData* tickData);
     void Cleanup();
     void AddMesh(MeshInstance* renderer);
 
@@ -161,7 +163,8 @@ class VulkanEngine
 
     void recordCommandBuffer(
         VkCommandBuffer commandBuffer,
-        uint32_t imageIndex
+        uint32_t imageIndex,
+        TickData* tickData
     );
     void renderImGui();
     void updateUniformBufferData(uint32_t frameIndex);
@@ -174,7 +177,7 @@ class VulkanEngine
      */
     void initVulkan();
 
-    virtual void drawFrame();
+    virtual void drawFrame(TickData* tickData);
 
     virtual void postCleanup() {};
 
@@ -273,4 +276,12 @@ class VulkanEngine
     std::unique_ptr<MeshRenderManager> _meshRenderManager;
 
     DeletionStack _deletionStack;
+
+    
+    PhongRenderSystem* _phongSystem;
+
+    // temporary hacks
+  public:
+    Camera* mainCamera;
+
 };

@@ -27,20 +27,33 @@ void VulkanEngine::Init(GLFWwindow* window) {
     this->initVulkan();
     TextureManager::GetSingleton()->Init(_device
     ); // pass device to texture manager for it to start loading
-    this->_meshRenderManager = std::make_unique<MeshRenderManager>();
+    //this->_meshRenderManager = std::make_unique<MeshRenderManager>();
     this->_deletionStack.push([this]() {
         TextureManager::GetSingleton()->Cleanup();
     });
-    this->_deletionStack.push([this]() { this->_meshRenderManager->Cleanup(); }
-    );
+    this->_phongSystem = new PhongRenderSystem();
+    InitData initData;
+    initData.device = this->_device.get();
+    initData.textureManager = TextureManager::GetSingleton(); // TODO: get rid of singleton pattern
+    initData.swapChainImageFormat = this->_swapChainImageFormat;
+    _phongSystem->Init(&initData);
+
+    // make entity
+    Entity* thing = new Entity("thing");
+    auto phongMeshComponent = _phongSystem->MakePhongMeshInstanceComponent("../resources/spot.obj", "../resources/spot.png");
+    thing->AddComponent(phongMeshComponent);
+
+    _phongSystem->AddEntity(thing);
+    //this->_deletionStack.push([this]() { this->_meshRenderManager->Cleanup(); }
+    //);
 }
 
 #define CAMERA_SPEED 3
 
-void VulkanEngine::Tick(const TickData* tickData) {
+void VulkanEngine::Tick(TickData* tickData) {
     this->_viewMatrix = tickData->mainCamera->GetViewMatrix();
     _imguiManager.RenderFrame();
-    drawFrame();
+    drawFrame(tickData);
     vkDeviceWaitIdle(this->_device->logicalDevice);
 }
 
@@ -815,7 +828,8 @@ void VulkanEngine::createFramebuffers() {
 
 void VulkanEngine::recordCommandBuffer(
     VkCommandBuffer commandBuffer,
-    uint32_t imageIndex
+    uint32_t imageIndex,
+    TickData* tickData
 ) { // called every frame
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -830,42 +844,45 @@ void VulkanEngine::recordCommandBuffer(
     }
 
     // start render pass
-    VkRenderPassBeginInfo renderPassInfo{};
-    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    renderPassInfo.renderPass = this->_renderPass;
-    renderPassInfo.framebuffer = this->_swapChainFrameBuffers[imageIndex];
+    {
+        VkRenderPassBeginInfo renderPassInfo{};
+        renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        renderPassInfo.renderPass = this->_renderPass;
+        renderPassInfo.framebuffer = this->_swapChainFrameBuffers[imageIndex];
 
-    renderPassInfo.renderArea.offset = {0, 0};
-    renderPassInfo.renderArea.extent = this->_swapChainExtent;
+        renderPassInfo.renderArea.offset = {0, 0};
+        renderPassInfo.renderArea.extent = this->_swapChainExtent;
 
-    std::array<VkClearValue, 2> clearValues{};
-    clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
-    clearValues[1].depthStencil = {1.0f, 0};
+        std::array<VkClearValue, 2> clearValues{};
+        clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
+        clearValues[1].depthStencil = {1.0f, 0};
 
-    renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
-    renderPassInfo.pClearValues = clearValues.data();
+        renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+        renderPassInfo.pClearValues = clearValues.data();
 
-    vkCmdBeginRenderPass(
-        commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE
-    );
+        vkCmdBeginRenderPass(
+            commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE
+        );
 
-    // TODO: this doesn't need to update every frame
-    VkViewport viewport{};
-    viewport.x = 0.0f;
-    viewport.y = 0.0f;
-    viewport.width = static_cast<float>(_swapChainExtent.width);
-    viewport.height = static_cast<float>(_swapChainExtent.height);
-    viewport.minDepth = 0.0f;
-    viewport.maxDepth = 1.0f;
-    vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+        // TODO: this doesn't need to update every frame
+        VkViewport viewport{};
+        viewport.x = 0.0f;
+        viewport.y = 0.0f;
+        viewport.width = static_cast<float>(_swapChainExtent.width);
+        viewport.height = static_cast<float>(_swapChainExtent.height);
+        viewport.minDepth = 0.0f;
+        viewport.maxDepth = 1.0f;
+        vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 
-    VkRect2D scissor{};
-    scissor.offset = {0, 0};
-    scissor.extent = _swapChainExtent;
-    vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+        VkRect2D scissor{};
+        scissor.offset = {0, 0};
+        scissor.extent = _swapChainExtent;
+        vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-    _meshRenderManager->RecordRenderCommands(commandBuffer, _currentFrame);
-    vkCmdEndRenderPass(commandBuffer);
+        //_meshRenderManager->RecordRenderCommands(commandBuffer, _currentFrame);
+        vkCmdEndRenderPass(commandBuffer);
+    }
+
 
     if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
         FATAL("Failed to record command buffer!");
@@ -902,7 +919,7 @@ void VulkanEngine::createDepthBuffer() {
     );
 }
 
-void VulkanEngine::drawFrame() {
+void VulkanEngine::drawFrame(TickData* tickData) {
     //  Wait for the previous frame to finish
     vkWaitForFences(
         _device->logicalDevice,
@@ -940,23 +957,36 @@ void VulkanEngine::drawFrame() {
     vkResetCommandBuffer(
         this->_device->graphicsCommandBuffers[this->_currentFrame], 0
     );
+
+    // populate tickData 
+    // TODO: clean up this hack
+    
+    tickData->currentFrameInFlight = _currentFrame;
+    tickData->currentCB = this->_device->graphicsCommandBuffers[this->_currentFrame];
+    tickData->currentFB = this->_swapChainFrameBuffers[imageIndex];
+    tickData->currentFBextend = this->_swapChainExtent;
+    tickData->mainProjectionMatrix = this->_perspectiveMatrix;
+    
+
+    this->_phongSystem->Tick(tickData);
     this->recordCommandBuffer(
-        this->_device->graphicsCommandBuffers[this->_currentFrame], imageIndex
+        this->_device->graphicsCommandBuffers[this->_currentFrame], imageIndex, tickData
     );
     _imguiManager.RecordCommandBuffer(
         this->_currentFrame, imageIndex, _swapChainExtent
     );
+    _phongSystem->Tick(tickData);
 
-    _meshRenderManager->UpdateUniformBuffers(
-        _currentFrame,
-        _viewMatrix,
-        glm::perspective(
-            glm::radians(90.f),
-            _swapChainExtent.width / (float)_swapChainExtent.height,
-            0.1f,
-            100.f
-        )
-    );
+    // _meshRenderManager->UpdateUniformBuffers(
+    //     _currentFrame,
+    //     _viewMatrix,
+    //     glm::perspective(
+    //         glm::radians(90.f),
+    //         _swapChainExtent.width / (float)_swapChainExtent.height,
+    //         0.1f,
+    //         100.f
+    //     )
+    // );
 
     //  Submit the recorded command buffer
     VkSubmitInfo submitInfo{};
@@ -1031,9 +1061,9 @@ void VulkanEngine::SetImguiRenderCallback(std::function<void()> imguiFunction) {
 }
 
 void VulkanEngine::Prepare() {
-    this->_meshRenderManager->PrepareRendering(
-        NUM_INTERMEDIATE_FRAMES, _renderPass, _device
-    );
+    // this->_meshRenderManager->PrepareRendering(
+    //     NUM_INTERMEDIATE_FRAMES, _renderPass, _device
+    // );
 }
 
 void VulkanEngine::initSwapChain() {

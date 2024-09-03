@@ -16,10 +16,15 @@ class Entity
     Entity(const std::string& name) { this->_name = name; }
 
     template <typename T, typename... Args>
-    void AddComponent(Args&&... args) {
+    void CreateComponent(Args&&... args) {
         _components.emplace(
             std::type_index(typeid(T)), new T(std::forward<Args>(args)...)
         );
+    }
+
+    template <typename T>
+    void AddComponent(T* component) {
+        _components[std::type_index(typeid(T))] = component;
     }
 
     // get a component of type `T` of the entity.

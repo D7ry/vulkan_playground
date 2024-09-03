@@ -8,13 +8,11 @@
 #include "ecs/component/TransformComponent.h"
 #include "structs/UniformBuffer.h"
 
-#define TEXTURE_ARRAY_SIZE 8
 struct PhongMesh
 {
     VQBuffer vertexBuffer;
     VQBufferIndex indexBuffer;
 };
-
 
 struct PhongUBOStatic
 {
@@ -39,7 +37,11 @@ class PhongRenderSystem : public ISystem
 
     virtual void Init(const InitData* initData) override;
     virtual void Tick(const TickData* tickData) override;
-    virtual void Cleanup() override;
+
+    virtual void Cleanup() override {
+        // TODO: implement this
+        FATAL("Cleanup method not implemented");
+    }
 
   private:
     const char* VERTEX_SHADER_SRC = "../shaders/vert_test.vert.spv";
@@ -61,11 +63,14 @@ class PhongRenderSystem : public ISystem
         VQBuffer dynamicUBO;
     };
 
+    size_t _numDynamicUBO; // how many dynamic UBOs do we have
+    size_t _currDynamicUBO; // dynamic ubo that is to be allocated
+
+    int getDynamicUBOAlignmentSize();
     std::array<VkDescriptorSet, NUM_INTERMEDIATE_FRAMES> _descriptorSets;
     std::array<UBO, NUM_INTERMEDIATE_FRAMES> _UBO;
     void resizeDynamicUbo(
-        size_t dynamicUboCount,
-        size_t dynamicUboSize = sizeof(PhongUBODynamic)
+        size_t dynamicUboCount
     );
 
     VQDevice* _device = nullptr;
@@ -73,6 +78,8 @@ class PhongRenderSystem : public ISystem
     void createRenderPass(VQDevice* device, VkFormat swapChainImageFormat);
 
     // initialize resources for graphics pipeline,
+    // - shaders
+    // - descriptors(pool, layout, sets)
     // and the pipeline itself
     void createGraphicsPipeline();
 
@@ -80,8 +87,26 @@ class PhongRenderSystem : public ISystem
 
     TextureManager* _textureManager;
 
-    // a huge array of texture descriptors that gets filled up as textures are loaded in
-    std::array<VkDescriptorImageInfo, TEXTURE_ARRAY_SIZE> _textureDescriptorInfo;
-    size_t _textureDescriptorInfoIdx = 0; // idx to the current texture descriptor that can be written in
-    std::unordered_map<std::string, int> _textureDescriptorIndices; // texture name, index into the texture descriptor array
+    // an array of texture descriptors that gets filled up as textures are
+    // loaded in
+    // TODO: adaptively unload textures?
+    std::array<VkDescriptorImageInfo, TEXTURE_ARRAY_SIZE>
+        _textureDescriptorInfo;
+    size_t _textureDescriptorInfoIdx
+        = 0; // idx to the current texture descriptor that can be written in
+    std::unordered_map<std::string, int>
+        _textureDescriptorIndices; // texture name, index into the texture
+                                   // descriptor array
+                                   //
+    void updateTextureDescriptorSet(
+    ); // flush the `_textureDescriptorInfo` into device, updating the
+       // descriptor set
+
+    enum class BindingLocation : unsigned int
+    {
+        UBO_STATIC = 0,
+        UBO_DYNAMIC = 1,
+        TEXTURE_SAMPLER = 2
+    };
+
 };

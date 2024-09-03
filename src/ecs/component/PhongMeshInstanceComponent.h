@@ -7,5 +7,5 @@ struct PhongMeshInstanceComponent : IComponent
 {
     PhongMesh* mesh;
     size_t dynamicUBOId; // id, id * sizeof(dynamicUBO) = offset of its own dynamic UBO
-    int textureOffset;
+    int textureOffset; // index into the texture array
 };
