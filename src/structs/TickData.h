@@ -1,4 +1,5 @@
 #pragma once
+#include "glm/glm.hpp"
 #include <vulkan/vulkan_core.h>
 
 class Camera;
@@ -17,6 +18,7 @@ struct TickData
     VkCommandBuffer currentCB; // a active command buffer.
                                // vkBeginCommandBuffer should've been called on it
     VkExtent2D currentFBextend;
+    glm::mat4 mainProjectionMatrix;
 };
 
 class VQDevice;

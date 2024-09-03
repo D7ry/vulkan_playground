@@ -3,6 +3,8 @@
 #include "lib/VQUtils.h"
 #include "structs/Vertex.h"
 
+#include "components/Camera.h"
+
 #include "PhongRenderSystem.h"
 #include "ecs/component/ModelComponent.h"
 #include "ecs/component/TransformComponent.h"
@@ -17,6 +19,9 @@ void PhongRenderSystem::Tick(const TickData* tickData) {
     VkCommandBuffer CB = tickData->currentCB;
     VkFramebuffer FB = tickData->currentFB;
     VkExtent2D FBExt = tickData->currentFBextend;
+    int frameIdx = tickData->currentFrameInFlight;
+
+    vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipeline);
 
     { // begin phong render pass
         VkRenderPassBeginInfo renderPassInfo{};
@@ -39,7 +44,7 @@ void PhongRenderSystem::Tick(const TickData* tickData) {
     }
 
     { // set viewport and scissor
-      // TODO: don't need to do this in the render system?
+        // TODO: don't need to do this in the render system?
         VkViewport viewport{};
         viewport.x = 0.0f;
         viewport.y = 0.0f;
@@ -55,18 +60,69 @@ void PhongRenderSystem::Tick(const TickData* tickData) {
         vkCmdSetScissor(CB, 0, 1, &scissor);
     }
 
-    // update static ubo with model view matrix
+    { // update static ubo with model view matrix
+        PhongUBOStatic ubo{
+            tickData->mainCamera->GetViewMatrix(), // view mat
+            tickData->mainProjectionMatrix         // proj mat
+        };
+
+        memcpy(_UBO[frameIdx].staticUBO.bufferAddress, &ubo, sizeof(ubo));
+    }
 
     // loop through entities and render them
     for (Entity* entity : this->_entities) {
-        ModelComponent* model = entity->GetComponent<ModelComponent>();
+        PhongMeshInstanceComponent* meshInstance
+            = entity->GetComponent<PhongMeshInstanceComponent>();
         TransformComponent* transform
             = entity->GetComponent<TransformComponent>();
-        ASSERT(model != nullptr)
+        ASSERT(meshInstance != nullptr)
         ASSERT(transform != nullptr)
         // actual render logic
 
-        // update dynamic ubo with transform matrix
+        { // bind vertex & index buffer
+            VkDeviceSize offsets[] = {0};
+
+            VkBuffer vertexBuffers[]
+                = {meshInstance->mesh->vertexBuffer.buffer};
+            VkBuffer indexBufffer = meshInstance->mesh->indexBuffer.buffer;
+            vkCmdBindVertexBuffers(CB, 0, 1, vertexBuffers, offsets);
+            vkCmdBindIndexBuffer(CB, indexBufffer, 0, VK_INDEX_TYPE_UINT32);
+        }
+
+        uint32_t dynamicUBOOffset
+            = meshInstance->dynamicUBOId * sizeof(PhongUBODynamic);
+        { // bind descriptor set to the correct dynamic ubo
+            // note that we use the same descriptor set for all phong meshes
+            // need to rebind because offset to dynamic UBO is different
+            vkCmdBindDescriptorSets(
+                CB,
+                VK_PIPELINE_BIND_POINT_GRAPHICS,
+                _pipelineLayout,
+                0,
+                1,
+                &_descriptorSets[tickData->currentFrameInFlight],
+                1,
+                &dynamicUBOOffset
+            );
+        }
+
+        { // update dynamic UBO
+            // TODO: implement copy in resizeDynamicUbo() so that 
+            // only need to update dynamic UBO on data change
+            void* dynamicUBOAddr = reinterpret_cast<void*>(
+                reinterpret_cast<uintptr_t>(
+                    _UBO[frameIdx].dynamicUBO.bufferAddress
+                )
+                + dynamicUBOOffset
+            );
+            PhongUBODynamic dynamicUBO {
+                transform->GetModelMatrix(),
+                meshInstance->textureOffset
+            };
+            memcpy(dynamicUBOAddr, &dynamicUBO, sizeof(PhongUBODynamic));
+        }
+
+        // issue draw call
     }
 
     vkCmdEndRenderPass(CB); // end phong render pass
@@ -141,7 +197,7 @@ void PhongRenderSystem::createGraphicsPipeline() {
     VkDescriptorSetLayoutBinding uboStaticBinding{};
     VkDescriptorSetLayoutBinding uboDynamicBinding{};
     VkDescriptorSetLayoutBinding samplerLayoutBinding{};
-    { // UBO static -- vertex
+    {                                 // UBO static -- vertex
         uboStaticBinding.binding = 0; // binding = 0 in shader
         uboStaticBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         uboStaticBinding.descriptorCount = 1; // number of values in the array
@@ -242,20 +298,58 @@ void PhongRenderSystem::createGraphicsPipeline() {
         }
     }
 
-    /////  ---------- static UBO ---------- /////
+    /////  ---------- UBO ---------- /////
+
+    // allocate for static ubo, this only needs to be done once
     for (auto& UBO : this->_UBO) {
         _device->CreateBufferInPlace(
-            sizeof(UniformBuffer_Phong),
+            sizeof(PhongUBOStatic),
             VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
                 | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-            UBO
+            UBO.staticUBO
         );
     }
 
-    for (int i = 0; i < this->_UBO.size(); i++) {
+    // update descripto sets
+    for (size_t i = 0; i < NUM_INTERMEDIATE_FRAMES; i++) {
+        VkDescriptorBufferInfo descriptorBufferInfo_static{};
+        descriptorBufferInfo_static.buffer = this->_UBO[i].staticUBO.buffer;
+        descriptorBufferInfo_static.offset = 0;
+        descriptorBufferInfo_static.range = sizeof(PhongUBOStatic);
 
+        // FIXME: fix texture array
+        VkDescriptorImageInfo descriptorImageInfo{};
+        TextureManager::GetSingleton()->GetDescriptorImageInfo(
+            this->texturePath, descriptorImageInfo
+        );
 
+        std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
+
+        descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrites[0].dstSet = this->_descriptorSets[i];
+        descriptorWrites[0].dstBinding = 0;
+        descriptorWrites[0].dstArrayElement = 0;
+        descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        descriptorWrites[0].descriptorCount = 1;
+        descriptorWrites[0].pBufferInfo = &descriptorBufferInfo_static;
+
+        descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrites[1].dstSet = this->_descriptorSets[i];
+        descriptorWrites[1].dstBinding = 2;
+        descriptorWrites[1].dstArrayElement = 0;
+        descriptorWrites[1].descriptorType
+            = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        descriptorWrites[1].descriptorCount = 1;
+        descriptorWrites[1].pImageInfo = &descriptorImageInfo;
+
+        vkUpdateDescriptorSets(
+            _device->logicalDevice,
+            descriptorWrites.size(),
+            descriptorWrites.data(),
+            0,
+            nullptr
+        );
     }
 
     /////  ---------- shader ---------- /////
@@ -516,7 +610,9 @@ PhongMeshInstanceComponent* PhongRenderSystem::MakePhongMeshInstanceComponent(
     if (it == _meshes.end()) { // construct phong mesh
         PhongMesh newMesh;
         VQDevice& device = *_device;
-        VQUtils::meshToBuffer(meshPath.c_str(), device, newMesh.vertexBuffer, newMesh.indexBuffer);
+        VQUtils::meshToBuffer(
+            meshPath.c_str(), device, newMesh.vertexBuffer, newMesh.indexBuffer
+        );
         auto result = _meshes.insert({meshPath, newMesh});
         ASSERT(result.second)
         mesh = &(result.first->second);
@@ -525,10 +621,8 @@ PhongMeshInstanceComponent* PhongRenderSystem::MakePhongMeshInstanceComponent(
     }
 
     // load texture into textures[textureOffset]
-    
 
     // reserve a dynamic UBO for this instance
-
 
     // return new component
     PhongMeshInstanceComponent* ret = new PhongMeshInstanceComponent();
@@ -536,4 +630,44 @@ PhongMeshInstanceComponent* PhongRenderSystem::MakePhongMeshInstanceComponent(
     ret->dynamicUBOId = dynamicUBOId;
     ret->textureOffset = textureOffset;
     return ret;
+}
+
+void PhongRenderSystem::resizeDynamicUbo(
+    size_t dynamicUboCount,
+    size_t dynamicUboSize
+) {
+    for (int i = 0; i < NUM_INTERMEDIATE_FRAMES; i++) {
+        // reallocate dyamic ubo
+        this->_UBO[i].dynamicUBO.Cleanup();
+        this->_device->CreateBufferInPlace(
+            dynamicUboSize * dynamicUboCount,
+            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+                | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+            this->_UBO[i].dynamicUBO
+        );
+        // point descriptor to newly allocated buffer
+        VkDescriptorBufferInfo descriptorBufferInfo_dynamic{};
+        descriptorBufferInfo_dynamic.buffer = this->_UBO[i].dynamicUBO.buffer;
+        descriptorBufferInfo_dynamic.offset = 0;
+        descriptorBufferInfo_dynamic.range = dynamicUboSize;
+
+        std::array<VkWriteDescriptorSet, 1> descriptorWrites{};
+        descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrites[0].dstSet = this->_descriptorSets[i];
+        descriptorWrites[0].dstBinding = 1;
+        descriptorWrites[0].dstArrayElement = 0;
+        descriptorWrites[0].descriptorType
+            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+        descriptorWrites[0].descriptorCount = 1;
+        descriptorWrites[0].pBufferInfo = &descriptorBufferInfo_dynamic;
+
+        vkUpdateDescriptorSets(
+            _device->logicalDevice,
+            descriptorWrites.size(),
+            descriptorWrites.data(),
+            0,
+            nullptr
+        );
+    }
 }

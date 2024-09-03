@@ -13,6 +13,19 @@ struct PhongMesh
     VQBufferIndex indexBuffer;
 };
 
+
+struct PhongUBOStatic
+{
+    glm::mat4 view;
+    glm::mat4 proj;
+};
+
+struct PhongUBODynamic
+{
+    glm::mat4 model;
+    int textureOffset;
+};
+
 // self-contained system to render phong meshes
 class PhongRenderSystem : public ISystem
 {
@@ -40,8 +53,18 @@ class PhongRenderSystem : public ISystem
     VkDescriptorPool _descriptorPool
         = VK_NULL_HANDLE; // TODO: can we use a global descriptor pool?
 
+    struct UBO
+    {
+        VQBuffer staticUBO;
+        VQBuffer dynamicUBO;
+    };
+
     std::array<VkDescriptorSet, NUM_INTERMEDIATE_FRAMES> _descriptorSets;
-    std::array<VQBuffer, NUM_INTERMEDIATE_FRAMES> _UBO;
+    std::array<UBO, NUM_INTERMEDIATE_FRAMES> _UBO;
+    void resizeDynamicUbo(
+        size_t dynamicUboCount,
+        size_t dynamicUboSize = sizeof(PhongUBODynamic)
+    );
 
     VQDevice* _device = nullptr;
 
@@ -52,4 +75,5 @@ class PhongRenderSystem : public ISystem
     void createGraphicsPipeline();
 
     std::unordered_map<std::string, PhongMesh> _meshes;
+
 };
