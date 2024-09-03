@@ -41,9 +41,3 @@ struct VQBufferIndex : VQBuffer
     uint32_t numIndices; // how many indices are there?
     uint32_t indexSize;  // how large is one index?
 };
-
-struct VQBufferVertex
-{
-    VQBuffer vqBuffer;
-    std::vector<Vertex> vertices;
-};

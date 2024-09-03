@@ -17,6 +17,7 @@
 #include <vulkan/vk_enum_string_helper.h>
 #include <vulkan/vulkan_core.h>
 
+#include "components/Camera.h"
 #include "VulkanEngine.h"
 
 void VulkanEngine::Init(GLFWwindow* window) {
@@ -36,11 +37,8 @@ void VulkanEngine::Init(GLFWwindow* window) {
 
 #define CAMERA_SPEED 3
 
-void VulkanEngine::SetViewMatrix(glm::mat4 viewMatrix) {
-    _viewMatrix = viewMatrix;
-}
-
-void VulkanEngine::Tick(float deltaTime) {
+void VulkanEngine::Tick(const TickData* tickData) {
+    this->_viewMatrix = tickData->mainCamera->GetViewMatrix();
     _imguiManager.RenderFrame();
     drawFrame();
     vkDeviceWaitIdle(this->_device->logicalDevice);

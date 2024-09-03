@@ -21,26 +21,26 @@ std::unique_ptr<std::vector<VkVertexInputAttributeDescription>> Vertex::GetAttri
     std::unique_ptr<std::vector<VkVertexInputAttributeDescription>> attributeDescriptions
         = std::make_unique<std::vector<VkVertexInputAttributeDescription>>(4);
 
-    // pos
+    // layout(location = 0) in vec3 inPosition;
     attributeDescriptions->at(0).binding = 0;
     attributeDescriptions->at(0).location = 0;        // location directive of the input in the vertex shader
     attributeDescriptions->at(0).format = FormatVec3; // vec3
     attributeDescriptions->at(0).offset
         = offsetof(Vertex, pos); // byte offset of the data from the start of the per-vertex data
 
-    // color
+    // layout(location = 1) in vec3 inColor;
     attributeDescriptions->at(1).binding = 0;
     attributeDescriptions->at(1).location = 1;
     attributeDescriptions->at(1).format = FormatVec3; // vec3
     attributeDescriptions->at(1).offset = offsetof(Vertex, color);
 
-    // vertex
+    // layout(location = 1) in vec3 inTexCoord
     attributeDescriptions->at(2).binding = 0;
     attributeDescriptions->at(2).location = 2;
     attributeDescriptions->at(2).format = FormatVec2; // vec2
     attributeDescriptions->at(2).offset = offsetof(Vertex, texCoord);
 
-    // normal
+    // layout(location = 3) in vec3 inNormal;
     attributeDescriptions->at(3).binding = 0;
     attributeDescriptions->at(3).location = 3;
     attributeDescriptions->at(3).format = FormatVec3; // vec3

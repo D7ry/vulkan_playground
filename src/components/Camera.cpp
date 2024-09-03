@@ -59,7 +59,7 @@ void Camera::Move(float x, float y, float z) {
     updateViewMatrix();
 };
 
-glm::mat4 Camera::GetViewMatrix() {
+const glm::mat4 Camera::GetViewMatrix() const {
     return _viewMatrix;
 };
 

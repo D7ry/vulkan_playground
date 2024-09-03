@@ -49,11 +49,12 @@ void DEngine::Run() {
 void DEngine::tick() {
     glfwPollEvents();
     _deltaTimer.Tick();
-    float deltaTime = _deltaTimer.GetDeltaTime();
-    _vulkanEngine->SetViewMatrix(_mainCamera.GetViewMatrix()
-    ); // TODO: only update the view matrix when updating the camera
-    _vulkanEngine->Tick(deltaTime);
-    _inputManager->Tick(deltaTime);
+    TickData tickData {
+        &_mainCamera,
+        _deltaTimer.GetDeltaTime()
+    };
+    _vulkanEngine->Tick(&tickData);
+    _inputManager->Tick(tickData.deltaTime);
 };
 
 void DEngine::initGLFW() {

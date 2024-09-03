@@ -13,4 +13,4 @@ void DeltaTimer::Tick() {
 
 DeltaTimer::DeltaTimer() { _prev = std::chrono::high_resolution_clock::now(); }
 
-float DeltaTimer::GetDeltaTime() { return _delta; }
+double DeltaTimer::GetDeltaTime() { return _delta; }

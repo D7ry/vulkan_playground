@@ -10,6 +10,8 @@
 #include <vulkan/vulkan_beta.h> // VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME
 #endif
 
+#include "structs/TickData.h"
+
 #include "MeshInstance.h"
 #include "MeshRenderManager.h"
 #include "components/ImGuiManager.h"
@@ -21,6 +23,7 @@
 
 #include "lib/DeletionStack.h"
 
+class TickData;
 /**
  * @brief Todo: migrate everything inside
  *
@@ -70,7 +73,7 @@ class VulkanEngine
      */
     void Init(GLFWwindow* window);
     void Prepare();
-    void Tick(float deltaTime);
+    void Tick(const TickData* tickData);
     void Cleanup();
     void AddMesh(MeshInstance* renderer);
 
@@ -86,13 +89,6 @@ class VulkanEngine
         }
         ImGui::End();
     }
-
-    /**
-     * @brief Update the view matrix.
-     *
-     * @param viewMatrix
-     */
-    void SetViewMatrix(glm::mat4 viewMatrix);
 
     void SetImguiRenderCallback(std::function<void()> imguiFunction);
 

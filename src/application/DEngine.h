@@ -1,4 +1,5 @@
 #pragma once
+#include "structs/TickData.h"
 
 #include "components/Camera.h"
 #include "components/DeltaTimer.h"

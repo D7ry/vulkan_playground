@@ -15,3 +15,10 @@ struct UniformBuffer_Dynamic : UniformBuffer
 {
     glm::mat4 model;
 };
+
+struct UniformBuffer_Phong
+{
+    glm::mat4 model;
+    glm::mat4 view;
+    glm::mat4 proj;
+};
