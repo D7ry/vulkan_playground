@@ -21,6 +21,38 @@ void PhongRenderSystem::Init(const InitData* initData) {
     this->createGraphicsPipeline();
 }
 
+void PhongRenderSystem::Cleanup() {
+    DEBUG("Cleaning up phong rendering system");
+
+    // clean up meshes
+    for (auto& mesh : this->_meshes) {
+        // free up buffers
+        mesh.second.indexBuffer.Cleanup();
+        mesh.second.vertexBuffer.Cleanup();
+    }
+
+    // clean up static UBO & dynamic UBO
+    for (UBO& ubo : _UBO) {
+        ubo.staticUBO.Cleanup();
+        ubo.dynamicUBO.Cleanup();
+    }
+
+    // clean up pipeline
+    vkDestroyPipeline(_device->logicalDevice, _pipeline, nullptr);
+    vkDestroyPipelineLayout(_device->logicalDevice, _pipelineLayout, nullptr);
+
+    // clean up descriptors
+    vkDestroyDescriptorSetLayout(_device->logicalDevice, _descriptorSetLayout, nullptr);
+    // descriptor sets automatically cleaned up
+    vkDestroyDescriptorPool(_device->logicalDevice, _descriptorPool, nullptr);
+
+    // clean up render pass
+    vkDestroyRenderPass(_device->logicalDevice, _renderPass, nullptr);
+    
+    DEBUG("phong rendering system cleaned up.");
+    // note: texture is handled by TextureManager so no need to clean that up
+}
+
 void PhongRenderSystem::Tick(const TickData* tickData) {
     VkCommandBuffer CB = tickData->graphics.currentCB;
     VkFramebuffer FB = tickData->graphics.currentFB;
@@ -768,3 +800,4 @@ int PhongRenderSystem::getDynamicUBOAlignmentSize() {
     }
     return dynamicAlignment;
 }
+

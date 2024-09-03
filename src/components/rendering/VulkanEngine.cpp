@@ -37,6 +37,7 @@ void VulkanEngine::Init(GLFWwindow* window) {
         = TextureManager::GetSingleton(); // TODO: get rid of singleton pattern
     initData.swapChainImageFormat = this->_swapChainImageFormat;
     _phongSystem->Init(&initData);
+    _deletionStack.push([this]() { this->_phongSystem->Cleanup(); });
 
     // make entity
     {
@@ -82,7 +83,7 @@ void VulkanEngine::framebufferResizeCallback(
     int width,
     int height
 ) {
-    INFO("Window resized to {}x{}", width, height);
+    DEBUG("Window resized to {}x{}", width, height);
     auto app
         = reinterpret_cast<VulkanEngine*>(glfwGetWindowUserPointer(window));
     app->_framebufferResized = true;
@@ -891,7 +892,6 @@ void VulkanEngine::recordCommandBuffer(
 
         vkCmdEndRenderPass(commandBuffer);
     }
-
 }
 
 void VulkanEngine::createDepthBuffer() {

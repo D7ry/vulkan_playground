@@ -10,6 +10,7 @@
 #include "structs/UniformBuffer.h"
 
 // a blinn-phong mesh that lives on GPU
+// TODO: should it be a part of this class?
 struct PhongMesh
 {
     VQBuffer vertexBuffer;
@@ -42,10 +43,7 @@ class PhongRenderSystem : public ISystem
     virtual void Init(const InitData* initData) override;
     virtual void Tick(const TickData* tickData) override;
 
-    virtual void Cleanup() override {
-        // TODO: implement this
-        FATAL("Cleanup method not implemented");
-    }
+    virtual void Cleanup() override;
 
   private:
     const char* VERTEX_SHADER_SRC = "../shaders/phong.vert.spv";
@@ -85,6 +83,7 @@ class PhongRenderSystem : public ISystem
     // and the pipeline itself
     void createGraphicsPipeline();
 
+    // all phong meshes created
     std::unordered_map<std::string, PhongMesh> _meshes;
 
     TextureManager* _textureManager;
