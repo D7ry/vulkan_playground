@@ -1,4 +1,10 @@
 #version 450
+
+
+// binding = {0,1} reserved for UBOs
+layout(set = 0, binding = 2) uniform sampler samp;
+layout(set = 0, binding = 3) uniform texture2D textures[8];
+
 layout(binding = 2) uniform sampler2D textureSampler;
 
 layout(location = 0) in vec3 fragColor;

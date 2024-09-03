@@ -1,10 +1,14 @@
 #version 450
 
 layout(binding = 0) uniform UBOStatic {
-    mat4 model;
     mat4 view;
     mat4 proj;
 } uboStatic;
+
+layout(binding = 1) uniform UBODynamic {
+    mat4 model;
+    int textureId;
+} uboDynamic;
 
 
 layout(location = 0) in vec3 inPosition;
