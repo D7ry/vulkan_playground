@@ -1,5 +1,6 @@
 #pragma once
 #include <map>
+#include <unordered_set>
 #include <vulkan/vulkan_core.h>
 
 #include "lib/VQBuffer.h"
@@ -40,6 +41,11 @@ class PhongRenderSystem : public ISystem
         const std::string& texturePath
     );
 
+    // destroy a mesh instance component that's initialized with `MakePhongMeshInstanceComponent`
+    // freeing the pointer
+    void DestroyPhongMeshInstanceComponent(PhongMeshInstanceComponent*& component);
+
+
     virtual void Init(const InitData* initData) override;
     virtual void Tick(const TickData* tickData) override;
 
@@ -66,7 +72,9 @@ class PhongRenderSystem : public ISystem
 
     size_t _numDynamicUBO;  // how many dynamic UBOs do we have
     size_t _currDynamicUBO; // dynamic ubo that is to be allocated
+    std::vector<unsigned long> _freeDynamicUBOIdx; // stores freed indices that are smaller than _currDynamicUBO
     size_t _dynamicUBOAlignmentSize; // actual size of the dynamic UBO that satisfies device alignment
+    // NOTE this design assumes that we never shrink PhongRenderSystem's dynamic UBO at runtime
 
     std::array<VkDescriptorSet, NUM_INTERMEDIATE_FRAMES> _descriptorSets;
     std::array<UBO, NUM_INTERMEDIATE_FRAMES> _UBO;

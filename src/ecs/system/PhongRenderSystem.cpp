@@ -699,13 +699,17 @@ PhongMeshInstanceComponent* PhongRenderSystem::MakePhongMeshInstanceComponent(
     // reserve a dynamic UBO for this instance
     // note each instance has to have a dynamic ubo, for storing instance data
     // such as texture index and model mat
-    // FIXME: on component cleanup, the dynamic ubo should be flagged as free
-    // implement something like a CleanUpPhongMeshInstanceComponent()
     {
-        dynamicUBOId = _currDynamicUBO;
-        _currDynamicUBO++;
-        if (_currDynamicUBO >= _numDynamicUBO) {
-            resizeDynamicUbo(_numDynamicUBO * 1.5);
+        // have an available index that's been released, simply use that index.
+        if (!_freeDynamicUBOIdx.empty()) {
+            dynamicUBOId = _freeDynamicUBOIdx.back();
+            _freeDynamicUBOIdx.pop_back();
+        } else { // use a new index
+            dynamicUBOId = _currDynamicUBO;
+            _currDynamicUBO++;
+            if (_currDynamicUBO >= _numDynamicUBO) {
+                resizeDynamicUbo(_numDynamicUBO * 1.5); // grow dynamic UBO
+            }
         }
     }
 
@@ -717,8 +721,18 @@ PhongMeshInstanceComponent* PhongRenderSystem::MakePhongMeshInstanceComponent(
     return ret;
 }
 
+void PhongRenderSystem::DestroyPhongMeshInstanceComponent(PhongMeshInstanceComponent*& component) {
+    // TODO: should we free up the mesh that lives in graphics memory?
+    // TODO: sholud we free up the texture that lives in grahpics memory?
+
+    _freeDynamicUBOIdx.push_back(component->dynamicUBOId); // relinquish dynamic ubo
+    delete component;
+    component = nullptr;
+}
+
 // reallocate dynamic UBO array, updating the descriptors as well
 // note that contents from the old UBO array aren't copied over
+// TODO: implement copying over from the old array?
 void PhongRenderSystem::resizeDynamicUbo(size_t dynamicUboCount) {
     for (int i = 0; i < NUM_INTERMEDIATE_FRAMES; i++) {
         // reallocate dyamic ubo
