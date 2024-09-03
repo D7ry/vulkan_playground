@@ -26,13 +26,14 @@ layout(location = 5) out int fragTexIndex; // texture index
 vec3 globalLightPos = vec3(-6, -3, 0.0);
 
 void main() {
-    gl_Position = uboStatic.proj * uboStatic.view * uboDynamic.model * vec4(inPosition, 1.0);
+    mat4 model = uboDynamic.model;
+    gl_Position = uboStatic.proj * uboStatic.view * model * vec4(inPosition, 1.0);
     fragColor = inColor;
     fragTexCoord = inTexCoord;
 
-    mat3 normalMatrix = transpose(inverse(mat3(uboDynamic.model))); // Calculate the normal matrix
+    mat3 normalMatrix = transpose(inverse(mat3(model))); // Calculate the normal matrix
     fragNormal = normalize(normalMatrix * inNormal); // Transform the normal and pass it to the fragment shader
 
-    fragPos = vec3(uboDynamic.model * vec4(inPosition, 1.0)); // Transform the vertex position to world space
+    fragPos = vec3(model * vec4(inPosition, 1.0)); // Transform the vertex position to world space
     fragGlobalLightPos = globalLightPos; // Pass the light position in world space to the fragment shader
 }

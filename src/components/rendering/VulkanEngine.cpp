@@ -17,8 +17,8 @@
 #include <vulkan/vk_enum_string_helper.h>
 #include <vulkan/vulkan_core.h>
 
-#include "components/Camera.h"
 #include "VulkanEngine.h"
+#include "components/Camera.h"
 
 void VulkanEngine::Init(GLFWwindow* window) {
     INFO("Initializing Render Manager...");
@@ -27,28 +27,46 @@ void VulkanEngine::Init(GLFWwindow* window) {
     this->initVulkan();
     TextureManager::GetSingleton()->Init(_device
     ); // pass device to texture manager for it to start loading
-    //this->_meshRenderManager = std::make_unique<MeshRenderManager>();
+    // this->_meshRenderManager = std::make_unique<MeshRenderManager>();
     this->_deletionStack.push([this]() {
         TextureManager::GetSingleton()->Cleanup();
     });
     this->_phongSystem = new PhongRenderSystem();
     InitData initData;
     initData.device = this->_device.get();
-    initData.textureManager = TextureManager::GetSingleton(); // TODO: get rid of singleton pattern
+    initData.textureManager
+        = TextureManager::GetSingleton(); // TODO: get rid of singleton pattern
     initData.swapChainImageFormat = this->_swapChainImageFormat;
     _phongSystem->Init(&initData);
 
     // make entity
-    Entity* thing = new Entity("thing");
-    auto phongMeshComponent = _phongSystem->MakePhongMeshInstanceComponent("../resources/spot.obj", "../resources/spot.png");
-    thing->AddComponent(phongMeshComponent);
-    TransformComponent* transform = new TransformComponent();
-    *transform = TransformComponent::Identity();
+    {
+        Entity* thing = new Entity("thing");
+        auto phongMeshComponent = _phongSystem->MakePhongMeshInstanceComponent(
+            "../resources/viking_room.obj", "../resources/viking_room.png"
+        );
+        thing->AddComponent(phongMeshComponent);
+        TransformComponent* transform = new TransformComponent();
+        *transform = TransformComponent::Identity();
 
-    thing->AddComponent(transform);
-
-    _phongSystem->AddEntity(thing);
-    //this->_deletionStack.push([this]() { this->_meshRenderManager->Cleanup(); }
+        thing->AddComponent(transform);
+        _phongSystem->AddEntity(thing);
+    }
+    { // make another entity
+        Entity* thing = new Entity("thing2");
+        auto phongMeshComponent = _phongSystem->MakePhongMeshInstanceComponent(
+            "../resources/viking_room.obj", "../resources/viking_room.png"
+        );
+        thing->AddComponent(phongMeshComponent);
+        TransformComponent* transform = new TransformComponent();
+        *transform = TransformComponent::Identity();
+        transform->scale = {1, 2, 1};
+        transform->position.y += 2;
+        thing->AddComponent(transform);
+        _phongSystem->AddEntity(thing);
+    }
+    // this->_deletionStack.push([this]() { this->_meshRenderManager->Cleanup();
+    // }
     //);
 }
 
@@ -861,7 +879,8 @@ void VulkanEngine::recordCommandBuffer(
         clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
         clearValues[1].depthStencil = {1.0f, 0};
 
-        renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+        renderPassInfo.clearValueCount
+            = static_cast<uint32_t>(clearValues.size());
         renderPassInfo.pClearValues = clearValues.data();
 
         vkCmdBeginRenderPass(
@@ -883,10 +902,10 @@ void VulkanEngine::recordCommandBuffer(
         scissor.extent = _swapChainExtent;
         vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-        //_meshRenderManager->RecordRenderCommands(commandBuffer, _currentFrame);
+        //_meshRenderManager->RecordRenderCommands(commandBuffer,
+        //_currentFrame);
         vkCmdEndRenderPass(commandBuffer);
     }
-
 
     if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
         FATAL("Failed to record command buffer!");
@@ -962,24 +981,32 @@ void VulkanEngine::drawFrame(TickData* tickData) {
         this->_device->graphicsCommandBuffers[this->_currentFrame], 0
     );
 
-    // populate tickData 
+    // populate tickData
     // TODO: clean up this hack
-    
+
     tickData->currentFrameInFlight = _currentFrame;
-    tickData->currentCB = this->_device->graphicsCommandBuffers[this->_currentFrame];
+    tickData->currentCB
+        = this->_device->graphicsCommandBuffers[this->_currentFrame];
     tickData->currentFB = this->_swapChainFrameBuffers[imageIndex];
     tickData->currentFBextend = this->_swapChainExtent;
     tickData->mainProjectionMatrix = this->_perspectiveMatrix;
-    
+    tickData->mainProjectionMatrix = glm::perspective(
+        glm::radians(90.f),
+        _swapChainExtent.width / (float)_swapChainExtent.height,
+        0.1f,
+        100.f
+    );
+    tickData->mainProjectionMatrix[1][1] *= -1; // invert y axis because vulkan
 
     this->_phongSystem->Tick(tickData);
-    this->recordCommandBuffer(
-        this->_device->graphicsCommandBuffers[this->_currentFrame], imageIndex, tickData
-    );
+    // this->recordCommandBuffer(
+    //     this->_device->graphicsCommandBuffers[this->_currentFrame],
+    //     imageIndex, tickData
+    // );
     _imguiManager.RecordCommandBuffer(
         this->_currentFrame, imageIndex, _swapChainExtent
     );
-    _phongSystem->Tick(tickData);
+    //_phongSystem->Tick(tickData);
 
     // _meshRenderManager->UpdateUniformBuffers(
     //     _currentFrame,
