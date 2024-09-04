@@ -22,7 +22,7 @@ class GlobalGridSystem : public ISingletonSystem, IRenderSystem
 
     virtual void Tick(const TickData* tickData) override;
 
-    virtual void Cleanup() override {}
+    virtual void Cleanup() override;
 
   private:
     const char* VERTEX_SHADER_SRC = "../shaders/global_grid.vert.spv";
@@ -48,7 +48,7 @@ class GlobalGridSystem : public ISingletonSystem, IRenderSystem
     struct {
         VQBuffer vertexBuffer;
         VQBufferIndex indexBuffer;
-    } gridMesh;
+    } _gridMesh;
 
     size_t _numLines;
 };

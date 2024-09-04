@@ -390,7 +390,7 @@ void GlobalGridSystem::Tick(const TickData* tickData) {
         UBOStatic ubo {
             tickData->mainCamera->GetViewMatrix(),
             tickData->graphics.mainProjectionMatrix,
-            glm::vec3(1, 1, 1)
+            glm::vec3(0.3, 0.3, 0.3)
         };
         // TODO: a better ubo abstraction using templates?
         memcpy(_UBO[frameIdx].buffer.bufferAddress, &ubo, sizeof(ubo));
@@ -399,7 +399,7 @@ void GlobalGridSystem::Tick(const TickData* tickData) {
     // draw the vertex grids
     VkDeviceSize offsets[] = {0};
     VkBuffer vertexBuffers[]
-        = {gridMesh.vertexBuffer.buffer};
+        = {_gridMesh.vertexBuffer.buffer};
     vkCmdBindVertexBuffers(CB, 0, 1, vertexBuffers, offsets);
 
     vkCmdDraw(CB, _numLines * 2, 1, 0, 0);
@@ -411,7 +411,7 @@ void GlobalGridSystem::Init(const InitData* initData) {
 
     // create vertex + index buffer for the global grid
     std::vector<Vertex> vertices;
-    const float gridSize = 10.0f;  // Total size of the grid (-100 to +100)
+    const float gridSize = 100.0f;  // Total size of the grid (-100 to +100)
     const float gridStep = 1.0f;   // Distance between grid lines
     const float z = -1.0f;          // Set z-coordinate to -1
 
@@ -421,7 +421,6 @@ void GlobalGridSystem::Init(const InitData* initData) {
         vertices.push_back(Vertex(glm::vec3(gridSize, y, z)));
         _numLines++;
     }
-    DEBUG("{}", _numLines);
 
     // Create vertices for vertical lines
     for (float x = -gridSize; x <= gridSize; x += gridStep) {
@@ -429,5 +428,25 @@ void GlobalGridSystem::Init(const InitData* initData) {
         vertices.push_back(Vertex(glm::vec3{x, gridSize, z}));
         _numLines++;
     }
-    VQUtils::createVertexBuffer(vertices, gridMesh.vertexBuffer, *_device);
+    VQUtils::createVertexBuffer(vertices, _gridMesh.vertexBuffer, *_device);
+}
+
+void GlobalGridSystem::Cleanup() {
+    DEBUG("cleaning up");
+    for (auto& ubo : _UBO) {
+        ubo.buffer.Cleanup();
+    }
+
+    vkDestroyPipeline(_device->logicalDevice, _pipeline, nullptr);
+    vkDestroyPipelineLayout(_device->logicalDevice, _pipelineLayout, nullptr);
+
+    vkDestroyDescriptorSetLayout(
+        _device->logicalDevice, _descriptorSetLayout, nullptr
+    );
+    vkDestroyDescriptorPool(_device->logicalDevice, _descriptorPool, nullptr);
+
+    _gridMesh.vertexBuffer.Cleanup();
+    _gridMesh.indexBuffer.Cleanup();
+
+    DEBUG("clean up finished");
 }

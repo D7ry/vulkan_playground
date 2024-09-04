@@ -110,8 +110,11 @@ void VulkanEngine::Init() {
         initData.swapChainImageFormat = this->_swapChainImageFormat;
         initData.renderPass.mainPass = _mainRenderPass;
         _phongSystem->Init(&initData);
-        _globalGridSystem->Init(&initData);
         _deletionStack.push([this]() { this->_phongSystem->Cleanup(); });
+        
+        _globalGridSystem->Init(&initData);
+        _deletionStack.push([this]() { this->_globalGridSystem->Cleanup(); });
+
 
         // make entity
         {
