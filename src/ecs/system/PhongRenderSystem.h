@@ -56,6 +56,7 @@ class PhongRenderSystem : public ISystem
     const char* VERTEX_SHADER_SRC = "../shaders/phong.vert.spv";
     const char* FRAGMENT_SHADER_SRC = "../shaders/phong.frag.spv";
 
+    // renderpass and pipeline
     VkRenderPass _renderPass = VK_NULL_HANDLE;
     VkPipeline _pipeline = VK_NULL_HANDLE;
     VkPipelineLayout _pipelineLayout = VK_NULL_HANDLE;
@@ -76,8 +77,8 @@ class PhongRenderSystem : public ISystem
     size_t _dynamicUBOAlignmentSize; // actual size of the dynamic UBO that satisfies device alignment
     // NOTE this design assumes that we never shrink PhongRenderSystem's dynamic UBO at runtime
 
-    std::array<VkDescriptorSet, NUM_INTERMEDIATE_FRAMES> _descriptorSets;
-    std::array<UBO, NUM_INTERMEDIATE_FRAMES> _UBO;
+    std::array<VkDescriptorSet, NUM_FRAME_IN_FLIGHT> _descriptorSets;
+    std::array<UBO, NUM_FRAME_IN_FLIGHT> _UBO;
     void resizeDynamicUbo(size_t dynamicUboCount);
 
     VQDevice* _device = nullptr;

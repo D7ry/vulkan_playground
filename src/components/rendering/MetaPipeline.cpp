@@ -89,7 +89,7 @@ MetaPipeline CreateGenericMetaPipeline(
             = sizeof(poolSizes)
               / sizeof(VkDescriptorPoolSize); // number of pool sizes
         poolInfo.pPoolSizes = poolSizes;
-        poolInfo.maxSets = NUM_INTERMEDIATE_FRAMES * poolInfo.poolSizeCount;
+        poolInfo.maxSets = NUM_FRAME_IN_FLIGHT * poolInfo.poolSizeCount;
         poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
 
         if (vkCreateDescriptorPool(

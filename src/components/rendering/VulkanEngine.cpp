@@ -54,14 +54,14 @@ void VulkanEngine::Init(GLFWwindow* window) {
         _entityViewerSystem->AddEntity(thing);
     }
     { // make another entity
-        Entity* thing = new Entity("thing2");
+        Entity* thing = new Entity("spot");
         auto phongMeshComponent = _phongSystem->MakePhongMeshInstanceComponent(
-            "../resources/viking_room.obj", "../resources/viking_room.png"
+            "../resources/spot.obj", "../resources/spot.png"
         );
         thing->AddComponent(phongMeshComponent);
         TransformComponent* transform = new TransformComponent();
         *transform = TransformComponent::Identity();
-        transform->scale = {1, 2, 1};
+        transform->scale = {1, 1, 1};
         transform->position.y += 2;
         thing->AddComponent(transform);
         _phongSystem->AddEntity(thing);
@@ -95,7 +95,7 @@ void VulkanEngine::createDevice() {
     this->_device->InitQueueFamilyIndices(this->_surface);
     this->_device->CreateLogicalDeviceAndQueue(DEVICE_EXTENSIONS);
     this->_device->CreateGraphicsCommandPool();
-    this->_device->CreateGraphicsCommandBuffer(NUM_INTERMEDIATE_FRAMES);
+    this->_device->CreateGraphicsCommandBuffer(NUM_FRAME_IN_FLIGHT);
     this->_deletionStack.push([this]() { this->_device->Cleanup(); });
 }
 
@@ -119,7 +119,7 @@ void VulkanEngine::initVulkan() {
 
     this->_imguiManager.InitializeImgui();
     this->_imguiManager.InitializeDescriptorPool(
-        NUM_INTERMEDIATE_FRAMES, _device->logicalDevice
+        NUM_FRAME_IN_FLIGHT, _device->logicalDevice
     );
     this->_imguiManager.BindVulkanResources(
         _window,
@@ -131,7 +131,7 @@ void VulkanEngine::initVulkan() {
         _swapChainFrameBuffers.size()
     );
     this->_imguiManager.InitializeCommandPoolAndBuffers(
-        NUM_INTERMEDIATE_FRAMES,
+        NUM_FRAME_IN_FLIGHT,
         _device->logicalDevice,
         _device->queueFamilyIndices.graphicsFamily.value()
     );
@@ -655,9 +655,9 @@ void VulkanEngine::createImageViews() {
 
 void VulkanEngine::createSynchronizationObjects() {
     INFO("Creating synchronization objects...");
-    this->_semaImageAvailable.resize(NUM_INTERMEDIATE_FRAMES);
-    this->_semaRenderFinished.resize(NUM_INTERMEDIATE_FRAMES);
-    this->_fenceInFlight.resize(NUM_INTERMEDIATE_FRAMES);
+    this->_semaImageAvailable.resize(NUM_FRAME_IN_FLIGHT);
+    this->_semaRenderFinished.resize(NUM_FRAME_IN_FLIGHT);
+    this->_fenceInFlight.resize(NUM_FRAME_IN_FLIGHT);
 
     VkSemaphoreCreateInfo semaphoreInfo{};
     semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -666,7 +666,7 @@ void VulkanEngine::createSynchronizationObjects() {
     fenceInfo.flags
         = VK_FENCE_CREATE_SIGNALED_BIT; // create with a signaled bit so that
                                         // the 1st frame can start right away
-    for (size_t i = 0; i < NUM_INTERMEDIATE_FRAMES; i++) {
+    for (size_t i = 0; i < NUM_FRAME_IN_FLIGHT; i++) {
         if (vkCreateSemaphore(
                 _device->logicalDevice,
                 &semaphoreInfo,
@@ -689,7 +689,7 @@ void VulkanEngine::createSynchronizationObjects() {
         }
     }
     this->_deletionStack.push([this]() {
-        for (size_t i = 0; i < NUM_INTERMEDIATE_FRAMES; i++) {
+        for (size_t i = 0; i < NUM_FRAME_IN_FLIGHT; i++) {
             vkDestroySemaphore(
                 this->_device->logicalDevice,
                 this->_semaRenderFinished[i],
@@ -1068,7 +1068,7 @@ void VulkanEngine::drawFrame(TickData* tickData) {
         FATAL("Failed to present swap chain image!");
     }
     //  Advance to the next frame
-    _currentFrame = (_currentFrame + 1) % NUM_INTERMEDIATE_FRAMES;
+    _currentFrame = (_currentFrame + 1) % NUM_FRAME_IN_FLIGHT;
 }
 
 void VulkanEngine::SetImguiRenderCallback(std::function<void()> imguiFunction) {

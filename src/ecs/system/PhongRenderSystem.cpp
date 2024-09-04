@@ -140,6 +140,7 @@ void PhongRenderSystem::Tick(const TickData* tickData) {
             // TODO: may be a little expensive to do; given dynamic ubo only
             // needs to be updated when relevant data structures of the instance
             // changes
+            // memcpy here will stall the program
             void* dynamicUBOAddr = reinterpret_cast<void*>(
                 reinterpret_cast<uintptr_t>(
                     _UBO[frameIdx].dynamicUBO.bufferAddress
@@ -259,7 +260,6 @@ void PhongRenderSystem::createGraphicsPipeline() {
     VkDescriptorSetLayoutBinding uboStaticBinding{};
     VkDescriptorSetLayoutBinding uboDynamicBinding{};
     VkDescriptorSetLayoutBinding samplerLayoutBinding{};
-    VkDescriptorSetLayoutBinding textureArrayLayoutBinding{};
     { // UBO static -- vertex
         uboStaticBinding.binding = (int)BindingLocation::UBO_STATIC;
         uboStaticBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -278,7 +278,7 @@ void PhongRenderSystem::createGraphicsPipeline() {
             = VK_SHADER_STAGE_VERTEX_BIT; // only used in vertex shader
         uboDynamicBinding.pImmutableSamplers = nullptr; // Optional
     }
-    { // combined image sampler -- fragment
+    { // combined image sampler array -- fragment
         samplerLayoutBinding.binding = (int)BindingLocation::TEXTURE_SAMPLER;
         samplerLayoutBinding.descriptorCount = TEXTURE_ARRAY_SIZE;
         samplerLayoutBinding.descriptorType
@@ -327,7 +327,7 @@ void PhongRenderSystem::createGraphicsPipeline() {
             = sizeof(poolSizes)
               / sizeof(VkDescriptorPoolSize); // number of pool sizes
         poolInfo.pPoolSizes = poolSizes;
-        poolInfo.maxSets = NUM_INTERMEDIATE_FRAMES * poolInfo.poolSizeCount;
+        poolInfo.maxSets = NUM_FRAME_IN_FLIGHT * poolInfo.poolSizeCount;
         poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
 
         if (vkCreateDescriptorPool(
@@ -339,17 +339,18 @@ void PhongRenderSystem::createGraphicsPipeline() {
     }
 
     { // _descriptorSets
+        // each frame in flight needs its own descriptorset
         std::vector<VkDescriptorSetLayout> layouts(
-            NUM_INTERMEDIATE_FRAMES, this->_descriptorSetLayout
+            NUM_FRAME_IN_FLIGHT, this->_descriptorSetLayout
         );
 
         VkDescriptorSetAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
         allocInfo.descriptorPool = this->_descriptorPool;
-        allocInfo.descriptorSetCount = NUM_INTERMEDIATE_FRAMES;
+        allocInfo.descriptorSetCount = NUM_FRAME_IN_FLIGHT;
         allocInfo.pSetLayouts = layouts.data();
 
-        ASSERT(this->_descriptorSets.size() == NUM_INTERMEDIATE_FRAMES);
+        ASSERT(this->_descriptorSets.size() == NUM_FRAME_IN_FLIGHT);
 
         if (vkAllocateDescriptorSets(
                 this->_device->logicalDevice,
@@ -381,7 +382,7 @@ void PhongRenderSystem::createGraphicsPipeline() {
     // note here we only update descripto sets for static ubo
     // dynamic ubo is updated through `resizeDynamicUbo`
     // texture array is updated through `updateTextureDescriptorSet`
-    for (size_t i = 0; i < NUM_INTERMEDIATE_FRAMES; i++) {
+    for (size_t i = 0; i < NUM_FRAME_IN_FLIGHT; i++) {
         VkDescriptorBufferInfo descriptorBufferInfo_static{};
         descriptorBufferInfo_static.buffer = this->_UBO[i].staticUBO.buffer;
         descriptorBufferInfo_static.offset = 0;
@@ -734,7 +735,7 @@ void PhongRenderSystem::DestroyPhongMeshInstanceComponent(PhongMeshInstanceCompo
 // note that contents from the old UBO array aren't copied over
 // TODO: implement copying over from the old array?
 void PhongRenderSystem::resizeDynamicUbo(size_t dynamicUboCount) {
-    for (int i = 0; i < NUM_INTERMEDIATE_FRAMES; i++) {
+    for (int i = 0; i < NUM_FRAME_IN_FLIGHT; i++) {
         // reallocate dyamic ubo
         this->_UBO[i].dynamicUBO.Cleanup();
         this->_device->CreateBufferInPlace(
@@ -773,7 +774,7 @@ void PhongRenderSystem::resizeDynamicUbo(size_t dynamicUboCount) {
 
 void PhongRenderSystem::updateTextureDescriptorSet() {
     DEBUG("updating texture descirptor set");
-    for (size_t i = 0; i < NUM_INTERMEDIATE_FRAMES; i++) {
+    for (size_t i = 0; i < NUM_FRAME_IN_FLIGHT; i++) {
         std::array<VkWriteDescriptorSet, 1> descriptorWrites{};
         descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         descriptorWrites[0].dstSet = this->_descriptorSets[i];

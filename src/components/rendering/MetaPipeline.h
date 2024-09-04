@@ -35,15 +35,15 @@ struct MetaPipeline
     inline void AllocateDescriptorSets(RenderGroup& renderGroup) {
 
         std::vector<VkDescriptorSetLayout> layouts(
-            NUM_INTERMEDIATE_FRAMES, this->descriptorSetLayout
+            NUM_FRAME_IN_FLIGHT, this->descriptorSetLayout
         );
         VkDescriptorSetAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
         allocInfo.descriptorPool = this->descriptorPool;
-        allocInfo.descriptorSetCount = NUM_INTERMEDIATE_FRAMES;
+        allocInfo.descriptorSetCount = NUM_FRAME_IN_FLIGHT;
         allocInfo.pSetLayouts = layouts.data();
 
-        renderGroup.descriptorSets.resize(NUM_INTERMEDIATE_FRAMES);
+        renderGroup.descriptorSets.resize(NUM_FRAME_IN_FLIGHT);
 
         if (vkAllocateDescriptorSets(
                 this->device, &allocInfo, renderGroup.descriptorSets.data()

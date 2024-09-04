@@ -39,7 +39,7 @@ struct RenderGroup
         resizeDynamicUbo(this->dynamicUboCount);
 
         // allocate static UBO
-        for (int i = 0; i < NUM_INTERMEDIATE_FRAMES; i++) {
+        for (int i = 0; i < NUM_FRAME_IN_FLIGHT; i++) {
             // allocate static ubo
             device->CreateBufferInPlace(
                 staticUboSize,
@@ -51,7 +51,7 @@ struct RenderGroup
         }
 
         // update all descriptor sets.
-        for (size_t i = 0; i < NUM_INTERMEDIATE_FRAMES; i++) {
+        for (size_t i = 0; i < NUM_FRAME_IN_FLIGHT; i++) {
             VkDescriptorBufferInfo descriptorBufferInfo_static{};
             descriptorBufferInfo_static.buffer
                 = this->uniformBuffers[i].staticUBO.buffer;
@@ -100,7 +100,7 @@ struct RenderGroup
         VQBuffer dynamicUBO;
     };
 
-    Uniformbuffers uniformBuffers[NUM_INTERMEDIATE_FRAMES];
+    Uniformbuffers uniformBuffers[NUM_FRAME_IN_FLIGHT];
 
     std::string texturePath;
     std::string meshPath;
@@ -119,7 +119,7 @@ struct RenderGroup
     VkDescriptorPool descriptorPool;
 
     inline void resizeDynamicUbo(size_t dynamicUboCount) {
-        for (int i = 0; i < NUM_INTERMEDIATE_FRAMES; i++) {
+        for (int i = 0; i < NUM_FRAME_IN_FLIGHT; i++) {
             // reallocate dyamic ubo
             this->uniformBuffers[i].dynamicUBO.Cleanup();
             this->device->CreateBufferInPlace(
