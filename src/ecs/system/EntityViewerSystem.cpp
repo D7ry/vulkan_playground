@@ -22,6 +22,8 @@ void EntityViewerSystem::DrawImGui() {
 
 void EntityViewerSystem::drawEntity(Entity* entity) {
     ImGui::SeparatorText(entity->GetName());
+
+    // TransformComponent
     if (TransformComponent* transform
         = entity->GetComponent<TransformComponent>()) {
         ImGui::Text("Position");

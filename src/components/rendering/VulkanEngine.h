@@ -13,8 +13,6 @@
 
 #include "structs/TickData.h"
 
-#include "MeshInstance.h"
-#include "MeshRenderManager.h"
 #include "components/ImGuiManager.h"
 #include "imgui.h"
 #include "lib/VQDevice.h"
@@ -27,40 +25,7 @@
 #include "ecs/system/PhongRenderSystem.h"
 
 class TickData;
-/**
- * @brief Todo: migrate everything inside
- *
- */
-namespace TempUtils
-{
-static char meshPathBuf[64] = "../resources/meshes/viking_room.obj";
-static char texturePathBuf[64] = "../resources/textures/viking_room.png";
 
-static void DrawMeshTextureSelector() {
-    ImGui::SeparatorText("Select Mesh and Texture");
-
-    // list all files in the resources/meshes folder
-    ImGui::Text("Meshes:");
-    for (const auto& entry :
-         std::filesystem::directory_iterator("../resources/meshes")) {
-        std::string path = entry.path().string();
-        if (ImGui::Button(path.c_str())) {
-            strcpy(meshPathBuf, path.c_str());
-        }
-    }
-    ImGui::Text("Textures:");
-    // list all files in the resources/textures folder
-    for (const auto& entry :
-         std::filesystem::directory_iterator("../resources/textures")) {
-        std::string path = entry.path().string();
-        if (ImGui::Button(path.c_str())) {
-            strcpy(texturePathBuf, path.c_str());
-        }
-    }
-    ImGui::Text("Mesh: %s", meshPathBuf);
-    ImGui::Text("Texture: %s", texturePathBuf);
-}
-} // namespace TempUtils
 
 // TODO: create a serialization scheme for tweakable settings.
 
@@ -77,7 +42,6 @@ class VulkanEngine
     void Init(GLFWwindow* window);
     void Tick(TickData* tickData);
     void Cleanup();
-    void AddMesh(MeshInstance* renderer);
 
     void DrawImgui();
 
@@ -179,12 +143,11 @@ class VulkanEngine
     static inline const std::vector<const char*> VALIDATION_LAYERS
         = {"VK_LAYER_KHRONOS_validation"};
     static inline const std::vector<const char*> DEVICE_EXTENSIONS
-        = {
-            VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+        = {VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 #if __APPLE__
-            VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME
+           VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME
 #endif // __APPLE__
-        };
+    };
     bool checkValidationLayerSupport();
 
     // debug messenger setup
@@ -229,13 +192,14 @@ class VulkanEngine
 
     // swapchain
     VkSwapchainKHR _swapChain = VK_NULL_HANDLE;
-    std::vector<VkImage> _swapChainImages;
     VkFormat _swapChainImageFormat;
     VkExtent2D _swapChainExtent; // resolution of the swapchain images
-
-    std::vector<VkFramebuffer> _swapChainFrameBuffers;
-
-    std::vector<VkImageView> _swapChainImageViews;
+    struct
+    {
+        std::vector<VkFramebuffer> frameBuffer;
+        std::vector<VkImage> image;
+        std::vector<VkImageView> imageView;
+    } _swapChainData; // sets of data, ith element of each vec corrsponds to ith image
 
     VkRenderPass _renderPass = VK_NULL_HANDLE;
 
@@ -261,16 +225,12 @@ class VulkanEngine
 
     std::function<void()> _imguiRenderCallback;
 
-    std::unique_ptr<MeshRenderManager> _meshRenderManager;
-
     DeletionStack _deletionStack;
 
-    
     PhongRenderSystem* _phongSystem;
     EntityViewerSystem* _entityViewerSystem;
 
     // temporary hacks
   public:
     Camera* mainCamera;
-
 };

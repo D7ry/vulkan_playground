@@ -47,15 +47,12 @@ add_executable(vulkan_playground
         src/components/VulkanUtils.cpp
         src/components/ImGuiManager.cpp
         src/components/TextureManager.cpp
-        src/components/rendering/MetaPipeline.cpp
-        src/components/rendering/MeshInstance.cpp
-        src/components/rendering/MeshRenderManager.cpp
         src/components/InputManager.cpp
-        src/components/Transform.cpp
         src/lib/VQDevice.cpp
         src/lib/VQUtils.cpp
         src/components/rendering/VulkanEngine.cpp
         src/application/DEngine.cpp
+        # render systems
         src/ecs/system/PhongRenderSystem.cpp
         src/ecs/system/EntityViewerSystem.cpp
 )

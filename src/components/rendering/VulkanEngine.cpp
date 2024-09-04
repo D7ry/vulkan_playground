@@ -1,3 +1,4 @@
+#include "components/TextureManager.h"
 #include <algorithm>
 #include <cinttypes>
 #include <cstddef>
@@ -11,7 +12,6 @@
 
 #include <cstddef>
 #define GLFW_INCLUDE_VULKAN
-#include "MeshInstance.h"
 #include <GLFW/glfw3.h>
 #include <vulkan/vk_enum_string_helper.h>
 #include <vulkan/vulkan_core.h>
@@ -128,7 +128,7 @@ void VulkanEngine::initVulkan() {
         _device->logicalDevice,
         _device->queueFamilyIndices.graphicsFamily.value(),
         _device->graphicsQueue,
-        _swapChainFrameBuffers.size()
+        _swapChainData.frameBuffer.size()
     );
     this->_imguiManager.InitializeCommandPoolAndBuffers(
         NUM_FRAME_IN_FLIGHT,
@@ -476,12 +476,15 @@ void VulkanEngine::createSwapChain() {
     vkGetSwapchainImagesKHR(
         this->_device->logicalDevice, _swapChain, &imageCount, nullptr
     );
-    _swapChainImages.resize(imageCount);
+    _swapChainData.image.resize(imageCount);
+    _swapChainData.imageView.resize(imageCount);
+    _swapChainData.frameBuffer.resize(imageCount);
+
     vkGetSwapchainImagesKHR(
         this->_device->logicalDevice,
         _swapChain,
         &imageCount,
-        _swapChainImages.data()
+        _swapChainData.image.data()
     );
 
     _swapChainImageFormat = surfaceFormat.format;
@@ -496,12 +499,12 @@ void VulkanEngine::cleanupSwapChain() {
     vkFreeMemory(_device->logicalDevice, _depthImageMemory, nullptr);
 
     _imguiManager.DestroyFrameBuffers(_device->logicalDevice);
-    for (VkFramebuffer framebuffer : this->_swapChainFrameBuffers) {
+    for (VkFramebuffer framebuffer : this->_swapChainData.frameBuffer) {
         vkDestroyFramebuffer(
             this->_device->logicalDevice, framebuffer, nullptr
         );
     }
-    for (VkImageView imageView : this->_swapChainImageViews) {
+    for (VkImageView imageView : this->_swapChainData.imageView) {
         vkDestroyImageView(this->_device->logicalDevice, imageView, nullptr);
     }
     vkDestroySwapchainKHR(
@@ -623,12 +626,10 @@ VkExtent2D VulkanEngine::chooseSwapExtent(
 }
 
 void VulkanEngine::createImageViews() {
-    INFO("Creating {} image views...", this->_swapChainImages.size());
-    this->_swapChainImageViews.resize(this->_swapChainImages.size());
-    for (size_t i = 0; i < this->_swapChainImages.size(); i++) {
+    for (size_t i = 0; i < this->_swapChainData.image.size(); i++) {
         VkImageViewCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        createInfo.image = _swapChainImages[i];
+        createInfo.image = _swapChainData.image[i];
         createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
         createInfo.format = _swapChainImageFormat;
         createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -644,7 +645,7 @@ void VulkanEngine::createImageViews() {
                 this->_device->logicalDevice,
                 &createInfo,
                 nullptr,
-                &_swapChainImageViews[i]
+                &_swapChainData.imageView[i]
             )
             != VK_SUCCESS) {
             FATAL("Failed to create image views!");
@@ -808,14 +809,13 @@ void VulkanEngine::createRenderPass() {
 }
 
 void VulkanEngine::createFramebuffers() {
-    INFO("Creating {} framebuffers...", this->_swapChainImageViews.size());
-    this->_swapChainFrameBuffers.resize(this->_swapChainImageViews.size());
     // iterate through image views and create framebuffers
     if (_renderPass == VK_NULL_HANDLE) {
         FATAL("Render pass is null!");
     }
-    for (size_t i = 0; i < _swapChainImageViews.size(); i++) {
-        VkImageView attachments[] = {_swapChainImageViews[i], _depthImageView};
+    for (size_t i = 0; i < _swapChainData.image.size(); i++) {
+        VkImageView attachments[]
+            = {_swapChainData.imageView[i], _depthImageView};
         VkFramebufferCreateInfo framebufferInfo{};
         framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
         framebufferInfo.renderPass
@@ -832,16 +832,16 @@ void VulkanEngine::createFramebuffers() {
                 _device->logicalDevice,
                 &framebufferInfo,
                 nullptr,
-                &_swapChainFrameBuffers[i]
+                &_swapChainData.frameBuffer[i]
             )
             != VK_SUCCESS) {
             FATAL("Failed to create framebuffer!");
         }
     }
     _imguiManager.InitializeFrameBuffer(
-        this->_swapChainImageViews.size(),
+        this->_swapChainData.image.size(),
         _device->logicalDevice,
-        _swapChainImageViews,
+        _swapChainData.imageView,
         _swapChainExtent
     );
     INFO("Framebuffers created.");
@@ -858,7 +858,8 @@ void VulkanEngine::recordCommandBuffer(
         VkRenderPassBeginInfo renderPassInfo{};
         renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         renderPassInfo.renderPass = this->_renderPass;
-        renderPassInfo.framebuffer = this->_swapChainFrameBuffers[imageIndex];
+        renderPassInfo.framebuffer
+            = this->_swapChainData.frameBuffer[imageIndex];
 
         renderPassInfo.renderArea.offset = {0, 0};
         renderPassInfo.renderArea.extent = this->_swapChainExtent;
@@ -981,7 +982,7 @@ void VulkanEngine::drawFrame(TickData* tickData) {
     tickData->graphics.currentFrameInFlight = _currentFrame;
     tickData->graphics.currentCB
         = this->_device->graphicsCommandBuffers[this->_currentFrame];
-    tickData->graphics.currentFB = this->_swapChainFrameBuffers[imageIndex];
+    tickData->graphics.currentFB = this->_swapChainData.frameBuffer[imageIndex];
     tickData->graphics.currentFBextend = this->_swapChainExtent;
     tickData->graphics.mainProjectionMatrix = glm::perspective(
         glm::radians(90.f),
@@ -1083,14 +1084,6 @@ void VulkanEngine::initSwapChain() {
 void VulkanEngine::DrawImgui() {
     if (ImGui::Begin("Vulkan Engine")) {
         ImGui::Text("Hello Vulkan!");
-
-        // TempUtils::DrawMeshTextureSelector();
-        // if (ImGui::Button("add mesh")) {
-        //     // MeshInstance* mesh = _meshRenderManager->CreateMeshInstance(
-        //     //     TempUtils::meshPathBuf, TempUtils::texturePathBuf
-        //     // );
-        // }
-        // //_meshRenderManager->DrawImgui();
     }
     ImGui::End();
     _entityViewerSystem->DrawImGui();

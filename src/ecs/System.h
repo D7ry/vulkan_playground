@@ -30,6 +30,7 @@ class ISystem
 };
 
 // System that supports ImGui drawing
+// Overload DrawImGui() to draw imgui elements
 class ImGuiSystem : public ISystem
 {
   public:
