@@ -2,6 +2,7 @@
 #include "ecs/System.h"
 #include "lib/VQBuffer.h"
 
+// FIXME: this can be generalized into a "LineSystem" that draws line instances
 // a global coorindate grid similar to blender's background
 class GlobalGridSystem : public ISingletonSystem, IRenderSystem
 {
@@ -48,4 +49,6 @@ class GlobalGridSystem : public ISingletonSystem, IRenderSystem
         VQBuffer vertexBuffer;
         VQBufferIndex indexBuffer;
     } gridMesh;
+
+    size_t _numLines;
 };

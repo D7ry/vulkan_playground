@@ -402,7 +402,7 @@ void GlobalGridSystem::Tick(const TickData* tickData) {
         = {gridMesh.vertexBuffer.buffer};
     vkCmdBindVertexBuffers(CB, 0, 1, vertexBuffers, offsets);
 
-    vkCmdDraw(CB, 2, 1, 0, 0);
+    vkCmdDraw(CB, _numLines * 2, 1, 0, 0);
 }
 
 void GlobalGridSystem::Init(const InitData* initData) {
@@ -410,9 +410,24 @@ void GlobalGridSystem::Init(const InitData* initData) {
     this->createGraphicsPipeline(initData->renderPass.mainPass);
 
     // create vertex + index buffer for the global grid
-    std::vector<Vertex> vertices(2);
-    vertices[0].pos = {0, 0, 0};
-    vertices[1].pos = {0, 1, 0};
-    VQUtils::createVertexBuffer(vertices, gridMesh.vertexBuffer, *_device);
+    std::vector<Vertex> vertices;
+    const float gridSize = 10.0f;  // Total size of the grid (-100 to +100)
+    const float gridStep = 1.0f;   // Distance between grid lines
+    const float z = -1.0f;          // Set z-coordinate to -1
 
+    // Create vertices for horizontal lines
+    for (float y = -gridSize; y <= gridSize; y += gridStep) {
+        vertices.push_back(Vertex(glm::vec3(-gridSize, y, z)));
+        vertices.push_back(Vertex(glm::vec3(gridSize, y, z)));
+        _numLines++;
+    }
+    DEBUG("{}", _numLines);
+
+    // Create vertices for vertical lines
+    for (float x = -gridSize; x <= gridSize; x += gridStep) {
+        vertices.push_back(Vertex(glm::vec3{x, -gridSize, z}));
+        vertices.push_back(Vertex(glm::vec3{x, gridSize, z}));
+        _numLines++;
+    }
+    VQUtils::createVertexBuffer(vertices, gridMesh.vertexBuffer, *_device);
 }
