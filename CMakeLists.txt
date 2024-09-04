@@ -54,6 +54,7 @@ add_executable(vulkan_playground
         # render systems
         src/ecs/system/PhongRenderSystem.cpp
         src/ecs/system/EntityViewerSystem.cpp
+        src/ecs/system/GlobalGridSystem.cpp
 )
 
 target_sources(${PROJECT_NAME} 

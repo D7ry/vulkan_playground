@@ -102,6 +102,7 @@ void VulkanEngine::Init() {
     { // lab to mess around with ecs
         this->_entityViewerSystem = new EntityViewerSystem();
         this->_phongSystem = new PhongRenderSystem();
+        this->_globalGridSystem = new GlobalGridSystem();
         InitData initData;
         initData.device = this->_device.get();
         initData.textureManager = TextureManager::GetSingleton(
@@ -109,6 +110,7 @@ void VulkanEngine::Init() {
         initData.swapChainImageFormat = this->_swapChainImageFormat;
         initData.renderPass.mainPass = _mainRenderPass;
         _phongSystem->Init(&initData);
+        _globalGridSystem->Init(&initData);
         _deletionStack.push([this]() { this->_phongSystem->Cleanup(); });
 
         // make entity
@@ -1113,6 +1115,7 @@ void VulkanEngine::drawFrame(TickData* tickData) {
             vkCmdSetScissor(CB, 0, 1, &scissor);
         }
         this->_phongSystem->Tick(tickData);
+        this->_globalGridSystem->Tick(tickData);
         { // end main render pass
             vkCmdEndRenderPass(CB);
         }

@@ -3,6 +3,7 @@
 #include "components/DeltaTimer.h"
 #include "components/InputManager.h"
 #include "ecs/system/EntityViewerSystem.h"
+#include "ecs/system/GlobalGridSystem.h"
 #include <cstdint>
 #include <glm/detail/qualifier.hpp>
 #include <imgui_internal.h>
@@ -235,6 +236,7 @@ class VulkanEngine
     DeletionStack _deletionStack;
 
     PhongRenderSystem* _phongSystem;
+    GlobalGridSystem* _globalGridSystem;
     EntityViewerSystem* _entityViewerSystem;
 
     DeltaTimer _deltaTimer;
