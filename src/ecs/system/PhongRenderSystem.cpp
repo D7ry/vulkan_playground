@@ -316,8 +316,7 @@ void PhongRenderSystem::createGraphicsPipeline(const VkRenderPass renderPass) {
     // set up vertex descriptions
     VkVertexInputBindingDescription bindingDescription
         = Vertex::GetBindingDescription();
-    std::unique_ptr<std::vector<VkVertexInputAttributeDescription>>
-        attributeDescriptions = Vertex::GetAttributeDescriptions();
+    auto attributeDescriptions = Vertex::GetAttributeDescriptions();
     {
         vertexInputInfo.sType
             = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
