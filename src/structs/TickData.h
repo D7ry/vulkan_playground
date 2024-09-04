@@ -34,4 +34,7 @@ struct InitData
     VQDevice* device;
     VkFormat swapChainImageFormat;
     TextureManager* textureManager;
+    struct {
+        VkRenderPass mainPass;
+    } renderPass;
 };

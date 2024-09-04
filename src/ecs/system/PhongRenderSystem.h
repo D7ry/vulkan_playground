@@ -33,7 +33,7 @@ struct PhongUBODynamic
 };
 
 // self-contained system to render phong meshes
-class PhongRenderSystem : public ISystem
+class PhongRenderSystem : public IRenderSystem
 {
   public:
     PhongMeshInstanceComponent* MakePhongMeshInstanceComponent(
@@ -56,8 +56,7 @@ class PhongRenderSystem : public ISystem
     const char* VERTEX_SHADER_SRC = "../shaders/phong.vert.spv";
     const char* FRAGMENT_SHADER_SRC = "../shaders/phong.frag.spv";
 
-    // renderpass and pipeline
-    VkRenderPass _renderPass = VK_NULL_HANDLE;
+    // pipeline
     VkPipeline _pipeline = VK_NULL_HANDLE;
     VkPipelineLayout _pipelineLayout = VK_NULL_HANDLE;
 
@@ -83,13 +82,11 @@ class PhongRenderSystem : public ISystem
 
     VQDevice* _device = nullptr;
 
-    void createRenderPass(VQDevice* device, VkFormat swapChainImageFormat);
-
     // initialize resources for graphics pipeline,
     // - shaders
     // - descriptors(pool, layout, sets)
     // and the pipeline itself
-    void createGraphicsPipeline();
+    void createGraphicsPipeline(const VkRenderPass renderPass);
 
     // all phong meshes created
     std::unordered_map<std::string, PhongMesh> _meshes;

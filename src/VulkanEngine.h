@@ -207,7 +207,8 @@ class VulkanEngine
         std::vector<VkImageView> imageView;
     } _swapChainData; // sets of data, ith element of each vec corrsponds to ith image
 
-    VkRenderPass _renderPass = VK_NULL_HANDLE;
+    // main render pass, and currently the only render pass
+    VkRenderPass _mainRenderPass = VK_NULL_HANDLE;
 
     std::vector<VkSemaphore> _semaImageAvailable;
     std::vector<VkSemaphore> _semaRenderFinished;

@@ -107,6 +107,7 @@ void VulkanEngine::Init() {
         initData.textureManager = TextureManager::GetSingleton(
         ); // TODO: get rid of singleton pattern
         initData.swapChainImageFormat = this->_swapChainImageFormat;
+        initData.renderPass.mainPass = _mainRenderPass;
         _phongSystem->Init(&initData);
         _deletionStack.push([this]() { this->_phongSystem->Cleanup(); });
 
@@ -877,7 +878,7 @@ void VulkanEngine::createRenderPass() {
     renderPassInfo.pDependencies = &dependency;
 
     if (vkCreateRenderPass(
-            _device->logicalDevice, &renderPassInfo, nullptr, &this->_renderPass
+            _device->logicalDevice, &renderPassInfo, nullptr, &this->_mainRenderPass
         )
         != VK_SUCCESS) {
         FATAL("Failed to create render pass!");
@@ -885,14 +886,14 @@ void VulkanEngine::createRenderPass() {
 
     _deletionStack.push([this]() {
         vkDestroyRenderPass(
-            this->_device->logicalDevice, this->_renderPass, nullptr
+            this->_device->logicalDevice, this->_mainRenderPass, nullptr
         );
     });
 }
 
 void VulkanEngine::createFramebuffers() {
     // iterate through image views and create framebuffers
-    if (_renderPass == VK_NULL_HANDLE) {
+    if (_mainRenderPass == VK_NULL_HANDLE) {
         FATAL("Render pass is null!");
     }
     for (size_t i = 0; i < _swapChainData.image.size(); i++) {
@@ -901,7 +902,7 @@ void VulkanEngine::createFramebuffers() {
         VkFramebufferCreateInfo framebufferInfo{};
         framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
         framebufferInfo.renderPass
-            = _renderPass; // each framebuffer is associated with a render pass;
+            = _mainRenderPass; // each framebuffer is associated with a render pass;
                            // they need to be compatible i.e. having same number
                            // of attachments and same formats
         framebufferInfo.attachmentCount
@@ -939,7 +940,7 @@ void VulkanEngine::recordCommandBuffer(
     {
         VkRenderPassBeginInfo renderPassInfo{};
         renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        renderPassInfo.renderPass = this->_renderPass;
+        renderPassInfo.renderPass = this->_mainRenderPass;
         renderPassInfo.framebuffer
             = this->_swapChainData.frameBuffer[imageIndex];
 
@@ -1061,10 +1062,11 @@ void VulkanEngine::drawFrame(TickData* tickData) {
         }
     }
 
+    auto FB = this->_swapChainData.frameBuffer[imageIndex];
     tickData->graphics.currentFrameInFlight = _currentFrame;
     tickData->graphics.currentCB
         = this->_device->graphicsCommandBuffers[this->_currentFrame];
-    tickData->graphics.currentFB = this->_swapChainData.frameBuffer[imageIndex];
+    tickData->graphics.currentFB = FB;
     tickData->graphics.currentFBextend = this->_swapChainExtent;
     tickData->graphics.mainProjectionMatrix = glm::perspective(
         glm::radians(90.f),
@@ -1075,7 +1077,47 @@ void VulkanEngine::drawFrame(TickData* tickData) {
     tickData->graphics.mainProjectionMatrix[1][1]
         *= -1; // invert y axis because vulkan
 
-    this->_phongSystem->Tick(tickData);
+    { // invoke all GraphicsSystem under the main render pass
+        { // begin main render pass
+            VkRenderPassBeginInfo renderPassInfo{};
+            renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+            renderPassInfo.renderPass = this->_mainRenderPass;
+            renderPassInfo.framebuffer = FB;
+
+            renderPassInfo.renderArea.offset = {0, 0};
+            renderPassInfo.renderArea.extent = _swapChainExtent;
+
+            std::array<VkClearValue, 2> clearValues{};
+            clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
+            clearValues[1].depthStencil = {1.0f, 0};
+
+            renderPassInfo.clearValueCount
+                = static_cast<uint32_t>(clearValues.size());
+            renderPassInfo.pClearValues = clearValues.data();
+
+            vkCmdBeginRenderPass(CB, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+        }
+        { // set viewport and scissor
+            VkViewport viewport{};
+            viewport.x = 0.0f;
+            viewport.y = 0.0f;
+            viewport.width = static_cast<float>(_swapChainExtent.width);
+            viewport.height = static_cast<float>(_swapChainExtent.height);
+            viewport.minDepth = 0.0f;
+            viewport.maxDepth = 1.0f;
+            vkCmdSetViewport(CB, 0, 1, &viewport);
+
+            VkRect2D scissor{};
+            scissor.offset = {0, 0};
+            scissor.extent = _swapChainExtent;
+            vkCmdSetScissor(CB, 0, 1, &scissor);
+        }
+        this->_phongSystem->Tick(tickData);
+        { // end main render pass
+            vkCmdEndRenderPass(CB);
+        }
+    }
+
     _imguiManager.RecordCommandBuffer(
         this->_currentFrame, imageIndex, _swapChainExtent
     );
