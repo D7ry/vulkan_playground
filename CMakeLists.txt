@@ -50,8 +50,7 @@ add_executable(vulkan_playground
         src/components/InputManager.cpp
         src/lib/VQDevice.cpp
         src/lib/VQUtils.cpp
-        src/components/rendering/VulkanEngine.cpp
-        src/application/DEngine.cpp
+        src/VulkanEngine.cpp
         # render systems
         src/ecs/system/PhongRenderSystem.cpp
         src/ecs/system/EntityViewerSystem.cpp

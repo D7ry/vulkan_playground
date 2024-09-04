@@ -1,4 +1,7 @@
 #pragma once
+#include "components/Camera.h"
+#include "components/DeltaTimer.h"
+#include "components/InputManager.h"
 #include "ecs/system/EntityViewerSystem.h"
 #include <cstdint>
 #include <glm/detail/qualifier.hpp>
@@ -39,8 +42,9 @@ class VulkanEngine
      * @brief Initialize render manager, create necessary vulkan resources and
      * bindings.
      */
-    void Init(GLFWwindow* window);
-    void Tick(TickData* tickData);
+    void Init();
+    void Run();
+    void Tick();
     void Cleanup();
 
     void DrawImgui();
@@ -68,6 +72,8 @@ class VulkanEngine
         std::vector<VkSurfaceFormatKHR> formats;
         std::vector<VkPresentModeKHR> presentModes;
     };
+
+    void initGLFW();
 
     /**
      * @brief Creates a vulkan instance, save to a field of this class.
@@ -230,7 +236,12 @@ class VulkanEngine
     PhongRenderSystem* _phongSystem;
     EntityViewerSystem* _entityViewerSystem;
 
-    // temporary hacks
-  public:
-    Camera* mainCamera;
+    DeltaTimer _deltaTimer;
+    Camera _mainCamera = Camera(0, 0, 0, 0, 0, 0);
+    InputManager _inputManager;
+
+    bool _lockCursor;
+    void cursorPosCallback(GLFWwindow* window, double xpos, double ypos);
+
+    void bindDefaultInputs();
 };

@@ -19,62 +19,145 @@
 #include "VulkanEngine.h"
 #include "components/Camera.h"
 
-void VulkanEngine::Init(GLFWwindow* window) {
+void VulkanEngine::initGLFW() {
+    glfwInit();
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+    glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
+    if (!glfwVulkanSupported()) {
+        FATAL("Vulkan is not supported on this machine!");
+    }
+    this->_window
+        = glfwCreateWindow(1280, 720, "Vulkan Engine", nullptr, nullptr);
+    if (this->_window == nullptr) {
+        FATAL("Failed to initialize GLFW windlw!");
+    }
+    glfwSetWindowUserPointer(_window, this);
+    _deletionStack.push([this]() {
+        glfwDestroyWindow(this->_window);
+        glfwTerminate();
+    });
+}
+
+void VulkanEngine::cursorPosCallback(
+    GLFWwindow* window,
+    double xpos,
+    double ypos
+) {
+    static bool updatedCursor = false;
+    static int prevX = -1;
+    static int prevY = -1;
+    if (!updatedCursor) {
+        prevX = xpos;
+        prevY = ypos;
+        updatedCursor = true;
+    }
+    double deltaX = prevX - xpos;
+    double deltaY = prevY - ypos;
+    // handle camera movement
+    deltaX *= 0.3;
+    deltaY *= 0.3; // make movement slower
+    if (_lockCursor) {
+        _mainCamera.ModRotation(deltaX, deltaY, 0);
+    }
+    prevX = xpos;
+    prevY = ypos;
+}
+
+void VulkanEngine::Init() {
+    initGLFW();
+    { // Input Handling
+        auto keyCallback
+            = [](GLFWwindow* window, int key, int scancode, int action, int mods
+              ) {
+                  VulkanEngine* pThis = reinterpret_cast<VulkanEngine*>(
+                      glfwGetWindowUserPointer(window)
+                  );
+                  pThis->_inputManager.OnKeyInput(
+                      window, key, scancode, action, mods
+                  );
+              };
+        glfwSetKeyCallback(this->_window, keyCallback);
+        // don't have a mouse input manager yet, so manually bind cursor pos
+        // callback
+        auto cursorPosCallback
+            = [](GLFWwindow* window, double xpos, double ypos) {
+                  VulkanEngine* pThis = reinterpret_cast<VulkanEngine*>(
+                      glfwGetWindowUserPointer(window)
+                  );
+                  pThis->cursorPosCallback(window, xpos, ypos);
+              };
+        glfwSetCursorPosCallback(this->_window, cursorPosCallback);
+        bindDefaultInputs();
+    }
+
     INFO("Initializing Render Manager...");
-    this->_window = window;
     glfwSetFramebufferSizeCallback(_window, this->framebufferResizeCallback);
     this->initVulkan();
+    this->_imguiManager.BindRenderCallback([this]() { this->DrawImgui(); });
     TextureManager::GetSingleton()->Init(_device
     ); // pass device to texture manager for it to start loading
     this->_deletionStack.push([this]() {
         TextureManager::GetSingleton()->Cleanup();
     });
-    this->_entityViewerSystem = new EntityViewerSystem();
-    this->_phongSystem = new PhongRenderSystem();
-    InitData initData;
-    initData.device = this->_device.get();
-    initData.textureManager
-        = TextureManager::GetSingleton(); // TODO: get rid of singleton pattern
-    initData.swapChainImageFormat = this->_swapChainImageFormat;
-    _phongSystem->Init(&initData);
-    _deletionStack.push([this]() { this->_phongSystem->Cleanup(); });
+    { // lab to mess around with ecs
+        this->_entityViewerSystem = new EntityViewerSystem();
+        this->_phongSystem = new PhongRenderSystem();
+        InitData initData;
+        initData.device = this->_device.get();
+        initData.textureManager = TextureManager::GetSingleton(
+        ); // TODO: get rid of singleton pattern
+        initData.swapChainImageFormat = this->_swapChainImageFormat;
+        _phongSystem->Init(&initData);
+        _deletionStack.push([this]() { this->_phongSystem->Cleanup(); });
 
-    // make entity
-    {
-        Entity* thing = new Entity("thing");
-        auto phongMeshComponent = _phongSystem->MakePhongMeshInstanceComponent(
-            "../resources/viking_room.obj", "../resources/viking_room.png"
-        );
-        thing->AddComponent(phongMeshComponent);
-        TransformComponent* transform = new TransformComponent();
-        *transform = TransformComponent::Identity();
+        // make entity
+        {
+            Entity* thing = new Entity("thing");
+            auto phongMeshComponent
+                = _phongSystem->MakePhongMeshInstanceComponent(
+                    "../resources/viking_room.obj",
+                    "../resources/viking_room.png"
+                );
+            thing->AddComponent(phongMeshComponent);
+            TransformComponent* transform = new TransformComponent();
+            *transform = TransformComponent::Identity();
 
-        thing->AddComponent(transform);
-        _phongSystem->AddEntity(thing);
-        _entityViewerSystem->AddEntity(thing);
-    }
-    { // make another entity
-        Entity* thing = new Entity("spot");
-        auto phongMeshComponent = _phongSystem->MakePhongMeshInstanceComponent(
-            "../resources/spot.obj", "../resources/spot.png"
-        );
-        thing->AddComponent(phongMeshComponent);
-        TransformComponent* transform = new TransformComponent();
-        *transform = TransformComponent::Identity();
-        transform->scale = {1, 1, 1};
-        transform->position.y += 2;
-        thing->AddComponent(transform);
-        _phongSystem->AddEntity(thing);
-        _entityViewerSystem->AddEntity(thing);
+            thing->AddComponent(transform);
+            _phongSystem->AddEntity(thing);
+            _entityViewerSystem->AddEntity(thing);
+        }
+        { // make another entity
+            Entity* thing = new Entity("spot");
+            auto phongMeshComponent
+                = _phongSystem->MakePhongMeshInstanceComponent(
+                    "../resources/spot.obj", "../resources/spot.png"
+                );
+            thing->AddComponent(phongMeshComponent);
+            TransformComponent* transform = new TransformComponent();
+            *transform = TransformComponent::Identity();
+            transform->scale = {1, 1, 1};
+            transform->position.y += 2;
+            thing->AddComponent(transform);
+            _phongSystem->AddEntity(thing);
+            _entityViewerSystem->AddEntity(thing);
+        }
     }
 }
 
-#define CAMERA_SPEED 3
+void VulkanEngine::Run() {
+    while (!glfwWindowShouldClose(_window)) {
+        Tick();
+    }
+}
 
-void VulkanEngine::Tick(TickData* tickData) {
-    this->_viewMatrix = tickData->mainCamera->GetViewMatrix();
+void VulkanEngine::Tick() {
+    glfwPollEvents();
+    _deltaTimer.Tick();
+    double deltaTime = _deltaTimer.GetDeltaTime();
+    _inputManager.Tick(deltaTime);
+    TickData tickData{&_mainCamera, deltaTime};
     _imguiManager.RenderFrame();
-    drawFrame(tickData);
+    drawFrame(&tickData);
     vkDeviceWaitIdle(this->_device->logicalDevice);
 }
 
@@ -711,7 +794,6 @@ void VulkanEngine::createSynchronizationObjects() {
 void VulkanEngine::Cleanup() {
     INFO("Cleaning up...");
     _deletionStack.flush();
-
     if (enableValidationLayers) {
         if (this->_debugMessenger != nullptr) {
             // TODO: implement this
@@ -1072,10 +1154,6 @@ void VulkanEngine::drawFrame(TickData* tickData) {
     _currentFrame = (_currentFrame + 1) % NUM_FRAME_IN_FLIGHT;
 }
 
-void VulkanEngine::SetImguiRenderCallback(std::function<void()> imguiFunction) {
-    this->_imguiManager.BindRenderCallback(imguiFunction);
-}
-
 void VulkanEngine::initSwapChain() {
     createSwapChain();
     this->_deletionStack.push([this]() { this->cleanupSwapChain(); });
@@ -1083,8 +1161,100 @@ void VulkanEngine::initSwapChain() {
 
 void VulkanEngine::DrawImgui() {
     if (ImGui::Begin("Vulkan Engine")) {
-        ImGui::Text("Hello Vulkan!");
+        ImGui::SetWindowPos(ImVec2(0, 0), ImGuiCond_Once);
+        ImGui::SetWindowSize(ImVec2(400, 400), ImGuiCond_Once);
+        ImGui::Text("Framerate: %f", 1 / _deltaTimer.GetDeltaTime());
+        ImGui::Separator();
+        ImGui::Text("Camera");
+        if (ImGui::BeginChild("Camera")) {
+            ImGui::Text(
+                "Position: (%f, %f, %f)",
+                _mainCamera.GetPosition().x,
+                _mainCamera.GetPosition().y,
+                _mainCamera.GetPosition().z
+            );
+            ImGui::Text(
+                "Yaw: %f Pitch: %f Roll: %f",
+                _mainCamera.GetRotation().y,
+                _mainCamera.GetRotation().x,
+                _mainCamera.GetRotation().z
+            );
+            if (_lockCursor) {
+                ImGui::Text("View Mode: Active");
+            } else {
+                ImGui::Text("View Mode: Deactive");
+            }
+        }
+        ImGui::EndChild();
     }
     ImGui::End();
     _entityViewerSystem->DrawImGui();
+}
+
+void VulkanEngine::bindDefaultInputs() {
+    const int CAMERA_SPEED = 3;
+    _inputManager.RegisterCallback(
+        GLFW_KEY_W,
+        InputManager::KeyCallbackCondition::HOLD,
+        [this]() {
+            _mainCamera.Move(_deltaTimer.GetDeltaTime() * CAMERA_SPEED, 0, 0);
+        }
+    );
+    _inputManager.RegisterCallback(
+        GLFW_KEY_S,
+        InputManager::KeyCallbackCondition::HOLD,
+        [this]() {
+            _mainCamera.Move(-_deltaTimer.GetDeltaTime() * CAMERA_SPEED, 0, 0);
+        }
+    );
+    _inputManager.RegisterCallback(
+        GLFW_KEY_A,
+        InputManager::KeyCallbackCondition::HOLD,
+        [this]() {
+            _mainCamera.Move(0, _deltaTimer.GetDeltaTime() * CAMERA_SPEED, 0);
+        }
+    );
+    _inputManager.RegisterCallback(
+        GLFW_KEY_D,
+        InputManager::KeyCallbackCondition::HOLD,
+        [this]() {
+            _mainCamera.Move(0, -_deltaTimer.GetDeltaTime() * CAMERA_SPEED, 0);
+        }
+    );
+    _inputManager.RegisterCallback(
+        GLFW_KEY_LEFT_CONTROL,
+        InputManager::KeyCallbackCondition::HOLD,
+        [this]() {
+            _mainCamera.Move(0, 0, -CAMERA_SPEED * _deltaTimer.GetDeltaTime());
+        }
+    );
+    _inputManager.RegisterCallback(
+        GLFW_KEY_SPACE,
+        InputManager::KeyCallbackCondition::HOLD,
+        [this]() {
+            _mainCamera.Move(0, 0, CAMERA_SPEED * _deltaTimer.GetDeltaTime());
+        }
+    );
+
+    _inputManager.RegisterCallback(
+        GLFW_KEY_TAB,
+        InputManager::KeyCallbackCondition::PRESS,
+        [this]() {
+            _lockCursor = !_lockCursor;
+            if (_lockCursor) {
+                glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+                ImGui::GetIO().ConfigFlags
+                    |= (ImGuiConfigFlags_NoMouse | ImGuiConfigFlags_NoKeyboard);
+            } else {
+                glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+                ImGui::GetIO().ConfigFlags &= ~ImGuiConfigFlags_NoMouse;
+                ImGui::GetIO().ConfigFlags &= ~ImGuiConfigFlags_NoKeyboard;
+            }
+        }
+    );
+    _inputManager.RegisterCallback(
+        GLFW_KEY_ESCAPE,
+        InputManager::KeyCallbackCondition::PRESS,
+        [this]() { glfwSetWindowShouldClose(_window, GLFW_TRUE); }
+    );
 }
