@@ -51,7 +51,15 @@ void PhongRenderSystem::Cleanup() {
     // note: texture is handled by TextureManager so no need to clean that up
 }
 
-//Renderpass Pipeline Descriptor sets static uniform buffers dynamic uniform buffers vertex buffers Push constants
+// global uniform 
+// Renderpass 
+// Pipeline&static descriptor sets -- managed by PhongRenderSystem
+// vertex / index buffer -- all instances neesds to be grouped into vertex/index buffer
+// Dynamic Descriptor sets: two choices
+//  -- bind the offset in CPU -- more flexibility
+//  -- index into offset in device using pushConstants
+//
+// pushConstants // -push instance id?
 void PhongRenderSystem::Tick(const TickData* tickData) {
     VkCommandBuffer CB = tickData->graphics.currentCB;
     VkFramebuffer FB = tickData->graphics.currentFB;
@@ -59,6 +67,7 @@ void PhongRenderSystem::Tick(const TickData* tickData) {
     int frameIdx = tickData->graphics.currentFrameInFlight;
 
     vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipeline);
+    // NOTE: phong mesh do not have static UBO anymore
     // { // update static ubo with model view matrix
     //     PhongUBOStatic ubo{
     //         tickData->mainCamera->GetViewMatrix(),  // view mat
