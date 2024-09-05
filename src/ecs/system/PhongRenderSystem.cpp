@@ -17,7 +17,7 @@ void PhongRenderSystem::Init(const InitData* initData) {
         = _device->GetDynamicUBOAlignedSize(sizeof(PhongUBODynamic));
     // create the phong render pass
     // create graphics pipeline
-    this->createGraphicsPipeline(initData->renderPass.mainPass);
+    this->createGraphicsPipeline(initData->renderPass.mainPass, initData);
 }
 
 void PhongRenderSystem::Cleanup() {
@@ -32,7 +32,7 @@ void PhongRenderSystem::Cleanup() {
 
     // clean up static UBO & dynamic UBO
     for (UBO& ubo : _UBO) {
-        ubo.staticUBO.Cleanup();
+        //ubo.staticUBO.Cleanup();
         ubo.dynamicUBO.Cleanup();
     }
 
@@ -59,14 +59,14 @@ void PhongRenderSystem::Tick(const TickData* tickData) {
     int frameIdx = tickData->graphics.currentFrameInFlight;
 
     vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipeline);
-    { // update static ubo with model view matrix
-        PhongUBOStatic ubo{
-            tickData->mainCamera->GetViewMatrix(),  // view mat
-            tickData->graphics.mainProjectionMatrix // proj mat
-        };
-
-        memcpy(_UBO[frameIdx].staticUBO.bufferAddress, &ubo, sizeof(ubo));
-    }
+    // { // update static ubo with model view matrix
+    //     PhongUBOStatic ubo{
+    //         tickData->mainCamera->GetViewMatrix(),  // view mat
+    //         tickData->graphics.mainProjectionMatrix // proj mat
+    //     };
+    //
+    //     memcpy(_UBO[frameIdx].staticUBO.bufferAddress, &ubo, sizeof(ubo));
+    // }
 
     // loop through entities and render them
     for (Entity* entity : this->_entities) {
@@ -130,13 +130,13 @@ void PhongRenderSystem::Tick(const TickData* tickData) {
 
 }
 
-void PhongRenderSystem::createGraphicsPipeline(const VkRenderPass renderPass) {
+void PhongRenderSystem::createGraphicsPipeline(const VkRenderPass renderPass, const InitData* initData) {
     /////  ---------- descriptor ---------- /////
     VkDescriptorSetLayoutBinding uboStaticBinding{};
     VkDescriptorSetLayoutBinding uboDynamicBinding{};
     VkDescriptorSetLayoutBinding samplerLayoutBinding{};
     { // UBO static -- vertex
-        uboStaticBinding.binding = (int)BindingLocation::UBO_STATIC;
+        uboStaticBinding.binding = (int)BindingLocation::UBO_STATIC_ENGINE;
         uboStaticBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         uboStaticBinding.descriptorCount = 1; // number of values in the array
         uboStaticBinding.stageFlags
@@ -240,15 +240,15 @@ void PhongRenderSystem::createGraphicsPipeline(const VkRenderPass renderPass) {
     /////  ---------- UBO ---------- /////
 
     // allocate for static ubo, this only needs to be done once
-    for (auto& UBO : this->_UBO) {
-        _device->CreateBufferInPlace(
-            sizeof(PhongUBOStatic),
-            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
-                | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-            UBO.staticUBO
-        );
-    }
+    // for (auto& UBO : this->_UBO) {
+    //     _device->CreateBufferInPlace(
+    //         sizeof(PhongUBOStatic),
+    //         VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+    //         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+    //             | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+    //         UBO.staticUBO
+    //     );
+    // }
 
     // allocate for dynamic ubo, and write to descriptors
     resizeDynamicUbo(10);
@@ -258,20 +258,15 @@ void PhongRenderSystem::createGraphicsPipeline(const VkRenderPass renderPass) {
     // dynamic ubo is updated through `resizeDynamicUbo`
     // texture array is updated through `updateTextureDescriptorSet`
     for (size_t i = 0; i < NUM_FRAME_IN_FLIGHT; i++) {
-        VkDescriptorBufferInfo descriptorBufferInfo_static{};
-        descriptorBufferInfo_static.buffer = this->_UBO[i].staticUBO.buffer;
-        descriptorBufferInfo_static.offset = 0;
-        descriptorBufferInfo_static.range = sizeof(PhongUBOStatic);
 
         std::array<VkWriteDescriptorSet, 1> descriptorWrites{};
-
         descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         descriptorWrites[0].dstSet = this->_descriptorSets[i];
-        descriptorWrites[0].dstBinding = (int)BindingLocation::UBO_STATIC;
+        descriptorWrites[0].dstBinding = (int)BindingLocation::UBO_STATIC_ENGINE;
         descriptorWrites[0].dstArrayElement = 0;
         descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         descriptorWrites[0].descriptorCount = 1;
-        descriptorWrites[0].pBufferInfo = &descriptorBufferInfo_static;
+        descriptorWrites[0].pBufferInfo = &initData->engineUBOStaticDescriptorBufferInfo[i];
 
         vkUpdateDescriptorSets(
             _device->logicalDevice,

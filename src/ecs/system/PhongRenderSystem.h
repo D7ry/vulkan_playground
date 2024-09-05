@@ -41,10 +41,11 @@ class PhongRenderSystem : public IRenderSystem
         const std::string& texturePath
     );
 
-    // destroy a mesh instance component that's initialized with `MakePhongMeshInstanceComponent`
-    // freeing the pointer
-    void DestroyPhongMeshInstanceComponent(PhongMeshInstanceComponent*& component);
-
+    // destroy a mesh instance component that's initialized with
+    // `MakePhongMeshInstanceComponent` freeing the pointer
+    void DestroyPhongMeshInstanceComponent(
+        PhongMeshInstanceComponent*& component
+    );
 
     virtual void Init(const InitData* initData) override;
     virtual void Tick(const TickData* tickData) override;
@@ -66,15 +67,20 @@ class PhongRenderSystem : public IRenderSystem
 
     struct UBO
     {
-        VQBuffer staticUBO;
+        VQBuffer staticUBO; // currently unused as we use engineUBO. may be
+                            // useful for sytem-scoped ubo
         VQBuffer dynamicUBO;
     };
 
     size_t _numDynamicUBO;  // how many dynamic UBOs do we have
     size_t _currDynamicUBO; // dynamic ubo that is to be allocated
-    std::vector<unsigned long> _freeDynamicUBOIdx; // stores freed indices that are smaller than _currDynamicUBO
-    size_t _dynamicUBOAlignmentSize; // actual size of the dynamic UBO that satisfies device alignment
-    // NOTE this design assumes that we never shrink PhongRenderSystem's dynamic UBO at runtime
+    std::vector<unsigned long>
+        _freeDynamicUBOIdx; // stores freed indices that are smaller than
+                            // _currDynamicUBO
+    size_t _dynamicUBOAlignmentSize; // actual size of the dynamic UBO that
+                                     // satisfies device alignment
+    // NOTE this design assumes that we never shrink PhongRenderSystem's dynamic
+    // UBO at runtime
 
     std::array<VkDescriptorSet, NUM_FRAME_IN_FLIGHT> _descriptorSets;
     std::array<UBO, NUM_FRAME_IN_FLIGHT> _UBO;
@@ -86,7 +92,10 @@ class PhongRenderSystem : public IRenderSystem
     // - shaders
     // - descriptors(pool, layout, sets)
     // and the pipeline itself
-    void createGraphicsPipeline(const VkRenderPass renderPass);
+    void createGraphicsPipeline(
+        const VkRenderPass renderPass,
+        const InitData* initData
+    );
 
     // all phong meshes created
     std::unordered_map<std::string, PhongMesh> _meshes;
@@ -112,7 +121,7 @@ class PhongRenderSystem : public IRenderSystem
 
     enum class BindingLocation : unsigned int
     {
-        UBO_STATIC = 0,
+        UBO_STATIC_ENGINE = 0,
         UBO_DYNAMIC = 1,
         TEXTURE_SAMPLER = 2
     };

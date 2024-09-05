@@ -42,10 +42,18 @@ struct InitData
     VQDevice* device;
     VkFormat swapChainImageFormat;
     TextureManager* textureManager;
-    struct {
+
+    struct
+    {
         VkRenderPass mainPass;
     } renderPass;
-    // points to initialized buffer of static engine ubo
-    // the callee can bind static ubo to its descriptor set
-    std::array<VQBuffer, NUM_FRAME_IN_FLIGHT> engineUBOStatic;
+
+    /**
+     * points to initialized buffer of static engine ubo
+     * the callee can bind static ubo to its descriptor set by using:
+     *
+     * InitData initData->engineUBOStatic[i]
+     *
+     */
+    std::array<VkDescriptorBufferInfo , NUM_FRAME_IN_FLIGHT> engineUBOStaticDescriptorBufferInfo;
 };

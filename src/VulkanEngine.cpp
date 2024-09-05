@@ -120,12 +120,19 @@ void VulkanEngine::Init() {
         this->_phongSystem = new PhongRenderSystem();
         this->_globalGridSystem = new GlobalGridSystem();
         InitData initData;
-        initData.device = this->_device.get();
-        initData.textureManager = TextureManager::GetSingleton(
-        ); // TODO: get rid of singleton pattern
-        initData.swapChainImageFormat = this->_swapChainImageFormat;
-        initData.renderPass.mainPass = _mainRenderPass;
-        initData.engineUBOStatic = _engineUBOStatic;
+        { // populate initData
+            initData.device = this->_device.get();
+            initData.textureManager = TextureManager::GetSingleton(
+            ); // TODO: get rid of singleton pattern
+            initData.swapChainImageFormat = this->_swapChainImageFormat;
+            initData.renderPass.mainPass = _mainRenderPass;
+            for (int i = 0; i < _engineUBOStatic.size(); i++) {
+                initData.engineUBOStaticDescriptorBufferInfo[i].range = sizeof(EngineUBOStatic);
+                initData.engineUBOStaticDescriptorBufferInfo[i].buffer = _engineUBOStatic[i].buffer;
+                initData.engineUBOStaticDescriptorBufferInfo[i].offset = 0;
+            }
+        }
+
         _phongSystem->Init(&initData);
         _deletionStack.push([this]() { this->_phongSystem->Cleanup(); });
 
