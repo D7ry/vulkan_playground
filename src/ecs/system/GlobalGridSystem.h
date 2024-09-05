@@ -9,8 +9,6 @@ class GlobalGridSystem : public ISingletonSystem, IRenderSystem
   public:
     struct UBOStatic
     {
-        glm::mat4 view;
-        glm::mat4 proj;
         glm::vec3 gridColor; // rgb
     };
     struct UBOStaticDevice
@@ -27,10 +25,11 @@ class GlobalGridSystem : public ISingletonSystem, IRenderSystem
   private:
     const char* VERTEX_SHADER_SRC = "../shaders/global_grid.vert.spv";
     const char* FRAGMENT_SHADER_SRC = "../shaders/global_grid.frag.spv";
-    void createGraphicsPipeline(const VkRenderPass renderPass);
+    void createGraphicsPipeline(const VkRenderPass renderPass, const InitData* initData);
     enum class BindingLocation : unsigned int
     {
-        UBO_STATIC = 0
+        UBO_STATIC_ENGINE= 0,
+        UBO_STATIC = 1
     };
 
     VkPipeline _pipeline = VK_NULL_HANDLE;

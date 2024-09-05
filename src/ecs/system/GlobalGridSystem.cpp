@@ -1,13 +1,13 @@
 #include "GlobalGridSystem.h"
 #include "components/Camera.h"
 #include "components/ShaderUtils.h"
-#include "lib/VQDevice.h"
 #include "components/VulkanUtils.h"
+#include "lib/VQDevice.h"
 #include "lib/VQUtils.h"
 
 // FIXME: too much repetitive code, graphics pipeline creation can be
 // encapsulated
-void GlobalGridSystem::createGraphicsPipeline(const VkRenderPass renderPass) {
+void GlobalGridSystem::createGraphicsPipeline(const VkRenderPass renderPass, const InitData* initData) {
     /////  ---------- descriptor ---------- /////
     VkDescriptorSetLayoutBinding uboStaticBinding{};
     { // UBO static -- vertex
@@ -18,8 +18,17 @@ void GlobalGridSystem::createGraphicsPipeline(const VkRenderPass renderPass) {
             = VK_SHADER_STAGE_VERTEX_BIT; // only used in vertex shader
         uboStaticBinding.pImmutableSamplers = nullptr; // Optional
     }
+    VkDescriptorSetLayoutBinding engineUboStaticBinding{};
+    { // Engine UBO Static -- vertex
+        engineUboStaticBinding.binding = (int)BindingLocation::UBO_STATIC_ENGINE;
+        engineUboStaticBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        engineUboStaticBinding.descriptorCount = 1; // number of values in the array
+        engineUboStaticBinding.stageFlags
+            = VK_SHADER_STAGE_VERTEX_BIT; // only used in vertex shader
+        engineUboStaticBinding.pImmutableSamplers = nullptr; // Optional
+    }
 
-    std::array<VkDescriptorSetLayoutBinding, 1> bindings = {uboStaticBinding};
+    std::array<VkDescriptorSetLayoutBinding, 2> bindings = {uboStaticBinding, engineUboStaticBinding};
 
     { // _descriptorSetLayout
         VkDescriptorSetLayoutCreateInfo layoutInfo{};
@@ -109,7 +118,7 @@ void GlobalGridSystem::createGraphicsPipeline(const VkRenderPass renderPass) {
         descriptorBufferInfo_static.offset = 0;
         descriptorBufferInfo_static.range = sizeof(GlobalGridSystem::UBOStatic);
 
-        std::array<VkWriteDescriptorSet, 1> descriptorWrites{};
+        std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
 
         descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         descriptorWrites[0].dstSet = this->_descriptorSets[i];
@@ -118,6 +127,15 @@ void GlobalGridSystem::createGraphicsPipeline(const VkRenderPass renderPass) {
         descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         descriptorWrites[0].descriptorCount = 1;
         descriptorWrites[0].pBufferInfo = &descriptorBufferInfo_static;
+
+
+        descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrites[1].dstSet = this->_descriptorSets[i];
+        descriptorWrites[1].dstBinding = (int)BindingLocation::UBO_STATIC_ENGINE;
+        descriptorWrites[1].dstArrayElement = 0;
+        descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        descriptorWrites[1].descriptorCount = 1;
+        descriptorWrites[1].pBufferInfo = &initData->engineUBOStaticDescriptorBufferInfo[i];
 
         vkUpdateDescriptorSets(
             _device->logicalDevice,
@@ -181,8 +199,7 @@ void GlobalGridSystem::createGraphicsPipeline(const VkRenderPass renderPass) {
               // vertices and if primitive restart should be enabled.
     inputAssembly.sType
         = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    inputAssembly.topology
-        = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;       // draw lines
+    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST; // draw lines
     inputAssembly.primitiveRestartEnable = VK_FALSE; // don't restart primitives
 
     // depth and stencil state
@@ -386,9 +403,7 @@ void GlobalGridSystem::Tick(const TickData* tickData) {
     // pipelines. can we have just one static ubo for specifically view and
     // proj?
     {
-        UBOStatic ubo {
-            tickData->mainCamera->GetViewMatrix(),
-            tickData->graphics.mainProjectionMatrix,
+        UBOStatic ubo{
             glm::vec3(0.3, 0.3, 0.3)
         };
         // TODO: a better ubo abstraction using templates?
@@ -397,8 +412,7 @@ void GlobalGridSystem::Tick(const TickData* tickData) {
 
     // draw the vertex grids
     VkDeviceSize offsets[] = {0};
-    VkBuffer vertexBuffers[]
-        = {_gridMesh.vertexBuffer.buffer};
+    VkBuffer vertexBuffers[] = {_gridMesh.vertexBuffer.buffer};
     vkCmdBindVertexBuffers(CB, 0, 1, vertexBuffers, offsets);
 
     vkCmdDraw(CB, _numLines * 2, 1, 0, 0);
@@ -406,13 +420,13 @@ void GlobalGridSystem::Tick(const TickData* tickData) {
 
 void GlobalGridSystem::Init(const InitData* initData) {
     this->_device = initData->device;
-    this->createGraphicsPipeline(initData->renderPass.mainPass);
+    this->createGraphicsPipeline(initData->renderPass.mainPass, initData);
 
     // create vertex + index buffer for the global grid
     std::vector<Vertex> vertices;
-    const float gridSize = 100.0f;  // Total size of the grid (-100 to +100)
+    const float gridSize = 100.0f; // Total size of the grid (-100 to +100)
     const float gridStep = 1.0f;   // Distance between grid lines
-    const float z = -1.0f;          // Set z-coordinate to -1
+    const float z = -1.0f;         // Set z-coordinate to -1
 
     // Create vertices for horizontal lines
     for (float y = -gridSize; y <= gridSize; y += gridStep) {
