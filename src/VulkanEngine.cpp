@@ -294,7 +294,9 @@ void VulkanEngine::createInstance() {
     instanceExtensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
     createInfo.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
 #endif // __APPLE__
-
+#ifndef NDEBUG
+    instanceExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+#endif // NDEBUG
     createInfo.enabledExtensionCount = instanceExtensions.size();
     createInfo.ppEnabledExtensionNames = instanceExtensions.data();
 
@@ -441,6 +443,7 @@ VulkanEngine::QueueFamilyIndices VulkanEngine::findQueueFamilies(
 }
 
 bool VulkanEngine::checkDeviceExtensionSupport(VkPhysicalDevice device) {
+    DEBUG("checking device extension support");
     uint32_t extensionCount;
     vkEnumerateDeviceExtensionProperties(
         device, nullptr, &extensionCount, nullptr
@@ -463,6 +466,7 @@ bool VulkanEngine::checkDeviceExtensionSupport(VkPhysicalDevice device) {
 }
 
 bool VulkanEngine::isDeviceSuitable(VkPhysicalDevice device) {
+    DEBUG("checking is device suitable");
     VkPhysicalDeviceProperties deviceProperties;
     VkPhysicalDeviceFeatures deviceFeatures;
     vkGetPhysicalDeviceProperties(device, &deviceProperties);

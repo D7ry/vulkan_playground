@@ -151,8 +151,12 @@ class VulkanEngine
         = {"VK_LAYER_KHRONOS_validation"};
     static inline const std::vector<const char*> DEVICE_EXTENSIONS
         = {VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-#if __APPLE__
-           VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME
+#if __APPLE__ // molten vk support
+           VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME,
+           //VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME
+           // NOTE: appple M3 does not have this extension, 
+           // but disabling it leads to a trivial validation layer error
+           // that may be safely ignored.
 #endif // __APPLE__
     };
     bool checkValidationLayerSupport();
