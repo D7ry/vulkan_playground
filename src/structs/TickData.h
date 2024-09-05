@@ -2,7 +2,15 @@
 #include "glm/glm.hpp"
 #include <vulkan/vulkan_core.h>
 
+#include "lib/VQBuffer.h"
 class Camera;
+
+// static ubo that gets updated by the engine every frame
+struct EngineUBOStatic
+{
+    glm::mat4 view; // view matrix
+    glm::mat4 proj; // proj matrix
+};
 
 struct GraphicsTickData
 {
@@ -37,4 +45,7 @@ struct InitData
     struct {
         VkRenderPass mainPass;
     } renderPass;
+    // points to initialized buffer of static engine ubo
+    // the callee can bind static ubo to its descriptor set
+    std::array<VQBuffer, NUM_FRAME_IN_FLIGHT> engineUBOStatic;
 };

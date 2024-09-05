@@ -99,6 +99,22 @@ void VulkanEngine::Init() {
     this->_deletionStack.push([this]() {
         TextureManager::GetSingleton()->Cleanup();
     });
+
+    // create static engine ubo
+    {
+        for (VQBuffer& engineUBO : _engineUBOStatic)
+            _device->CreateBufferInPlace(
+                sizeof(EngineUBOStatic),
+                VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+                    | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                engineUBO
+            );
+        _deletionStack.push([this]() {
+            for (VQBuffer& engineUBO : _engineUBOStatic)
+                engineUBO.Cleanup();
+        });
+    }
     { // lab to mess around with ecs
         this->_entityViewerSystem = new EntityViewerSystem();
         this->_phongSystem = new PhongRenderSystem();
@@ -109,12 +125,12 @@ void VulkanEngine::Init() {
         ); // TODO: get rid of singleton pattern
         initData.swapChainImageFormat = this->_swapChainImageFormat;
         initData.renderPass.mainPass = _mainRenderPass;
+        initData.engineUBOStatic = _engineUBOStatic;
         _phongSystem->Init(&initData);
         _deletionStack.push([this]() { this->_phongSystem->Cleanup(); });
-        
+
         _globalGridSystem->Init(&initData);
         _deletionStack.push([this]() { this->_globalGridSystem->Cleanup(); });
-
 
         // make entity
         {
@@ -163,7 +179,9 @@ void VulkanEngine::Tick() {
     _inputManager.Tick(deltaTime);
     TickData tickData{&_mainCamera, deltaTime};
     _imguiManager.RenderFrame();
-    drawFrame(&tickData);
+    flushEngineUBOStatic(_currentFrame);
+    drawFrame(&tickData, _currentFrame);
+    _currentFrame = (_currentFrame + 1) % NUM_FRAME_IN_FLIGHT;
     vkDeviceWaitIdle(this->_device->logicalDevice);
 }
 
@@ -887,7 +905,10 @@ void VulkanEngine::createRenderPass() {
     renderPassInfo.pDependencies = &dependency;
 
     if (vkCreateRenderPass(
-            _device->logicalDevice, &renderPassInfo, nullptr, &this->_mainRenderPass
+            _device->logicalDevice,
+            &renderPassInfo,
+            nullptr,
+            &this->_mainRenderPass
         )
         != VK_SUCCESS) {
         FATAL("Failed to create render pass!");
@@ -911,9 +932,9 @@ void VulkanEngine::createFramebuffers() {
         VkFramebufferCreateInfo framebufferInfo{};
         framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
         framebufferInfo.renderPass
-            = _mainRenderPass; // each framebuffer is associated with a render pass;
-                           // they need to be compatible i.e. having same number
-                           // of attachments and same formats
+            = _mainRenderPass; // each framebuffer is associated with a render
+                               // pass; they need to be compatible i.e. having
+                               // same number of attachments and same formats
         framebufferInfo.attachmentCount
             = sizeof(attachments) / sizeof(VkImageView);
         framebufferInfo.pAttachments = attachments;
@@ -1017,12 +1038,22 @@ void VulkanEngine::createDepthBuffer() {
     );
 }
 
-void VulkanEngine::drawFrame(TickData* tickData) {
+void VulkanEngine::flushEngineUBOStatic(uint8_t frame) {
+    VQBuffer& buf = _engineUBOStatic[frame];
+    EngineUBOStatic ubo{
+        _mainCamera.GetViewMatrix() // view
+        // proj
+    };
+    getMainProjectionMatrix(ubo.proj);
+    memcpy(buf.bufferAddress, &ubo, sizeof(ubo));
+}
+
+void VulkanEngine::drawFrame(TickData* tickData, uint8_t frame) {
     //  Wait for the previous frame to finish
     vkWaitForFences(
         _device->logicalDevice,
         1,
-        &this->_fenceInFlight[this->_currentFrame],
+        &this->_fenceInFlight[frame],
         VK_TRUE,
         UINT64_MAX
     );
@@ -1033,7 +1064,7 @@ void VulkanEngine::drawFrame(TickData* tickData) {
         this->_device->logicalDevice,
         _swapChain,
         UINT64_MAX,
-        _semaImageAvailable[this->_currentFrame],
+        _semaImageAvailable[frame],
         VK_NULL_HANDLE,
         &imageIndex
     );
@@ -1046,19 +1077,15 @@ void VulkanEngine::drawFrame(TickData* tickData) {
 
     // lock the fence
     vkResetFences(
-        this->_device->logicalDevice,
-        1,
-        &this->_fenceInFlight[this->_currentFrame]
+        this->_device->logicalDevice, 1, &this->_fenceInFlight[frame]
     );
 
+    VkCommandBuffer CB = this->_device->graphicsCommandBuffers[frame];
     //  Record a command buffer which draws the scene onto that image
-    vkResetCommandBuffer(
-        this->_device->graphicsCommandBuffers[this->_currentFrame], 0
-    );
+    vkResetCommandBuffer(CB, 0);
 
     // populate graphics data before ticking graphics systems
-
-    auto CB = this->_device->graphicsCommandBuffers[this->_currentFrame];
+    // TODO: how much of this can be done before waiting for the graphics fence?
 
     { // begin command buffer
         VkCommandBufferBeginInfo beginInfo{};
@@ -1072,9 +1099,8 @@ void VulkanEngine::drawFrame(TickData* tickData) {
     }
 
     auto FB = this->_swapChainData.frameBuffer[imageIndex];
-    tickData->graphics.currentFrameInFlight = _currentFrame;
-    tickData->graphics.currentCB
-        = this->_device->graphicsCommandBuffers[this->_currentFrame];
+    tickData->graphics.currentFrameInFlight = frame;
+    tickData->graphics.currentCB = this->_device->graphicsCommandBuffers[frame];
     tickData->graphics.currentFB = FB;
     tickData->graphics.currentFBextend = this->_swapChainExtent;
     tickData->graphics.mainProjectionMatrix = glm::perspective(
@@ -1086,7 +1112,7 @@ void VulkanEngine::drawFrame(TickData* tickData) {
     tickData->graphics.mainProjectionMatrix[1][1]
         *= -1; // invert y axis because vulkan
 
-    { // invoke all GraphicsSystem under the main render pass
+    {     // invoke all GraphicsSystem under the main render pass
         { // begin main render pass
             VkRenderPassBeginInfo renderPassInfo{};
             renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -1104,7 +1130,9 @@ void VulkanEngine::drawFrame(TickData* tickData) {
                 = static_cast<uint32_t>(clearValues.size());
             renderPassInfo.pClearValues = clearValues.data();
 
-            vkCmdBeginRenderPass(CB, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+            vkCmdBeginRenderPass(
+                CB, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE
+            );
         }
         { // set viewport and scissor
             VkViewport viewport{};
@@ -1128,9 +1156,7 @@ void VulkanEngine::drawFrame(TickData* tickData) {
         }
     }
 
-    _imguiManager.RecordCommandBuffer(
-        this->_currentFrame, imageIndex, _swapChainExtent
-    );
+    _imguiManager.RecordCommandBuffer(frame, imageIndex, _swapChainExtent);
 
     { // end command buffer
         if (vkEndCommandBuffer(CB) != VK_SUCCESS) {
@@ -1143,14 +1169,14 @@ void VulkanEngine::drawFrame(TickData* tickData) {
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
     VkSemaphore waitSemaphores[]
-        = {_semaImageAvailable[_currentFrame]}; // use imageAvailable semaphore
-                                                // to make sure that the image
-                                                // is available before drawing
+        = {_semaImageAvailable[frame]}; // use imageAvailable semaphore
+                                        // to make sure that the image
+                                        // is available before drawing
     VkPipelineStageFlags waitStages[]
         = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
     std::array<VkCommandBuffer, 2> submitCommandBuffers
-        = {this->_device->graphicsCommandBuffers[_currentFrame],
-           _imguiManager.GetCommandBuffer(_currentFrame)};
+        = {this->_device->graphicsCommandBuffers[frame],
+           _imguiManager.GetCommandBuffer(frame)};
 
     submitInfo.waitSemaphoreCount = 1;
     submitInfo.pWaitSemaphores = waitSemaphores;
@@ -1159,17 +1185,14 @@ void VulkanEngine::drawFrame(TickData* tickData) {
         = static_cast<uint32_t>(submitCommandBuffers.size());
     submitInfo.pCommandBuffers = submitCommandBuffers.data();
 
-    VkSemaphore signalSemaphores[] = {_semaRenderFinished[_currentFrame]};
+    VkSemaphore signalSemaphores[] = {_semaRenderFinished[frame]};
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signalSemaphores;
 
     // the submission does not start until vkAcquireNextImageKHR returns, and
     // downs the corresponding _semaRenderFinished semapohre once it's done.
     if (vkQueueSubmit(
-            _device->graphicsQueue,
-            1,
-            &submitInfo,
-            _fenceInFlight[_currentFrame]
+            _device->graphicsQueue, 1, &submitInfo, _fenceInFlight[frame]
         )
         != VK_SUCCESS) {
         FATAL("Failed to submit draw command buffer!");
@@ -1202,8 +1225,6 @@ void VulkanEngine::drawFrame(TickData* tickData) {
     } else if (result != VK_SUCCESS) {
         FATAL("Failed to present swap chain image!");
     }
-    //  Advance to the next frame
-    _currentFrame = (_currentFrame + 1) % NUM_FRAME_IN_FLIGHT;
 }
 
 void VulkanEngine::initSwapChain() {
@@ -1309,4 +1330,14 @@ void VulkanEngine::bindDefaultInputs() {
         InputManager::KeyCallbackCondition::PRESS,
         [this]() { glfwSetWindowShouldClose(_window, GLFW_TRUE); }
     );
+}
+
+void VulkanEngine::getMainProjectionMatrix(glm::mat4& projectionMatrix) {
+    projectionMatrix = glm::perspective(
+        glm::radians(_FOV),
+        _swapChainExtent.width / (float)_swapChainExtent.height,
+        0.1f,
+        100.f
+    );
+    projectionMatrix[1][1] *= -1; // invert for vulkan coord system
 }

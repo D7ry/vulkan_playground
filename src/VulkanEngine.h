@@ -20,6 +20,7 @@
 #include "components/ImGuiManager.h"
 #include "imgui.h"
 #include "lib/VQDevice.h"
+#include "lib/VQBuffer.h"
 #include <vector>
 
 #include <filesystem>
@@ -131,13 +132,18 @@ class VulkanEngine
 
     void createSynchronizationObjects();
 
+    void getMainProjectionMatrix(glm::mat4& projectionMatrix);
+
     /**
      * @brief Initializes Vulkan.
      *
      */
     void initVulkan();
 
-    virtual void drawFrame(TickData* tickData);
+    // flush data to _engineUBOStatic
+    void flushEngineUBOStatic(uint8_t frame);
+
+    virtual void drawFrame(TickData* tickData, uint8_t frame);
 
     virtual void postCleanup() {};
 
@@ -226,7 +232,7 @@ class VulkanEngine
 
     bool _framebufferResized = false;
 
-    uint32_t _currentFrame = 0;
+    uint8_t _currentFrame = 0;
 
     ImGuiManager _imguiManager;
 
@@ -251,4 +257,10 @@ class VulkanEngine
     void cursorPosCallback(GLFWwindow* window, double xpos, double ypos);
 
     void bindDefaultInputs();
+
+    // static ubo for each frame
+    // each buffer stores a `EngineUBOStatic`
+    std::array<VQBuffer, NUM_FRAME_IN_FLIGHT> _engineUBOStatic;
+
+    float _FOV = 90;
 };
