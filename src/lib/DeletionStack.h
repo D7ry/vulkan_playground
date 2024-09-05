@@ -1,7 +1,5 @@
 #pragma once
 
-#include <vector>
-
 /**
  * @brief A stack of functions to be executed that handles the deletion of resources.
  * Stack is FIFO, so push cleaning functions right after resource initialization.

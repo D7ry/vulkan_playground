@@ -21,7 +21,6 @@
 #include "imgui.h"
 #include "lib/VQDevice.h"
 #include "lib/VQBuffer.h"
-#include <vector>
 
 #include <filesystem>
 

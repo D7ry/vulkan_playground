@@ -69,6 +69,7 @@ void PhongRenderSystem::Tick(const TickData* tickData) {
     // }
 
     // loop through entities and render them
+    // TODO: instance everything
     for (Entity* entity : this->_entities) {
         PhongMeshInstanceComponent* meshInstance
             = entity->GetComponent<PhongMeshInstanceComponent>();

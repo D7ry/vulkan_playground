@@ -1,7 +1,5 @@
 #pragma once
 #include "ecs/Component.h"
-#include "glm/ext/matrix_transform.hpp"
-#include "glm/glm.hpp"
 
 struct TransformComponent : public IComponent
 {
