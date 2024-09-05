@@ -1,12 +1,13 @@
 #pragma once
-#include "imgui.h"
 #include "backends/imgui_impl_glfw.h"
 #include "backends/imgui_impl_vulkan.h"
+#include "imgui.h"
 #include <GLFW/glfw3.h>
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_core.h>
 
 #include "VulkanUtils.h"
+#include "structs/TickData.h"
 
 class ImGuiManager
 {
@@ -23,11 +24,12 @@ class ImGuiManager
         int imageCount
     );
 
-    void InitializeRenderPass(VkDevice logicalDevice, VkFormat swapChainImageFormat);
+    void InitializeRenderPass(
+        VkDevice logicalDevice,
+        VkFormat swapChainImageFormat
+    );
 
     void InitializeFonts();
-
-    void InitializeCommandPoolAndBuffers(int bufferCount, VkDevice device, uint32_t queueFamilyIndex);
 
     void DestroyFrameBuffers(VkDevice device);
 
@@ -40,22 +42,23 @@ class ImGuiManager
 
     void InitializeDescriptorPool(int frames_in_flight, VkDevice logicalDevice);
 
-    void RenderFrame();
+    // Create a new frame and records all ImGui::**** draws
+    // for the draw calls to actually be presented, call RecordCommandBuffer(),
+    // which pushes all draw calls to the CB.
+    void BeginImGuiContext();
 
-    void RecordCommandBuffer(int currentFrameInFlight, int imageIndex, VkExtent2D swapChainExtent);
+    // end the `BeginRecordImGui` context
+    void EndImGuiContext();
+
+    // Push all recorded ImGui UI elements onto the CB.
+    void RecordCommandBuffer(const TickData* tickData);
 
     void Cleanup(VkDevice logicalDevice);
-
-    VkCommandBuffer GetCommandBuffer(uint32_t currentFrame);
-
-    void BindRenderCallback(std::function<void(void)> callback);
 
   private:
     VkRenderPass _imGuiRenderPass; // render pass sepcifically for imgui
     VkDescriptorPool _imguiDescriptorPool;
-    std::vector<VkCommandBuffer> _imGuiCommandBuffers;
-    VkCommandPool _imGuiCommandPool;
     std::vector<VkFramebuffer> _imGuiFramebuffers;
-    VkClearValue _imguiClearValue = {0.0f, 0.0f, 0.0f, 0.0f}; // transparent, unused
-    std::function<void(void)> _imguiRenderCallback = nullptr;
+    VkClearValue _imguiClearValue
+        = {0.0f, 0.0f, 0.0f, 0.0f}; // transparent, unused
 };

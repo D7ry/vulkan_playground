@@ -48,7 +48,6 @@ class VulkanEngine
     void Tick();
     void Cleanup();
 
-    void DrawImgui();
 
     void SetImguiRenderCallback(std::function<void()> imguiFunction);
 
@@ -73,6 +72,9 @@ class VulkanEngine
         std::vector<VkSurfaceFormatKHR> formats;
         std::vector<VkPresentModeKHR> presentModes;
     };
+
+
+    void drawImGui();
 
     void initGLFW();
 

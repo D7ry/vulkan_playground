@@ -93,7 +93,6 @@ void VulkanEngine::Init() {
     INFO("Initializing Render Manager...");
     glfwSetFramebufferSizeCallback(_window, this->framebufferResizeCallback);
     this->initVulkan();
-    this->_imguiManager.BindRenderCallback([this]() { this->DrawImgui(); });
     TextureManager::GetSingleton()->Init(_device
     ); // pass device to texture manager for it to start loading
     this->_deletionStack.push([this]() {
@@ -127,8 +126,10 @@ void VulkanEngine::Init() {
             initData.swapChainImageFormat = this->_swapChainImageFormat;
             initData.renderPass.mainPass = _mainRenderPass;
             for (int i = 0; i < _engineUBOStatic.size(); i++) {
-                initData.engineUBOStaticDescriptorBufferInfo[i].range = sizeof(EngineUBOStatic);
-                initData.engineUBOStaticDescriptorBufferInfo[i].buffer = _engineUBOStatic[i].buffer;
+                initData.engineUBOStaticDescriptorBufferInfo[i].range
+                    = sizeof(EngineUBOStatic);
+                initData.engineUBOStaticDescriptorBufferInfo[i].buffer
+                    = _engineUBOStatic[i].buffer;
                 initData.engineUBOStaticDescriptorBufferInfo[i].offset = 0;
             }
         }
@@ -185,7 +186,9 @@ void VulkanEngine::Tick() {
     double deltaTime = _deltaTimer.GetDeltaTime();
     _inputManager.Tick(deltaTime);
     TickData tickData{&_mainCamera, deltaTime};
-    _imguiManager.RenderFrame();
+
+    drawImGui();
+
     flushEngineUBOStatic(_currentFrame);
     drawFrame(&tickData, _currentFrame);
     _currentFrame = (_currentFrame + 1) % NUM_FRAME_IN_FLIGHT;
@@ -230,26 +233,21 @@ void VulkanEngine::initVulkan() {
         this->_device->logicalDevice, _swapChainImageFormat
     );
     this->createFramebuffers();
-
-    this->_imguiManager.InitializeImgui();
-    this->_imguiManager.InitializeDescriptorPool(
-        NUM_FRAME_IN_FLIGHT, _device->logicalDevice
-    );
-    this->_imguiManager.BindVulkanResources(
-        _window,
-        _instance,
-        _device->physicalDevice,
-        _device->logicalDevice,
-        _device->queueFamilyIndices.graphicsFamily.value(),
-        _device->graphicsQueue,
-        _swapChainData.frameBuffer.size()
-    );
-    this->_imguiManager.InitializeCommandPoolAndBuffers(
-        NUM_FRAME_IN_FLIGHT,
-        _device->logicalDevice,
-        _device->queueFamilyIndices.graphicsFamily.value()
-    );
-
+    { // init misc imgui resources
+        this->_imguiManager.InitializeImgui();
+        this->_imguiManager.InitializeDescriptorPool(
+            NUM_FRAME_IN_FLIGHT, _device->logicalDevice
+        );
+        this->_imguiManager.BindVulkanResources(
+            _window,
+            _instance,
+            _device->physicalDevice,
+            _device->logicalDevice,
+            _device->queueFamilyIndices.graphicsFamily.value(),
+            _device->graphicsQueue,
+            _swapChainData.frameBuffer.size()
+        );
+    }
     this->_deletionStack.push([this]() {
         this->_imguiManager.Cleanup(_device->logicalDevice);
     });
@@ -1087,12 +1085,27 @@ void VulkanEngine::drawFrame(TickData* tickData, uint8_t frame) {
         this->_device->logicalDevice, 1, &this->_fenceInFlight[frame]
     );
 
+    VkFramebuffer FB = this->_swapChainData.frameBuffer[imageIndex];
     VkCommandBuffer CB = this->_device->graphicsCommandBuffers[frame];
     //  Record a command buffer which draws the scene onto that image
     vkResetCommandBuffer(CB, 0);
 
-    // populate graphics data before ticking graphics systems
-    // TODO: how much of this can be done before waiting for the graphics fence?
+    { // update tickData->graphics field
+        tickData->graphics.currentFrameInFlight = frame;
+        tickData->graphics.currentSwapchainImageIndex = imageIndex;
+        tickData->graphics.currentCB
+            = this->_device->graphicsCommandBuffers[frame];
+        tickData->graphics.currentFB = FB;
+        tickData->graphics.currentFBextend = this->_swapChainExtent;
+        tickData->graphics.mainProjectionMatrix = glm::perspective(
+            glm::radians(90.f),
+            _swapChainExtent.width / (float)_swapChainExtent.height,
+            0.1f,
+            100.f
+        );
+        tickData->graphics.mainProjectionMatrix[1][1]
+            *= -1; // invert y axis because vulkan
+    }
 
     { // begin command buffer
         VkCommandBufferBeginInfo beginInfo{};
@@ -1104,20 +1117,6 @@ void VulkanEngine::drawFrame(TickData* tickData, uint8_t frame) {
             FATAL("Failed to begin recording command buffer!");
         }
     }
-
-    auto FB = this->_swapChainData.frameBuffer[imageIndex];
-    tickData->graphics.currentFrameInFlight = frame;
-    tickData->graphics.currentCB = this->_device->graphicsCommandBuffers[frame];
-    tickData->graphics.currentFB = FB;
-    tickData->graphics.currentFBextend = this->_swapChainExtent;
-    tickData->graphics.mainProjectionMatrix = glm::perspective(
-        glm::radians(90.f),
-        _swapChainExtent.width / (float)_swapChainExtent.height,
-        0.1f,
-        100.f
-    );
-    tickData->graphics.mainProjectionMatrix[1][1]
-        *= -1; // invert y axis because vulkan
 
     {     // invoke all GraphicsSystem under the main render pass
         { // begin main render pass
@@ -1163,8 +1162,7 @@ void VulkanEngine::drawFrame(TickData* tickData, uint8_t frame) {
         }
     }
 
-    _imguiManager.RecordCommandBuffer(frame, imageIndex, _swapChainExtent);
-
+    _imguiManager.RecordCommandBuffer(tickData);
     { // end command buffer
         if (vkEndCommandBuffer(CB) != VK_SUCCESS) {
             FATAL("Failed to record command buffer!");
@@ -1181,9 +1179,8 @@ void VulkanEngine::drawFrame(TickData* tickData, uint8_t frame) {
                                         // is available before drawing
     VkPipelineStageFlags waitStages[]
         = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
-    std::array<VkCommandBuffer, 2> submitCommandBuffers
-        = {this->_device->graphicsCommandBuffers[frame],
-           _imguiManager.GetCommandBuffer(frame)};
+    std::array<VkCommandBuffer, 1> submitCommandBuffers
+        = {this->_device->graphicsCommandBuffers[frame]};
 
     submitInfo.waitSemaphoreCount = 1;
     submitInfo.pWaitSemaphores = waitSemaphores;
@@ -1239,7 +1236,8 @@ void VulkanEngine::initSwapChain() {
     this->_deletionStack.push([this]() { this->cleanupSwapChain(); });
 }
 
-void VulkanEngine::DrawImgui() {
+void VulkanEngine::drawImGui() {
+    _imguiManager.BeginImGuiContext();
     if (ImGui::Begin("Vulkan Engine")) {
         ImGui::SetWindowPos(ImVec2(0, 0), ImGuiCond_Once);
         ImGui::SetWindowSize(ImVec2(400, 400), ImGuiCond_Once);
@@ -1269,6 +1267,7 @@ void VulkanEngine::DrawImgui() {
     }
     ImGui::End();
     _entityViewerSystem->DrawImGui();
+    _imguiManager.EndImGuiContext();
 }
 
 void VulkanEngine::bindDefaultInputs() {

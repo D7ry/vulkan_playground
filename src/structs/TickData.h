@@ -16,6 +16,7 @@ struct GraphicsTickData
 {
     int currentFrameInFlight; // used to index into command buffer of render
                               // systems
+    int currentSwapchainImageIndex;
     VkFramebuffer
         currentFB; // result of using `vkAcquireNextImageKHR` on engine
                    // swapchain, to obtain the currently active fb
