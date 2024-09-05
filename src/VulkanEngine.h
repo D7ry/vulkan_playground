@@ -199,8 +199,6 @@ class VulkanEngine
         int height
     );
 
-    const int SOME_VAR = 0;
-
     GLFWwindow* _window;
     VkInstance _instance;
     VkSurfaceKHR _surface;

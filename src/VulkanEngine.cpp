@@ -26,8 +26,13 @@ void VulkanEngine::initGLFW() {
     if (!glfwVulkanSupported()) {
         FATAL("Vulkan is not supported on this machine!");
     }
-    this->_window
-        = glfwCreateWindow(1280, 720, "Vulkan Engine", nullptr, nullptr);
+    this->_window = glfwCreateWindow(
+        DEFAULTS::WINDOW_WIDTH,
+        DEFAULTS::WINDOW_HEIGHT,
+        "Vulkan Engine",
+        nullptr,
+        nullptr
+    );
     if (this->_window == nullptr) {
         FATAL("Failed to initialize GLFW windlw!");
     }
@@ -1098,7 +1103,7 @@ void VulkanEngine::drawFrame(TickData* tickData, uint8_t frame) {
         tickData->graphics.currentFB = FB;
         tickData->graphics.currentFBextend = this->_swapChainExtent;
         tickData->graphics.mainProjectionMatrix = glm::perspective(
-            glm::radians(90.f),
+            glm::radians(DEFAULTS::FOV),
             _swapChainExtent.width / (float)_swapChainExtent.height,
             0.1f,
             100.f
@@ -1342,8 +1347,8 @@ void VulkanEngine::getMainProjectionMatrix(glm::mat4& projectionMatrix) {
     projectionMatrix = glm::perspective(
         glm::radians(_FOV),
         _swapChainExtent.width / (float)_swapChainExtent.height,
-        0.1f,
-        100.f
+        DEFAULTS::ZNEAR,
+        DEFAULTS::ZFAR
     );
     projectionMatrix[1][1] *= -1; // invert for vulkan coord system
 }
