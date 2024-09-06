@@ -66,13 +66,14 @@ const std::array<VkVertexInputAttributeDescription, 9>* Vertex::
     static std::array<VkVertexInputAttributeDescription, 9>
         attributeDescriptionsInstanced;
     if (!initialized) {
+        // copy from the original attrDescription array
         const std::array<VkVertexInputAttributeDescription, 4>* attrDescription
             = Vertex::GetAttributeDescriptions();
         // copy over the first 4 elements from attrDescription
         memcpy(
             attributeDescriptionsInstanced.data(),               // dst
             attrDescription->data(),                             // src
-            attrDescription->size() * sizeof(attrDescription[0]) // bytes
+            attrDescription->size() * sizeof(attrDescription->at(0)) // bytes
         );
         // initialize the rest 2
 
