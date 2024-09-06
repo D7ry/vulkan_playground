@@ -8,8 +8,8 @@ class TextureManager
 
   public:
     static TextureManager* GetSingleton() {
-        static TextureManager singleton;
-        return &singleton;
+        static TextureManager* singleton = new TextureManager();
+        return singleton;
     }
 
     TextureManager() { _device = nullptr; };
