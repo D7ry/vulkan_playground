@@ -107,7 +107,7 @@ const std::array<VkVertexInputAttributeDescription, 9>* Vertex::
             attributeDescriptionsInstanced[8].location = 8;
             attributeDescriptionsInstanced[8].format = VK_FORMAT_R32_UINT; // int
             attributeDescriptionsInstanced[8].offset
-                = 3 * sizeof(glm::vec4) + sizeof(float);
+                = 4 * sizeof(glm::vec4);
         }
 
         initialized = true;
