@@ -7,3 +7,7 @@ It's like writing an OS
 - [x] graphics pipeline abstractions
 - [x] basic game entity abstractions
 - [x] object viewer window
+
+## TODO
+
+- [ ] global instancing -- instance everything
