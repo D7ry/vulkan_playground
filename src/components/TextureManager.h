@@ -8,8 +8,8 @@ class TextureManager
 
   public:
     static TextureManager* GetSingleton() {
-        static TextureManager* singleton = new TextureManager();
-        return singleton;
+        static TextureManager singleton;
+        return std::addressof(singleton);
     }
 
     TextureManager() { _device = nullptr; };
