@@ -4,6 +4,11 @@
 #include <glm/gtx/hash.hpp>
 #include <vulkan/vulkan_core.h>
 
+struct VertexInstancedData
+{
+    glm::mat4 model; // model mat
+    int textureOffset; // offset into the texture array
+};
 struct Vertex
 {
     /**
@@ -20,7 +25,12 @@ struct Vertex
 
     static VkVertexInputBindingDescription GetBindingDescription();
 
+    static const std::array<VkVertexInputBindingDescription, 2>* GetBindingDescriptionsInstanced();
+
     static const std::array<VkVertexInputAttributeDescription, 4>* GetAttributeDescriptions();
+
+    static const std::array<VkVertexInputAttributeDescription, 9>*
+    GetAttributeDescriptionsInstanced();
 
     bool operator==(const Vertex& other) const {
         return pos == other.pos && color == other.color && texCoord == other.texCoord;
