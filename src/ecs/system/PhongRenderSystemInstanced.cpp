@@ -34,7 +34,6 @@ void PhongRenderSystemInstanced::Cleanup() {
     // note: texture is handled by TextureManager so no need to clean that up
 }
 
-
 void PhongRenderSystemInstanced::Tick(const TickData* tickData) {
     VkCommandBuffer CB = tickData->graphics.currentCB;
     VkFramebuffer FB = tickData->graphics.currentFB;
@@ -51,12 +50,18 @@ void PhongRenderSystemInstanced::Tick(const TickData* tickData) {
         // bind shared vertex buffer
         vkCmdBindVertexBuffers(CB, 0, 1, &mesh->vertexBuffer.buffer, offsets);
         // bind instance-specific vertex buffer
-        vkCmdBindVertexBuffers(CB, 1, 1, &meshData.instanceBuffer.buffer, offsets);
+        vkCmdBindVertexBuffers(
+            CB, 1, 1, &meshData.instanceBuffer.buffer, offsets
+        );
         // bind index buffer
-        vkCmdBindIndexBuffer(CB, mesh->indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+        vkCmdBindIndexBuffer(
+            CB, mesh->indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32
+        );
         // draw call
         const uint32_t instanceCount = meshData.availableInstanceBufferIdx;
-		vkCmdDrawIndexed(CB, mesh->indexBuffer.numIndices, instanceCount, 0, 0, 0);
+        vkCmdDrawIndexed(
+            CB, mesh->indexBuffer.numIndices, instanceCount, 0, 0, 0
+        );
     }
 }
 
@@ -213,17 +218,21 @@ void PhongRenderSystemInstanced::createGraphicsPipeline(
         = {}; // describes the format of the vertex data.
 
     // set up vertex descriptions
-    auto bindingDescription
+    const std::array<VkVertexInputBindingDescription, 2>* bindingDescription
         = Vertex::GetBindingDescriptionsInstanced();
-    auto attributeDescriptions = Vertex::GetAttributeDescriptionsInstanced();
+    const std::array<VkVertexInputAttributeDescription, 9>*
+        attributeDescriptions
+        = Vertex::GetAttributeDescriptionsInstanced();
+    ASSERT(bindingDescription->data()[1].binding == 1);
     {
         vertexInputInfo.sType
             = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 
-        vertexInputInfo.vertexBindingDescriptionCount = bindingDescription->size();
+        vertexInputInfo.vertexBindingDescriptionCount
+            = bindingDescription->size();
         vertexInputInfo.pVertexBindingDescriptions = bindingDescription->data();
         vertexInputInfo.vertexAttributeDescriptionCount
-            = static_cast<uint32_t>(attributeDescriptions->size());
+            = attributeDescriptions->size();
         vertexInputInfo.pVertexAttributeDescriptions
             = attributeDescriptions->data();
     }
@@ -504,7 +513,6 @@ void PhongRenderSystemInstanced::DestroyPhongMeshInstanceComponent(
 ) {
     NEEDS_IMPLEMENTATION();
 }
-
 
 void PhongRenderSystemInstanced::updateTextureDescriptorSet() {
     DEBUG("updating texture descirptor set");

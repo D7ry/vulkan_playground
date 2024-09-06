@@ -80,30 +80,30 @@ const std::array<VkVertexInputAttributeDescription, 9>* Vertex::
             // reserve 4 vec4
             // in shader, simply access location 4 as a mat4
             // https://www.reddit.com/r/vulkan/comments/8zx1hn/comment/e2m7xd8/?utm_source=share&utm_medium=web3x&utm_name=web3xcss&utm_term=1&utm_content=share_button
-            attributeDescriptionsInstanced[4].binding = 0;
+            attributeDescriptionsInstanced[4].binding = 1;
             attributeDescriptionsInstanced[4].location = 4;
             attributeDescriptionsInstanced[4].format = FormatVec4;
             attributeDescriptionsInstanced[4].offset = 0;
 
-            attributeDescriptionsInstanced[5].binding = 0;
+            attributeDescriptionsInstanced[5].binding = 1;
             attributeDescriptionsInstanced[5].location = 5;
             attributeDescriptionsInstanced[5].format = FormatVec4;
             attributeDescriptionsInstanced[5].offset = sizeof(glm::vec4);
 
-            attributeDescriptionsInstanced[6].binding = 0;
+            attributeDescriptionsInstanced[6].binding = 1;
             attributeDescriptionsInstanced[6].location = 6;
             attributeDescriptionsInstanced[6].format = FormatVec4;
             attributeDescriptionsInstanced[6].offset = 2 * sizeof(glm::vec4);
 
-            attributeDescriptionsInstanced[7].binding = 0;
+            attributeDescriptionsInstanced[7].binding = 1;
             attributeDescriptionsInstanced[7].location = 7;
             attributeDescriptionsInstanced[7].format = FormatVec4;
             attributeDescriptionsInstanced[7].offset = 3 * sizeof(glm::vec4);
         }
 
         { // layout(location=8) in int inInstTextureID;
-            attributeDescriptionsInstanced[8].binding = 0;
-            attributeDescriptionsInstanced[8].location = 7;
+            attributeDescriptionsInstanced[8].binding = 1;
+            attributeDescriptionsInstanced[8].location = 8;
             attributeDescriptionsInstanced[8].format = VK_FORMAT_R32_UINT; // int
             attributeDescriptionsInstanced[8].offset
                 = 3 * sizeof(glm::vec4) + sizeof(float);
