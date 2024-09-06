@@ -18,6 +18,7 @@ void Init();
 #define FATAL(...)                                                             \
     SPDLOG_CRITICAL(__VA_ARGS__);                                              \
     throw std::runtime_error("Fatal error: " + fmt::format(__VA_ARGS__))
+#define NEEDS_IMPLEMENTATION() FATAL("This method needs to be implemented")
 
 #ifndef NDEBUG
 #define ASSERT(...)                                                            \

@@ -13,28 +13,11 @@
 void PhongRenderSystemInstanced::Init(const InitData* initData) {
     _device = initData->device;
     _textureManager = initData->textureManager;
-    _dynamicUBOAlignmentSize
-        = _device->GetDynamicUBOAlignedSize(sizeof(PhongUBODynamic));
-    // create the phong render pass
     // create graphics pipeline
     this->createGraphicsPipeline(initData->renderPass.mainPass, initData);
 }
 
 void PhongRenderSystemInstanced::Cleanup() {
-    DEBUG("Cleaning up phong rendering system");
-
-    // clean up meshes
-    for (auto& mesh : this->_meshes) {
-        // free up buffers
-        mesh.second.indexBuffer.Cleanup();
-        mesh.second.vertexBuffer.Cleanup();
-    }
-
-    // clean up static UBO & dynamic UBO
-    for (UBO& ubo : _UBO) {
-        //ubo.staticUBO.Cleanup();
-        ubo.dynamicUBO.Cleanup();
-    }
 
     // clean up pipeline
     vkDestroyPipeline(_device->logicalDevice, _pipeline, nullptr);
@@ -51,38 +34,7 @@ void PhongRenderSystemInstanced::Cleanup() {
     // note: texture is handled by TextureManager so no need to clean that up
 }
 
-// global uniform 
-// Renderpass 
-// Pipeline&static descriptor sets -- managed by PhongRenderSystemInstanced
-// vertex / index buffer -- all instances needs to be grouped into vertex/index buffer
-// Dynamic Descriptor sets: two choices
-//  -- bind the offset in CPU -- more flexibility
-//  -- index into offset in shader:
-//    -- index into offset using pushConstants -- still CPU overhead for large instance (O(#instance) cost)
-//    -- index into offset using gl_InstanceID -- more complexity on managing instace-specific buffers
-//
-// pushConstants // -push instance id? -- not ideal, still O(#instance) cost
-//
-/**
 
-PseudoCode:
-
-cpp
-std::map<Mesh, Entity> entityMap; // maps mesh data(vertex&index buffer) to entities
-
-for pair(mesh, entity) in entityMap:
-    bindVeretexBuf(mesh.vertexBuf);
-    bindIndexBuf(mesh.indexBuf);
-
-    vkCmdDrawIndexed()
-
-shader
-
-
-    
-    
-
-*/
 void PhongRenderSystemInstanced::Tick(const TickData* tickData) {
     VkCommandBuffer CB = tickData->graphics.currentCB;
     VkFramebuffer FB = tickData->graphics.currentFB;
@@ -90,83 +42,30 @@ void PhongRenderSystemInstanced::Tick(const TickData* tickData) {
     int frameIdx = tickData->graphics.currentFrameInFlight;
 
     vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipeline);
-    // NOTE: phong mesh do not have static UBO anymore
-    // { // update static ubo with model view matrix
-    //     PhongUBOStatic ubo{
-    //         tickData->mainCamera->GetViewMatrix(),  // view mat
-    //         tickData->graphics.mainProjectionMatrix // proj mat
-    //     };
-    //
-    //     memcpy(_UBO[frameIdx].staticUBO.bufferAddress, &ubo, sizeof(ubo));
-    // }
 
     // loop through entities and render them
-    // TODO: instance everything
-    for (Entity* entity : this->_entities) {
-        PhongMeshInstanceComponent* meshInstance
-            = entity->GetComponent<PhongMeshInstanceComponent>();
-        TransformComponent* transform
-            = entity->GetComponent<TransformComponent>();
-        ASSERT(meshInstance != nullptr)
-        ASSERT(transform != nullptr)
-        // actual render logic
-
-        uint32_t dynamicUBOOffset
-            = meshInstance->dynamicUBOId * _dynamicUBOAlignmentSize;
-        { // bind descriptor set to the correct dynamic ubo
-            // note that we use the same descriptor set for all phong meshes
-            // need to rebind because offset to dynamic UBO is different
-            vkCmdBindDescriptorSets(
-                CB,
-                VK_PIPELINE_BIND_POINT_GRAPHICS,
-                _pipelineLayout,
-                0,
-                1,
-                &_descriptorSets[tickData->graphics.currentFrameInFlight],
-                1,
-                &dynamicUBOOffset
-            );
-        }
-
-        { // update dynamic UBO
-            // TODO: may be a little expensive to do; given dynamic ubo only
-            // needs to be updated when relevant data structures of the instance
-            // changes
-            // memcpy here will stall the program
-            void* dynamicUBOAddr = reinterpret_cast<void*>(
-                reinterpret_cast<uintptr_t>(
-                    _UBO[frameIdx].dynamicUBO.bufferAddress
-                )
-                + dynamicUBOOffset
-            );
-            PhongUBODynamic dynamicUBO{
-                transform->GetModelMatrix(), meshInstance->textureOffset
-            };
-            memcpy(dynamicUBOAddr, &dynamicUBO, sizeof(PhongUBODynamic));
-        }
-
-        { // bind vertex & index buffer
-            VkDeviceSize offsets[] = {0};
-            VkBuffer vertexBuffers[]
-                = {meshInstance->mesh->vertexBuffer.buffer};
-            VkBuffer indexBufffer = meshInstance->mesh->indexBuffer.buffer;
-            vkCmdBindVertexBuffers(CB, 0, 1, vertexBuffers, offsets);
-            vkCmdBindIndexBuffer(CB, indexBufffer, 0, VK_INDEX_TYPE_UINT32);
-        }
-
-        { // issue draw call
-            vkCmdDrawIndexed(
-                CB, meshInstance->mesh->indexBuffer.numIndices, 1, 0, 0, 0
-            );
-        }
+    for (auto pair : this->_meshes) {
+        MeshData& meshData = pair.second;
+        PhongMeshInstanced* mesh = &meshData.mesh;
+        VkDeviceSize offsets[] = {0};
+        // bind shared vertex buffer
+        vkCmdBindVertexBuffers(CB, 0, 1, &mesh->vertexBuffer.buffer, offsets);
+        // bind instance-specific vertex buffer
+        vkCmdBindVertexBuffers(CB, 1, 1, &meshData.instanceBuffer.buffer, offsets);
+        // bind index buffer
+        vkCmdBindIndexBuffer(CB, mesh->indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+        // draw call
+        const uint32_t instanceCount = meshData.availableInstanceBufferIdx;
+		vkCmdDrawIndexed(CB, mesh->indexBuffer.numIndices, instanceCount, 0, 0, 0);
     }
-
 }
 
-void PhongRenderSystemInstanced::createGraphicsPipeline(const VkRenderPass renderPass, const InitData* initData) {
+void PhongRenderSystemInstanced::createGraphicsPipeline(
+    const VkRenderPass renderPass,
+    const InitData* initData
+) {
     /////  ---------- descriptor ---------- /////
     VkDescriptorSetLayoutBinding uboStaticBinding{};
-    VkDescriptorSetLayoutBinding uboDynamicBinding{};
     VkDescriptorSetLayoutBinding samplerLayoutBinding{};
     { // UBO static -- vertex
         uboStaticBinding.binding = (int)BindingLocation::UBO_STATIC_ENGINE;
@@ -175,16 +74,6 @@ void PhongRenderSystemInstanced::createGraphicsPipeline(const VkRenderPass rende
         uboStaticBinding.stageFlags
             = VK_SHADER_STAGE_VERTEX_BIT; // only used in vertex shader
         uboStaticBinding.pImmutableSamplers = nullptr; // Optional
-    }
-    { // UBO dynamic -- vertex
-        uboDynamicBinding.binding = (int)BindingLocation::UBO_DYNAMIC;
-        uboDynamicBinding.descriptorType
-            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-        uboDynamicBinding.descriptorCount = 1; // number of values in the array
-
-        uboDynamicBinding.stageFlags
-            = VK_SHADER_STAGE_VERTEX_BIT; // only used in vertex shader
-        uboDynamicBinding.pImmutableSamplers = nullptr; // Optional
     }
     { // combined image sampler array -- fragment
         samplerLayoutBinding.binding = (int)BindingLocation::TEXTURE_SAMPLER;
@@ -198,8 +87,8 @@ void PhongRenderSystemInstanced::createGraphicsPipeline(const VkRenderPass rende
         samplerLayoutBinding.pImmutableSamplers = nullptr;
     }
 
-    std::array<VkDescriptorSetLayoutBinding, 3> bindings
-        = {uboStaticBinding, uboDynamicBinding, samplerLayoutBinding};
+    std::array<VkDescriptorSetLayoutBinding, 2> bindings
+        = {uboStaticBinding, samplerLayoutBinding};
 
     { // _descriptorSetLayout
         VkDescriptorSetLayoutCreateInfo layoutInfo{};
@@ -270,36 +159,18 @@ void PhongRenderSystemInstanced::createGraphicsPipeline(const VkRenderPass rende
         }
     }
 
-    /////  ---------- UBO ---------- /////
-
-    // allocate for static ubo, this only needs to be done once
-    // for (auto& UBO : this->_UBO) {
-    //     _device->CreateBufferInPlace(
-    //         sizeof(PhongUBOStatic),
-    //         VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-    //         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
-    //             | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-    //         UBO.staticUBO
-    //     );
-    // }
-
-    // allocate for dynamic ubo, and write to descriptors
-    resizeDynamicUbo(10);
-
-    // update descriptor sets
-    // note here we only update descripto sets for static ubo
-    // dynamic ubo is updated through `resizeDynamicUbo`
-    // texture array is updated through `updateTextureDescriptorSet`
     for (size_t i = 0; i < NUM_FRAME_IN_FLIGHT; i++) {
 
         std::array<VkWriteDescriptorSet, 1> descriptorWrites{};
         descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         descriptorWrites[0].dstSet = this->_descriptorSets[i];
-        descriptorWrites[0].dstBinding = (int)BindingLocation::UBO_STATIC_ENGINE;
+        descriptorWrites[0].dstBinding
+            = (int)BindingLocation::UBO_STATIC_ENGINE;
         descriptorWrites[0].dstArrayElement = 0;
         descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         descriptorWrites[0].descriptorCount = 1;
-        descriptorWrites[0].pBufferInfo = &initData->engineUBOStaticDescriptorBufferInfo[i];
+        descriptorWrites[0].pBufferInfo
+            = &initData->engineUBOStaticDescriptorBufferInfo[i];
 
         vkUpdateDescriptorSets(
             _device->logicalDevice,
@@ -342,15 +213,15 @@ void PhongRenderSystemInstanced::createGraphicsPipeline(const VkRenderPass rende
         = {}; // describes the format of the vertex data.
 
     // set up vertex descriptions
-    VkVertexInputBindingDescription bindingDescription
-        = Vertex::GetBindingDescription();
-    auto attributeDescriptions = Vertex::GetAttributeDescriptions();
+    auto bindingDescription
+        = Vertex::GetBindingDescriptionsInstanced();
+    auto attributeDescriptions = Vertex::GetAttributeDescriptionsInstanced();
     {
         vertexInputInfo.sType
             = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 
-        vertexInputInfo.vertexBindingDescriptionCount = 1;
-        vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
+        vertexInputInfo.vertexBindingDescriptionCount = bindingDescription->size();
+        vertexInputInfo.pVertexBindingDescriptions = bindingDescription->data();
         vertexInputInfo.vertexAttributeDescriptionCount
             = static_cast<uint32_t>(attributeDescriptions->size());
         vertexInputInfo.pVertexAttributeDescriptions
@@ -556,32 +427,17 @@ void PhongRenderSystemInstanced::createGraphicsPipeline(const VkRenderPass rende
     vkDestroyShaderModule(_device->logicalDevice, vertShaderModule, nullptr);
 }
 
-PhongMeshInstanceComponent* PhongRenderSystemInstanced::MakePhongMeshInstanceComponent(
-    const std::string& meshPath,
-    const std::string& texturePath
-) {
-    PhongMesh* mesh = nullptr;
-    size_t dynamicUBOId = 0;
+PhongRenderSystemInstancedComponent* PhongRenderSystemInstanced::
+    MakePhongRenderSystemInstancedComponent(
+        const std::string& meshPath,
+        const std::string& texturePath,
+        size_t instanceNumber // initial number of instance supported before
+                              // resizing
+    ) {
+    PhongMeshInstanced* mesh = nullptr;
+    size_t instanceID = 0;
     int textureOffset = 0;
-
-    { // load or create new mesh
-        auto it = _meshes.find(meshPath);
-        if (it == _meshes.end()) { // construct phong mesh
-            PhongMesh newMesh;
-            VQDevice& device = *_device;
-            VQUtils::meshToBuffer(
-                meshPath.c_str(),
-                device,
-                newMesh.vertexBuffer,
-                newMesh.indexBuffer
-            );
-            auto result = _meshes.insert({meshPath, newMesh});
-            ASSERT(result.second)
-            mesh = &(result.first->second);
-        } else {
-            mesh = &it->second;
-        }
-    }
+    ASSERT(_textureManager);
 
     { // load or create new texture
         auto it = _textureDescriptorIndices.find(texturePath);
@@ -599,80 +455,56 @@ PhongMeshInstanceComponent* PhongRenderSystemInstanced::MakePhongMeshInstanceCom
         }
     }
 
-    // reserve a dynamic UBO for this instance
-    // note each instance has to have a dynamic ubo, for storing instance data
-    // such as texture index and model mat
-    {
-        // have an available index that's been released, simply use that index.
-        if (!_freeDynamicUBOIdx.empty()) {
-            dynamicUBOId = _freeDynamicUBOIdx.back();
-            _freeDynamicUBOIdx.pop_back();
-        } else { // use a new index
-            dynamicUBOId = _currDynamicUBO;
-            _currDynamicUBO++;
-            if (_currDynamicUBO >= _numDynamicUBO) {
-                resizeDynamicUbo(_numDynamicUBO * 1.5); // grow dynamic UBO
-            }
-        }
-    }
+    MeshData* pMeshData = nullptr;
+    { // load or create new mesh
+        auto it = _meshes.find(meshPath);
+        if (it == _meshes.end()) { // construct phong mesh and buffer array
+            MeshData meshData{};
+            meshData.availableInstanceBufferIdx = 0;
+            // load mesh into vertex & index buffer
+            VQUtils::meshToBuffer(
+                meshPath.c_str(),
+                *_device,
+                meshData.mesh.vertexBuffer,
+                meshData.mesh.indexBuffer
+            );
+            // construct a fixed-sized buffer array
+            _device->CreateBufferInPlace(
+                instanceNumber * sizeof(VertexInstancedData),
+                VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+                    | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, // TODO: can we do
+                                                            // better?
+                meshData.instanceBuffer
+            );
 
+            auto result = _meshes.insert({meshPath, meshData});
+            // allocate an index for the instance
+            ASSERT(result.second)
+            pMeshData = std::addressof(result.first->second);
+        } else {
+            pMeshData = std::addressof(it->second);
+        }
+        instanceID = pMeshData->availableInstanceBufferIdx;
+        pMeshData->availableInstanceBufferIdx++; // increment buffer idx
+    }
     // return new component
-    PhongMeshInstanceComponent* ret = new PhongMeshInstanceComponent();
-    ret->mesh = mesh;
-    ret->dynamicUBOId = dynamicUBOId;
-    ret->textureOffset = textureOffset;
+    PhongRenderSystemInstancedComponent* ret
+        = new PhongRenderSystemInstancedComponent();
+    ret->textureID = textureOffset;
+    ret->instanceID = instanceID;
+    ret->buffer = &pMeshData->instanceBuffer;
+
+    pMeshData->components.insert(ret); // track the component
     return ret;
 }
 
-void PhongRenderSystemInstanced::DestroyPhongMeshInstanceComponent(PhongMeshInstanceComponent*& component) {
-    // TODO: should we free up the mesh that lives in graphics memory?
-    // TODO: sholud we free up the texture that lives in grahpics memory?
-
-    _freeDynamicUBOIdx.push_back(component->dynamicUBOId); // relinquish dynamic ubo
-    delete component;
-    component = nullptr;
+void PhongRenderSystemInstanced::DestroyPhongMeshInstanceComponent(
+    PhongRenderSystemInstancedComponent*& component
+) {
+    NEEDS_IMPLEMENTATION();
 }
 
-// reallocate dynamic UBO array, updating the descriptors as well
-// note that contents from the old UBO array aren't copied over
-// TODO: implement copying over from the old array?
-void PhongRenderSystemInstanced::resizeDynamicUbo(size_t dynamicUboCount) {
-    for (int i = 0; i < NUM_FRAME_IN_FLIGHT; i++) {
-        // reallocate dyamic ubo
-        this->_UBO[i].dynamicUBO.Cleanup();
-        this->_device->CreateBufferInPlace(
-            _dynamicUBOAlignmentSize * dynamicUboCount,
-            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
-                | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-            this->_UBO[i].dynamicUBO
-        );
-        // point descriptor to newly allocated buffer
-        VkDescriptorBufferInfo descriptorBufferInfo_dynamic{};
-        descriptorBufferInfo_dynamic.buffer = this->_UBO[i].dynamicUBO.buffer;
-        descriptorBufferInfo_dynamic.offset = 0;
-        descriptorBufferInfo_dynamic.range = _dynamicUBOAlignmentSize;
-
-        std::array<VkWriteDescriptorSet, 1> descriptorWrites{};
-        descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrites[0].dstSet = this->_descriptorSets[i];
-        descriptorWrites[0].dstBinding = (int)BindingLocation::UBO_DYNAMIC;
-        descriptorWrites[0].dstArrayElement = 0;
-        descriptorWrites[0].descriptorType
-            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-        descriptorWrites[0].descriptorCount = 1;
-        descriptorWrites[0].pBufferInfo = &descriptorBufferInfo_dynamic;
-
-        vkUpdateDescriptorSets(
-            _device->logicalDevice,
-            descriptorWrites.size(),
-            descriptorWrites.data(),
-            0,
-            nullptr
-        );
-    }
-    _numDynamicUBO = dynamicUboCount;
-}
 
 void PhongRenderSystemInstanced::updateTextureDescriptorSet() {
     DEBUG("updating texture descirptor set");

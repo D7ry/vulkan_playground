@@ -7,45 +7,37 @@
 
 #include "ecs/System.h"
 #include "ecs/component/PhongMeshInstanceComponent.h"
+#include "ecs/component/PhongRenderSystemInstancedComponent.h"
 #include "ecs/component/TransformComponent.h"
 #include "structs/UniformBuffer.h"
 
-// a blinn-phong mesh that lives on GPU
-// TODO: should it be a part of this class?
-struct PhongMesh
+
+//FIXME: fix spaghetti variable naming
+struct PhongMeshInstanced
 {
     VQBuffer vertexBuffer;
     VQBufferIndex indexBuffer;
-};
-
-// static UBO of phong render, we use the same UBO for all mesh instances
-struct PhongUBOStatic
-{
-    glm::mat4 view;
-    glm::mat4 proj;
-};
-
-// dynamic UBO of phong render, every mesh instance has its own dynamic UBO
-struct PhongUBODynamic
-{
-    glm::mat4 model;
-    int textureOffset;
 };
 
 // self-contained system to render phong meshes
 class PhongRenderSystemInstanced : public IRenderSystem
 {
   public:
-    PhongMeshInstanceComponent* MakePhongMeshInstanceComponent(
+    // currently only suppoot static instance
+    // TODO: add dynamic shrinking/growing, and heuristics for growing&shrinking
+    const unsigned int INITIAL_INSTANCE_BUFFER_SIZE = 10;
+
+    PhongRenderSystemInstancedComponent*
+    MakePhongRenderSystemInstancedComponent(
         const std::string& meshPath,
-        const std::string& texturePath
+        const std::string& texturePath,
+        size_t instanceNumber // initial number of instance supported before
+                              // resizing
     );
 
     // destroy a mesh instance component that's initialized with
-    // `MakePhongMeshInstanceComponent` freeing the pointer
-    void DestroyPhongMeshInstanceComponent(
-        PhongMeshInstanceComponent*& component
-    );
+    // `MakePhongRenderSystemInstancedComponent` freeing the pointer
+    void DestroyPhongMeshInstanceComponent(PhongRenderSystemInstancedComponent*& component);
 
     virtual void Init(const InitData* initData) override;
     virtual void Tick(const TickData* tickData) override;
@@ -54,8 +46,8 @@ class PhongRenderSystemInstanced : public IRenderSystem
 
   private:
     // spir-v source to vertex and fragment shader, relative to compiled binary
-    const char* VERTEX_SHADER_SRC = "../shaders/phong.vert.spv";
-    const char* FRAGMENT_SHADER_SRC = "../shaders/phong.frag.spv";
+    const char* VERTEX_SHADER_SRC = "../shaders/phong_instancing.vert.spv";
+    const char* FRAGMENT_SHADER_SRC = "../shaders/phong_instancing.frag.spv";
 
     // pipeline
     VkPipeline _pipeline = VK_NULL_HANDLE;
@@ -65,26 +57,8 @@ class PhongRenderSystemInstanced : public IRenderSystem
     VkDescriptorSetLayout _descriptorSetLayout = VK_NULL_HANDLE;
     VkDescriptorPool _descriptorPool = VK_NULL_HANDLE;
 
-    struct UBO
-    {
-        VQBuffer staticUBO; // currently unused as we use engineUBO. may be
-                            // useful for sytem-scoped ubo
-        VQBuffer dynamicUBO;
-    };
-
-    size_t _numDynamicUBO;  // how many dynamic UBOs do we have
-    size_t _currDynamicUBO; // dynamic ubo that is to be allocated
-    std::vector<unsigned long>
-        _freeDynamicUBOIdx; // stores freed indices that are smaller than
-                            // _currDynamicUBO
-    size_t _dynamicUBOAlignmentSize; // actual size of the dynamic UBO that
-                                     // satisfies device alignment
-    // NOTE this design assumes that we never shrink PhongRenderSystemInstanced's dynamic
-    // UBO at runtime
 
     std::array<VkDescriptorSet, NUM_FRAME_IN_FLIGHT> _descriptorSets;
-    std::array<UBO, NUM_FRAME_IN_FLIGHT> _UBO;
-    void resizeDynamicUbo(size_t dynamicUboCount);
 
     VQDevice* _device = nullptr;
 
@@ -97,8 +71,22 @@ class PhongRenderSystemInstanced : public IRenderSystem
         const InitData* initData
     );
 
+    struct MeshData
+    {
+        PhongMeshInstanced mesh;
+        // buffer array to store mesh instance data
+        VQBuffer instanceBuffer;
+        int availableInstanceBufferIdx
+            = 0; // which instance buffer is currently available?
+                 // increment this when assigning new instance buffer
+        std::unordered_set<PhongRenderSystemInstancedComponent*>
+            components; // what components corresponds to this mesh?
+                        // useful for updating the buffer field in the
+                        // components
+    };
+
     // all phong meshes created
-    std::unordered_map<std::string, PhongMesh> _meshes;
+    std::unordered_map<std::string, MeshData> _meshes;
 
     TextureManager* _textureManager;
 

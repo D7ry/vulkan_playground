@@ -3,7 +3,7 @@
 
 
 struct PhongMesh;
-struct PhongMeshInstanceComponent : IComponent
+struct PhongMeshComponent : IComponent
 {
     PhongMesh* mesh;
     size_t dynamicUBOId; // id, id * sizeof(dynamicUBO) = offset of its own dynamic UBO

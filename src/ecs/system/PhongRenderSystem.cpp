@@ -61,7 +61,28 @@ void PhongRenderSystem::Cleanup() {
 //    -- index into offset using pushConstants -- still CPU overhead for large instance (O(#instance) cost)
 //    -- index into offset using gl_InstanceID -- more complexity on managing instace-specific buffers
 //
-// pushConstants // -push instance id?
+// pushConstants // -push instance id? -- not ideal, still O(#instance) cost
+//
+/**
+
+PseudoCode:
+
+cpp
+std::map<Mesh, Entity> entityMap; // maps mesh data(vertex&index buffer) to entities
+
+for pair(mesh, entity) in entityMap:
+    bindVeretexBuf(mesh.vertexBuf);
+    bindIndexBuf(mesh.indexBuf);
+
+    vkCmdDrawIndexed()
+
+shader
+
+
+    
+    
+
+*/
 void PhongRenderSystem::Tick(const TickData* tickData) {
     VkCommandBuffer CB = tickData->graphics.currentCB;
     VkFramebuffer FB = tickData->graphics.currentFB;
@@ -82,8 +103,8 @@ void PhongRenderSystem::Tick(const TickData* tickData) {
     // loop through entities and render them
     // TODO: instance everything
     for (Entity* entity : this->_entities) {
-        PhongMeshInstanceComponent* meshInstance
-            = entity->GetComponent<PhongMeshInstanceComponent>();
+        PhongMeshComponent* meshInstance
+            = entity->GetComponent<PhongMeshComponent>();
         TransformComponent* transform
             = entity->GetComponent<TransformComponent>();
         ASSERT(meshInstance != nullptr)
@@ -535,7 +556,7 @@ void PhongRenderSystem::createGraphicsPipeline(const VkRenderPass renderPass, co
     vkDestroyShaderModule(_device->logicalDevice, vertShaderModule, nullptr);
 }
 
-PhongMeshInstanceComponent* PhongRenderSystem::MakePhongMeshInstanceComponent(
+PhongMeshComponent* PhongRenderSystem::MakePhongMeshComponent(
     const std::string& meshPath,
     const std::string& texturePath
 ) {
@@ -596,14 +617,14 @@ PhongMeshInstanceComponent* PhongRenderSystem::MakePhongMeshInstanceComponent(
     }
 
     // return new component
-    PhongMeshInstanceComponent* ret = new PhongMeshInstanceComponent();
+    PhongMeshComponent* ret = new PhongMeshComponent();
     ret->mesh = mesh;
     ret->dynamicUBOId = dynamicUBOId;
     ret->textureOffset = textureOffset;
     return ret;
 }
 
-void PhongRenderSystem::DestroyPhongMeshInstanceComponent(PhongMeshInstanceComponent*& component) {
+void PhongRenderSystem::DestroyPhongMeshComponent(PhongMeshComponent*& component) {
     // TODO: should we free up the mesh that lives in graphics memory?
     // TODO: sholud we free up the texture that lives in grahpics memory?
 

@@ -27,6 +27,7 @@
 #include "lib/DeletionStack.h"
 
 #include "ecs/system/PhongRenderSystem.h"
+#include "ecs/system/PhongRenderSystemInstanced.h"
 
 class TickData;
 
@@ -245,6 +246,7 @@ class VulkanEngine
     DeletionStack _deletionStack;
 
     PhongRenderSystem* _phongSystem;
+    PhongRenderSystemInstanced* _phongSystemInstanced;
     GlobalGridSystem* _globalGridSystem;
     EntityViewerSystem* _entityViewerSystem;
 

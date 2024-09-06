@@ -5,12 +5,6 @@ layout(binding = 0) uniform UBOStatic {
     mat4 proj;
 } uboStatic;
 
-layout(binding = 1) uniform UBODynamic {
-    mat4 model;
-    int textureId;
-} uboDynamic;
-
-
 // vertex attrs
 layout(location = 0) in vec3 inPosition;
 layout(location = 1) in vec3 inColor;

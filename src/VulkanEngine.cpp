@@ -122,6 +122,7 @@ void VulkanEngine::Init() {
     { // lab to mess around with ecs
         this->_entityViewerSystem = new EntityViewerSystem();
         this->_phongSystem = new PhongRenderSystem();
+        this->_phongSystemInstanced = new PhongRenderSystemInstanced();
         this->_globalGridSystem = new GlobalGridSystem();
         InitData initData;
         { // populate initData
@@ -139,43 +140,64 @@ void VulkanEngine::Init() {
             }
         }
 
+        _phongSystemInstanced->Init(&initData);
+        _deletionStack.push([this]() { this->_phongSystemInstanced->Cleanup(); });
+
         _phongSystem->Init(&initData);
         _deletionStack.push([this]() { this->_phongSystem->Cleanup(); });
 
         _globalGridSystem->Init(&initData);
         _deletionStack.push([this]() { this->_globalGridSystem->Cleanup(); });
-
-        // make entity
+        
+        // make instanced entity
         {
             Entity* thing = new Entity("thing");
             auto phongMeshComponent
-                = _phongSystem->MakePhongMeshInstanceComponent(
+                = _phongSystemInstanced->MakePhongRenderSystemInstancedComponent(
                     "../resources/viking_room.obj",
-                    "../resources/viking_room.png"
+                    "../resources/viking_room.png",
+                    10
                 );
             thing->AddComponent(phongMeshComponent);
             TransformComponent* transform = new TransformComponent();
             *transform = TransformComponent::Identity();
 
             thing->AddComponent(transform);
-            _phongSystem->AddEntity(thing);
+            _phongSystemInstanced->AddEntity(thing);
             _entityViewerSystem->AddEntity(thing);
         }
-        { // make another entity
-            Entity* thing = new Entity("spot");
-            auto phongMeshComponent
-                = _phongSystem->MakePhongMeshInstanceComponent(
-                    "../resources/spot.obj", "../resources/spot.png"
-                );
-            thing->AddComponent(phongMeshComponent);
-            TransformComponent* transform = new TransformComponent();
-            *transform = TransformComponent::Identity();
-            transform->scale = {1, 1, 1};
-            transform->position.y += 2;
-            thing->AddComponent(transform);
-            _phongSystem->AddEntity(thing);
-            _entityViewerSystem->AddEntity(thing);
-        }
+
+        // // make entity
+        // {
+        //     Entity* thing = new Entity("thing");
+        //     auto phongMeshComponent
+        //         = _phongSystem->MakePhongMeshComponent(
+        //             "../resources/viking_room.obj",
+        //             "../resources/viking_room.png"
+        //         );
+        //     thing->AddComponent(phongMeshComponent);
+        //     TransformComponent* transform = new TransformComponent();
+        //     *transform = TransformComponent::Identity();
+        //
+        //     thing->AddComponent(transform);
+        //     _phongSystem->AddEntity(thing);
+        //     _entityViewerSystem->AddEntity(thing);
+        // }
+        // { // make another entity
+        //     Entity* thing = new Entity("spot");
+        //     auto phongMeshComponent
+        //         = _phongSystem->MakePhongMeshComponent(
+        //             "../resources/spot.obj", "../resources/spot.png"
+        //         );
+        //     thing->AddComponent(phongMeshComponent);
+        //     TransformComponent* transform = new TransformComponent();
+        //     *transform = TransformComponent::Identity();
+        //     transform->scale = {1, 1, 1};
+        //     transform->position.y += 2;
+        //     thing->AddComponent(transform);
+        //     _phongSystem->AddEntity(thing);
+        //     _entityViewerSystem->AddEntity(thing);
+        // }
     }
 }
 

@@ -53,6 +53,7 @@ add_executable(vulkan_playground
         src/VulkanEngine.cpp
         # render systems
         src/ecs/system/PhongRenderSystem.cpp
+        src/ecs/system/PhongRenderSystemInstanced.cpp
         src/ecs/system/EntityViewerSystem.cpp
         src/ecs/system/GlobalGridSystem.cpp
 )

@@ -36,15 +36,15 @@ struct PhongUBODynamic
 class PhongRenderSystem : public IRenderSystem
 {
   public:
-    PhongMeshInstanceComponent* MakePhongMeshInstanceComponent(
+    PhongMeshComponent* MakePhongMeshComponent(
         const std::string& meshPath,
         const std::string& texturePath
     );
 
     // destroy a mesh instance component that's initialized with
     // `MakePhongMeshInstanceComponent` freeing the pointer
-    void DestroyPhongMeshInstanceComponent(
-        PhongMeshInstanceComponent*& component
+    void DestroyPhongMeshComponent(
+        PhongMeshComponent*& component
     );
 
     virtual void Init(const InitData* initData) override;
