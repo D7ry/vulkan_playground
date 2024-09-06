@@ -1,32 +1,24 @@
 #pragma once
-#include <map>
 #include <unordered_set>
 #include <vulkan/vulkan_core.h>
 
 #include "lib/VQBuffer.h"
 
 #include "ecs/System.h"
-#include "ecs/component/PhongMeshInstanceComponent.h"
 #include "ecs/component/PhongRenderSystemInstancedComponent.h"
 #include "ecs/component/TransformComponent.h"
-#include "structs/UniformBuffer.h"
 
 
-//FIXME: fix spaghetti variable naming
 struct PhongMeshInstanced
 {
     VQBuffer vertexBuffer;
     VQBufferIndex indexBuffer;
 };
 
-// self-contained system to render phong meshes
+// phong render system
 class PhongRenderSystemInstanced : public IRenderSystem
 {
   public:
-    // currently only suppoot static instance
-    // TODO: add dynamic shrinking/growing, and heuristics for growing&shrinking
-    const unsigned int INITIAL_INSTANCE_BUFFER_SIZE = 10;
-
     PhongRenderSystemInstancedComponent*
     MakePhongRenderSystemInstancedComponent(
         const std::string& meshPath,
@@ -76,6 +68,7 @@ class PhongRenderSystemInstanced : public IRenderSystem
         PhongMeshInstanced mesh;
         // buffer array to store mesh instance data
         VQBuffer instanceBuffer;
+        int instanceBufferInstanceCount; // number of maximum supported mesh instance
         int availableInstanceBufferIdx
             = 0; // which instance buffer is currently available?
                  // increment this when assigning new instance buffer
@@ -92,7 +85,6 @@ class PhongRenderSystemInstanced : public IRenderSystem
 
     // an array of texture descriptors that gets filled up as textures are
     // loaded in
-    // TODO: adaptively unload textures?
     std::array<VkDescriptorImageInfo, TEXTURE_ARRAY_SIZE>
         _textureDescriptorInfo;
     size_t _textureDescriptorInfoIdx
@@ -102,7 +94,6 @@ class PhongRenderSystemInstanced : public IRenderSystem
     std::unordered_map<std::string, int>
         _textureDescriptorIndices; // texture name, index into the texture
                                    // descriptor array
-                                   //
     void updateTextureDescriptorSet(
     ); // flush the `_textureDescriptorInfo` into device, updating the
        // descriptor set

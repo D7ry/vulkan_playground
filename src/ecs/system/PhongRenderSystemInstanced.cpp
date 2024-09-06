@@ -18,6 +18,15 @@ void PhongRenderSystemInstanced::Init(const InitData* initData) {
 }
 
 void PhongRenderSystemInstanced::Cleanup() {
+    for (auto& elem: _meshes) {
+        DEBUG("cleanup");
+        elem.second.mesh.indexBuffer.Cleanup();
+        elem.second.mesh.vertexBuffer.Cleanup();
+        elem.second.instanceBuffer.Cleanup();
+        for (auto& component : elem.second.components) {
+            delete component;
+        }
+    }
 
     // clean up pipeline
     vkDestroyPipeline(_device->logicalDevice, _pipeline, nullptr);
@@ -53,7 +62,7 @@ void PhongRenderSystemInstanced::Tick(const TickData* tickData) {
         0,
         0
     );
-    // loop through entities and render them
+    // loop through each mesh and bindlessly render their instances
     for (auto pair : this->_meshes) {
         MeshData& meshData = pair.second;
         PhongMeshInstanced* mesh = &meshData.mesh;
@@ -503,10 +512,23 @@ PhongRenderSystemInstancedComponent* PhongRenderSystemInstanced::
             // allocate an index for the instance
             ASSERT(result.second)
             pMeshData = std::addressof(result.first->second);
+            pMeshData->instanceBufferInstanceCount = instanceNumber;
         } else {
             pMeshData = std::addressof(it->second);
         }
         instanceID = pMeshData->availableInstanceBufferIdx;
+
+        if (instanceID == pMeshData->instanceBufferInstanceCount) {
+            DEBUG("resizing instance buffer for mesh {}", meshPath);
+            NEEDS_IMPLEMENTATION();
+            // make a new buffer array
+
+            // copy over old stuff
+            
+            // point instance buffer to new buffer
+            
+            // push old buffer to the tick deletion queue
+        }
         pMeshData->availableInstanceBufferIdx++; // increment buffer idx
     }
     // return new component

@@ -20,6 +20,8 @@
 #include "components/Camera.h"
 
 static Entity* entityInstanced = new Entity("instanced entity");
+static Entity* entityInstanced2 = new Entity("instanced entity2");
+
 void VulkanEngine::initGLFW() {
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -165,6 +167,24 @@ void VulkanEngine::Init() {
             phongMeshComponent->flush(entityInstanced);
             _phongSystemInstanced->AddEntity(entityInstanced);
             _entityViewerSystem->AddEntity(entityInstanced);
+
+            auto phongMeshComponent2
+                = _phongSystemInstanced->MakePhongRenderSystemInstancedComponent(
+                    "../resources/spot.obj",
+                    "../resources/spot.png",
+                    10
+                );
+            entityInstanced2->AddComponent(new TransformComponent());
+            entityInstanced2->AddComponent(phongMeshComponent2);
+            entityInstanced2->GetComponent<PhongRenderSystemInstancedComponent>()->flush(entityInstanced2);
+
+            // let's go crazy
+            for (int i = 0; i < 1000; i++) {
+
+            }
+
+            _phongSystemInstanced->AddEntity(entityInstanced2);
+            _entityViewerSystem->AddEntity(entityInstanced2);
         }
 
         // // make entity
