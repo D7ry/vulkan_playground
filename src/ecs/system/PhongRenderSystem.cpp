@@ -51,38 +51,6 @@ void PhongRenderSystem::Cleanup() {
     // note: texture is handled by TextureManager so no need to clean that up
 }
 
-// global uniform 
-// Renderpass 
-// Pipeline&static descriptor sets -- managed by PhongRenderSystem
-// vertex / index buffer -- all instances needs to be grouped into vertex/index buffer
-// Dynamic Descriptor sets: two choices
-//  -- bind the offset in CPU -- more flexibility
-//  -- index into offset in shader:
-//    -- index into offset using pushConstants -- still CPU overhead for large instance (O(#instance) cost)
-//    -- index into offset using gl_InstanceID -- more complexity on managing instace-specific buffers
-//
-// pushConstants // -push instance id? -- not ideal, still O(#instance) cost
-//
-/**
-
-PseudoCode:
-
-cpp
-std::map<Mesh, Entity> entityMap; // maps mesh data(vertex&index buffer) to entities
-
-for pair(mesh, entity) in entityMap:
-    bindVeretexBuf(mesh.vertexBuf);
-    bindIndexBuf(mesh.indexBuf);
-
-    vkCmdDrawIndexed()
-
-shader
-
-
-    
-    
-
-*/
 void PhongRenderSystem::Tick(const TickData* tickData) {
     VkCommandBuffer CB = tickData->graphics.currentCB;
     VkFramebuffer FB = tickData->graphics.currentFB;

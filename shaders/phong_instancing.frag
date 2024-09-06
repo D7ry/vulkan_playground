@@ -10,7 +10,7 @@ layout(location = 1) in vec2 fragTexCoord;
 layout(location = 2) in vec3 fragNormal;
 layout(location = 3) in vec3 fragPos;
 layout(location = 4) in vec3 fragGlobalLightPos;
-layout(location = 5) flat in int fragTexIndex;
+layout(location = 5) flat in uint fragTexIndex;
 
 layout(location = 0) out vec4 outColor;
 

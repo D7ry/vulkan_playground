@@ -42,6 +42,17 @@ void PhongRenderSystemInstanced::Tick(const TickData* tickData) {
 
     vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipeline);
 
+    // only use the global engine UBO, so need to bind once only
+    vkCmdBindDescriptorSets(
+        CB,
+        VK_PIPELINE_BIND_POINT_GRAPHICS,
+        _pipelineLayout,
+        0,
+        1,
+        &_descriptorSets[tickData->graphics.currentFrameInFlight],
+        0,
+        0
+    );
     // loop through entities and render them
     for (auto pair : this->_meshes) {
         MeshData& meshData = pair.second;
@@ -220,10 +231,11 @@ void PhongRenderSystemInstanced::createGraphicsPipeline(
     // set up vertex descriptions
     const std::array<VkVertexInputBindingDescription, 2>* bindingDescription
         = Vertex::GetBindingDescriptionsInstanced();
+
     const std::array<VkVertexInputAttributeDescription, 9>*
         attributeDescriptions
         = Vertex::GetAttributeDescriptionsInstanced();
-    ASSERT(bindingDescription->data()[1].binding == 1);
+
     {
         vertexInputInfo.sType
             = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;

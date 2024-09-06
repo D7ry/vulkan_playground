@@ -13,14 +13,14 @@ layout(location = 3) in vec3 inNormal;
 
 // instanced attrs
 layout(location = 4) in mat4 inInstModelMat; // model matrix
-layout(location = 8) in int inInstTexIndex; // texture index
+layout(location = 8) in uint inInstTexIndex; // texture index
 
 layout(location = 0) out vec3 fragColor;
 layout(location = 1) out vec2 fragTexCoord;
 layout(location = 2) out vec3 fragNormal;
 layout(location = 3) out vec3 fragPos; // frag position in view space
 layout(location = 4) out vec3 fragGlobalLightPos; // light position in view space
-layout(location = 5) out int fragTexIndex; // texture index
+layout(location = 5) out uint fragTexIndex; // texture index
 
 vec3 globalLightPos = vec3(-6, -3, 0.0);
 

@@ -19,6 +19,7 @@
 #include "VulkanEngine.h"
 #include "components/Camera.h"
 
+static Entity* entityInstanced = new Entity("instanced entity");
 void VulkanEngine::initGLFW() {
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -151,20 +152,19 @@ void VulkanEngine::Init() {
         
         // make instanced entity
         {
-            Entity* thing = new Entity("thing");
             auto phongMeshComponent
                 = _phongSystemInstanced->MakePhongRenderSystemInstancedComponent(
                     "../resources/viking_room.obj",
                     "../resources/viking_room.png",
                     10
                 );
-            thing->AddComponent(phongMeshComponent);
-            TransformComponent* transform = new TransformComponent();
-            *transform = TransformComponent::Identity();
-
-            thing->AddComponent(transform);
-            _phongSystemInstanced->AddEntity(thing);
-            _entityViewerSystem->AddEntity(thing);
+            TransformComponent* transformComponent = new TransformComponent();
+            *transformComponent = TransformComponent::Identity();
+            entityInstanced->AddComponent(transformComponent);
+            entityInstanced->AddComponent(phongMeshComponent);
+            phongMeshComponent->flush(entityInstanced);
+            _phongSystemInstanced->AddEntity(entityInstanced);
+            _entityViewerSystem->AddEntity(entityInstanced);
         }
 
         // // make entity
@@ -1183,6 +1183,7 @@ void VulkanEngine::drawFrame(TickData* tickData, uint8_t frame) {
             vkCmdSetScissor(CB, 0, 1, &scissor);
         }
         this->_phongSystem->Tick(tickData);
+        this->_phongSystemInstanced->Tick(tickData);
         this->_globalGridSystem->Tick(tickData);
         { // end main render pass
             vkCmdEndRenderPass(CB);

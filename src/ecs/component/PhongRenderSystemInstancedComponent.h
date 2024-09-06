@@ -14,8 +14,10 @@ struct PhongRenderSystemInstancedComponent : IComponent
 
     // mapped memory for transform
     void flush(Entity* e) {
+        ASSERT(e->GetComponent<PhongRenderSystemInstancedComponent>() == this);
         TransformComponent* transform = e->GetComponent<TransformComponent>();
         ASSERT(transform);
+        DEBUG("instance id: {}", instanceID);
         glm::mat4 model = transform->GetModelMatrix();
         size_t offset = sizeof(VertexInstancedData) * instanceID;
         void* instanceBufferAddress = reinterpret_cast<void*>(

@@ -9,7 +9,7 @@ const int TEXTURE_ARRAY_SIZE = 8; // size of the texture array for bindless text
 namespace DEFAULTS
 {
 #if __APPLE__
-    const size_t WINDOW_WIDTH = 1280
+    const size_t WINDOW_WIDTH = 1280;
     const size_t WINDOW_HEIGHT = 720;
 #else
     const size_t WINDOW_WIDTH = 1440;

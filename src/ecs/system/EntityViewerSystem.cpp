@@ -1,4 +1,5 @@
 #include "EntityViewerSystem.h"
+#include "ecs/component/PhongRenderSystemInstancedComponent.h"
 #include "ecs/component/TransformComponent.h"
 #include "imgui.h"
 
@@ -27,32 +28,42 @@ void EntityViewerSystem::drawEntity(Entity* entity) {
     if (TransformComponent* transform
         = entity->GetComponent<TransformComponent>()) {
         ImGui::Text("Position");
-        ImGui::SliderFloat(
+        bool changed = false;
+
+        changed |= ImGui::SliderFloat(
             "X##Position", &transform->position.x, -10.0f, 10.0f
         );
-        ImGui::SliderFloat(
+        changed |= ImGui::SliderFloat(
             "Y##Position", &transform->position.y, -10.0f, 10.0f
         );
-        ImGui::SliderFloat(
+        changed |= ImGui::SliderFloat(
             "Z##Position", &transform->position.z, -10.0f, 10.0f
         );
 
         // Rotation controller
         ImGui::Text("Rotation");
-        ImGui::SliderFloat(
+        changed |= ImGui::SliderFloat(
             "X##Rotation", &transform->rotation.x, -180.0f, 180.0f
         );
-        ImGui::SliderFloat(
+        changed |= ImGui::SliderFloat(
             "Y##Rotation", &transform->rotation.y, -180.0f, 180.0f
         );
-        ImGui::SliderFloat(
+        changed |= ImGui::SliderFloat(
             "Z##Rotation", &transform->rotation.z, -180.0f, 180.0f
         );
 
         // Scale controller
         ImGui::Text("Scale");
-        ImGui::SliderFloat("X##Scale", &transform->scale.x, 0.0f, 10.0f);
-        ImGui::SliderFloat("Y##Scale", &transform->scale.y, 0.0f, 10.0f);
-        ImGui::SliderFloat("Z##Scale", &transform->scale.z, 0.0f, 10.0f);
+        changed |= ImGui::SliderFloat("X##Scale", &transform->scale.x, 0.0f, 10.0f);
+        changed |= ImGui::SliderFloat("Y##Scale", &transform->scale.y, 0.0f, 10.0f);
+        changed |= ImGui::SliderFloat("Z##Scale", &transform->scale.z, 0.0f, 10.0f);
+
+        // flush instance transform to device buffer
+        if (changed) {
+            if (PhongRenderSystemInstancedComponent* renderInstance = entity->GetComponent<PhongRenderSystemInstancedComponent>()){
+                renderInstance->flush(entity);
+            }
+        }
+
     }
 }
