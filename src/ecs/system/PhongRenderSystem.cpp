@@ -54,10 +54,12 @@ void PhongRenderSystem::Cleanup() {
 // global uniform 
 // Renderpass 
 // Pipeline&static descriptor sets -- managed by PhongRenderSystem
-// vertex / index buffer -- all instances neesds to be grouped into vertex/index buffer
+// vertex / index buffer -- all instances needs to be grouped into vertex/index buffer
 // Dynamic Descriptor sets: two choices
 //  -- bind the offset in CPU -- more flexibility
-//  -- index into offset in device using pushConstants
+//  -- index into offset in shader:
+//    -- index into offset using pushConstants -- still CPU overhead for large instance (O(#instance) cost)
+//    -- index into offset using gl_InstanceID -- more complexity on managing instace-specific buffers
 //
 // pushConstants // -push instance id?
 void PhongRenderSystem::Tick(const TickData* tickData) {
