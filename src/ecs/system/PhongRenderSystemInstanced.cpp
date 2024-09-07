@@ -69,6 +69,7 @@ void PhongRenderSystemInstanced::Tick(const TickData* tickData) {
 
     // flush buffer updates, write to the buffer corresponding to the current
     // frame
+    // TODO: can we batch flushing?
     while (!_bufferUpdateQueue[frameIdx].empty()) {
         Entity* e = _bufferUpdateQueue[frameIdx].back();
         _bufferUpdateQueue[frameIdx].pop_back();
@@ -87,7 +88,6 @@ void PhongRenderSystemInstanced::Tick(const TickData* tickData) {
             model,
             instance->textureID
         };
-        // TODO: can we use a staging buffer?
         memcpy(instanceBufferAddress, &data, sizeof(data));
     }
     ASSERT(_bufferUpdateQueue[frameIdx].empty());
@@ -508,13 +508,14 @@ PhongRenderSystemInstancedComponent* PhongRenderSystemInstanced::
         auto it = _textureDescriptorIndices.find(texturePath);
         if (it == _textureDescriptorIndices.end()) {
             // load texture into textures[textureOffset]
-            DEBUG("loading texture into {}", _textureDescriptorInfoIdx);
+            DEBUG("loading {} into {}", texturePath, _textureDescriptorInfoIdx);
             _textureManager->GetDescriptorImageInfo(
                 texturePath, _textureDescriptorInfo[_textureDescriptorInfoIdx]
             );
             textureOffset = _textureDescriptorInfoIdx;
             _textureDescriptorInfoIdx++;
             updateTextureDescriptorSet();
+            _textureDescriptorIndices.insert({texturePath, textureOffset});
         } else {
             textureOffset = it->second;
         }
