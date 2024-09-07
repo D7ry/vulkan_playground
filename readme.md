@@ -11,7 +11,7 @@ It's like writing an OS
 
 
 ## TODO
-
+- [ ] deferred shading
 
 # Results
 
