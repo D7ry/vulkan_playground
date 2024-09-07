@@ -61,7 +61,7 @@ void EntityViewerSystem::drawEntity(Entity* entity) {
         // flush instance transform to device buffer
         if (changed) {
             if (PhongRenderSystemInstancedComponent* renderInstance = entity->GetComponent<PhongRenderSystemInstancedComponent>()){
-                renderInstance->flush(entity);
+                renderInstance->FlagAsDirty(entity);
             }
         }
 

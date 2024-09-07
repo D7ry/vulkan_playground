@@ -164,9 +164,9 @@ void VulkanEngine::Init() {
             *transformComponent = TransformComponent::Identity();
             entityInstanced->AddComponent(transformComponent);
             entityInstanced->AddComponent(phongMeshComponent);
-            phongMeshComponent->flush(entityInstanced);
             _phongSystemInstanced->AddEntity(entityInstanced);
             _entityViewerSystem->AddEntity(entityInstanced);
+            phongMeshComponent->FlagAsDirty(entityInstanced);
 
             auto phongMeshComponent2
                 = _phongSystemInstanced->MakePhongRenderSystemInstancedComponent(
@@ -176,7 +176,7 @@ void VulkanEngine::Init() {
                 );
             entityInstanced2->AddComponent(new TransformComponent());
             entityInstanced2->AddComponent(phongMeshComponent2);
-            entityInstanced2->GetComponent<PhongRenderSystemInstancedComponent>()->flush(entityInstanced2);
+            phongMeshComponent2->FlagAsDirty(entityInstanced2);
 
             // let's go crazy
             for (int i = 0; i < 1000; i++) {

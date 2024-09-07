@@ -18,12 +18,16 @@ void PhongRenderSystemInstanced::Init(const InitData* initData) {
 }
 
 void PhongRenderSystemInstanced::Cleanup() {
-    for (auto& elem: _meshes) {
+    for (auto& elem : _meshes) {
         DEBUG("cleanup");
-        elem.second.mesh.indexBuffer.Cleanup();
-        elem.second.mesh.vertexBuffer.Cleanup();
-        elem.second.instanceBuffer.Cleanup();
-        for (auto& component : elem.second.components) {
+        PhongMeshInstanced& mesh = elem.second.mesh;
+        mesh.indexBuffer.Cleanup();
+        mesh.vertexBuffer.Cleanup();
+        for (VQBuffer& buf : elem.second.instanceBuffer) {
+            buf.Cleanup();
+        }
+        for (PhongRenderSystemInstancedComponent* component :
+             elem.second.components) {
             delete component;
         }
     }
@@ -58,10 +62,36 @@ void PhongRenderSystemInstanced::Tick(const TickData* tickData) {
         _pipelineLayout,
         0,
         1,
-        &_descriptorSets[tickData->graphics.currentFrameInFlight],
+        &_descriptorSets[frameIdx],
         0,
         0
     );
+
+    // flush buffer updates, write to the buffer corresponding to the current
+    // frame
+    while (!_bufferUpdateQueue[frameIdx].empty()) {
+        Entity* e = _bufferUpdateQueue[frameIdx].back();
+        _bufferUpdateQueue[frameIdx].pop_back();
+        TransformComponent* transform = e->GetComponent<TransformComponent>();
+        PhongRenderSystemInstancedComponent* instance
+            = e->GetComponent<PhongRenderSystemInstancedComponent>();
+        ASSERT(transform);
+        glm::mat4 model = transform->GetModelMatrix();
+        size_t offset = sizeof(VertexInstancedData) * instance->instanceID;
+
+        void* instanceBufferAddress = reinterpret_cast<void*>(
+            reinterpret_cast<char*>(instance->instanceBuffer->at(frameIdx).bufferAddress) + offset
+        );
+        VertexInstancedData data
+        {
+            model,
+            instance->textureID
+        };
+        // TODO: can we use a staging buffer?
+        memcpy(instanceBufferAddress, &data, sizeof(data));
+    }
+    ASSERT(_bufferUpdateQueue[frameIdx].empty());
+
     // loop through each mesh and bindlessly render their instances
     for (auto pair : this->_meshes) {
         MeshData& meshData = pair.second;
@@ -71,7 +101,12 @@ void PhongRenderSystemInstanced::Tick(const TickData* tickData) {
         vkCmdBindVertexBuffers(CB, 0, 1, &mesh->vertexBuffer.buffer, offsets);
         // bind instance-specific vertex buffer
         vkCmdBindVertexBuffers(
-            CB, 1, 1, &meshData.instanceBuffer.buffer, offsets
+            CB,
+            1,
+            1,
+            &meshData.instanceBuffer.at(tickData->graphics.currentFrameInFlight)
+                 .buffer,
+            offsets
         );
         // bind index buffer
         vkCmdBindIndexBuffer(
@@ -498,15 +533,19 @@ PhongRenderSystemInstancedComponent* PhongRenderSystemInstanced::
                 meshData.mesh.vertexBuffer,
                 meshData.mesh.indexBuffer
             );
-            // construct a fixed-sized buffer array
-            _device->CreateBufferInPlace(
-                instanceNumber * sizeof(VertexInstancedData),
-                VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
-                    | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, // TODO: can we do
-                                                            // better?
-                meshData.instanceBuffer
-            );
+            for (int i = 0; i < NUM_FRAME_IN_FLIGHT; i++) {
+                // construct a fixed-sized buffer array
+                _device->CreateBufferInPlace(
+                    instanceNumber * sizeof(VertexInstancedData),
+                    VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+                        | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, // TODO: can we
+                                                                // use a staging
+                                                                // buffer for
+                                                                // flushing?
+                    meshData.instanceBuffer[i]
+                );
+            }
 
             auto result = _meshes.insert({meshPath, meshData});
             // allocate an index for the instance
@@ -524,9 +563,9 @@ PhongRenderSystemInstancedComponent* PhongRenderSystemInstanced::
             // make a new buffer array
 
             // copy over old stuff
-            
+
             // point instance buffer to new buffer
-            
+
             // push old buffer to the tick deletion queue
         }
         pMeshData->availableInstanceBufferIdx++; // increment buffer idx
@@ -536,7 +575,8 @@ PhongRenderSystemInstancedComponent* PhongRenderSystemInstanced::
         = new PhongRenderSystemInstancedComponent();
     ret->textureID = textureOffset;
     ret->instanceID = instanceID;
-    ret->buffer = &pMeshData->instanceBuffer;
+    ret->parent = this;
+    ret->instanceBuffer = std::addressof(pMeshData->instanceBuffer);
 
     pMeshData->components.insert(ret); // track the component
     return ret;
@@ -574,3 +614,16 @@ void PhongRenderSystemInstanced::updateTextureDescriptorSet() {
         );
     }
 };
+
+void PhongRenderSystemInstanced::FlagAsDirty(Entity* entity) {
+    ASSERT(
+        entity->GetComponent<PhongRenderSystemInstancedComponent>() != nullptr
+    );
+    // internally we push the entity to the update queue for each buffer, so
+    // that it can be updated before the buffer are used for drawing
+    // TODO: can have another staging buffer layer for better flushing
+    // performance
+    for (int i = 0; i < _bufferUpdateQueue.size(); i++) {
+        _bufferUpdateQueue[i].push_back(entity);
+    }
+}

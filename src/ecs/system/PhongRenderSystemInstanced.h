@@ -15,7 +15,13 @@ struct PhongMeshInstanced
     VQBufferIndex indexBuffer;
 };
 
-// phong render system
+// phong render system that provides CPU O(#of unique mesh) performance per draw calls
+// as opposed to O(# of unique mesh instance)
+// So is achieved by:
+// for each mesh, store all instance-unique data into a huge buffer,
+// when rendering, the GPU direcly index into the buffer.
+// 
+// The buffer is updated from the CPU, only if the instance data actually changed.
 class PhongRenderSystemInstanced : public IRenderSystem
 {
   public:
@@ -23,8 +29,8 @@ class PhongRenderSystemInstanced : public IRenderSystem
     MakePhongRenderSystemInstancedComponent(
         const std::string& meshPath,
         const std::string& texturePath,
-        size_t instanceNumber // initial number of instance supported before
-                              // resizing
+        size_t instanceNumber // initial # of instance allocated on the GPU.
+                              // make this number big if intend to draw a grass field or sth.
     );
 
     // destroy a mesh instance component that's initialized with
@@ -36,10 +42,17 @@ class PhongRenderSystemInstanced : public IRenderSystem
 
     virtual void Cleanup() override;
 
+    // flag the entity as dirty, so that its buffer will be flushed
+    void FlagAsDirty(
+        Entity* entity
+    );
+
   private:
     // spir-v source to vertex and fragment shader, relative to compiled binary
     const char* VERTEX_SHADER_SRC = "../shaders/phong_instancing.vert.spv";
     const char* FRAGMENT_SHADER_SRC = "../shaders/phong_instancing.frag.spv";
+
+    std::array<std::vector<Entity*>, NUM_FRAME_IN_FLIGHT> _bufferUpdateQueue;
 
     // pipeline
     VkPipeline _pipeline = VK_NULL_HANDLE;
@@ -67,11 +80,12 @@ class PhongRenderSystemInstanced : public IRenderSystem
     {
         PhongMeshInstanced mesh;
         // buffer array to store mesh instance data
-        VQBuffer instanceBuffer;
+        std::array<VQBuffer, NUM_FRAME_IN_FLIGHT> instanceBuffer; // instance buffer for each frame
         int instanceBufferInstanceCount; // number of maximum supported mesh instance
         int availableInstanceBufferIdx
             = 0; // which instance buffer is currently available?
                  // increment this when assigning new instance buffer
+                 // also can use as the # of instance buffer used
         std::unordered_set<PhongRenderSystemInstancedComponent*>
             components; // what components corresponds to this mesh?
                         // useful for updating the buffer field in the
