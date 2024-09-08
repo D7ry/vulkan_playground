@@ -173,45 +173,48 @@ void VulkanEngine::Init() {
             // auto phongMeshComponent2
             //     = _phongSystemInstanced
             //           ->MakePhongRenderSystemInstancedComponent(
-            //               "../resources/spot.obj", "../resources/spot.png", 10
+            //               "../resources/spot.obj", "../resources/spot.png",
+            //               10
             //           );
             // entityInstanced2->AddComponent(new TransformComponent());
             // entityInstanced2->AddComponent(phongMeshComponent2);
             // phongMeshComponent2->FlagAsDirty(entityInstanced2);
 
             // let's go crazy
-            for (int i = 0; i < 5000; i++) {
+            for (int i = 0; i < 10000; i++) {
                 Entity* spot = new Entity("Spot");
                 spot->AddComponent(new TransformComponent());
                 spot->AddComponent(
-                        _phongSystemInstanced
-                            ->MakePhongRenderSystemInstancedComponent(
-                                "../resources/spot.obj",
-                                "../resources/spot.png",
-                                10000 // give it a large hint so don't need to resize
-                            ));
+                    _phongSystemInstanced
+                        ->MakePhongRenderSystemInstancedComponent(
+                            "../resources/spot.obj",
+                            "../resources/spot.png",
+                            10000 // give it a large hint so don't need to
+                                  // resize
+                        )
+                );
                 // Generate spherical coordinates
                 float radius = 30.0f;
                 float theta = static_cast<float>(rand()) / RAND_MAX * 2 * M_PI;
                 float phi = acos(2 * static_cast<float>(rand()) / RAND_MAX - 1);
-                
+
                 // Convert spherical coordinates to Cartesian
                 float x = radius * sin(phi) * cos(theta);
                 float y = radius * sin(phi) * sin(theta);
                 float z = radius * cos(phi);
-                
+
                 // Set the position
                 spot->GetComponent<TransformComponent>()->position.x = x;
                 spot->GetComponent<TransformComponent>()->position.y = y;
                 spot->GetComponent<TransformComponent>()->position.z = z;
-                spot->GetComponent<PhongRenderSystemInstancedComponent>()->FlagAsDirty(spot);
+                spot->GetComponent<PhongRenderSystemInstancedComponent>()
+                    ->FlagAsDirty(spot);
                 _phongSystemInstanced->AddEntity(spot);
             }
 
             _phongSystemInstanced->AddEntity(entityInstanced2);
             _entityViewerSystem->AddEntity(entityInstanced2);
         }
-
     }
 }
 
@@ -222,18 +225,23 @@ void VulkanEngine::Run() {
 }
 
 void VulkanEngine::Tick() {
-    glfwPollEvents();
-    _deltaTimer.Tick();
-    double deltaTime = _deltaTimer.GetDeltaTime();
-    _inputManager.Tick(deltaTime);
-    TickData tickData{&_mainCamera, deltaTime};
+    {
+        PROFILE_SCOPE(&_profiler, "Main Tick");
+        glfwPollEvents();
+        _deltaTimer.Tick();
+        double deltaTime = _deltaTimer.GetDeltaTime();
+        _inputManager.Tick(deltaTime);
+        TickData tickData{&_mainCamera, deltaTime};
 
-    drawImGui();
+        tickData.profiler = &_profiler;
+        drawImGui();
 
-    flushEngineUBOStatic(_currentFrame);
-    drawFrame(&tickData, _currentFrame);
-    _currentFrame = (_currentFrame + 1) % NUM_FRAME_IN_FLIGHT;
-    vkDeviceWaitIdle(this->_device->logicalDevice);
+        flushEngineUBOStatic(_currentFrame);
+        drawFrame(&tickData, _currentFrame);
+        _currentFrame = (_currentFrame + 1) % NUM_FRAME_IN_FLIGHT;
+        vkDeviceWaitIdle(this->_device->logicalDevice);
+    }
+    _profiler.NewProfile();
 }
 
 void VulkanEngine::framebufferResizeCallback(
@@ -1279,14 +1287,15 @@ void VulkanEngine::initSwapChain() {
 }
 
 void VulkanEngine::drawImGui() {
+    PROFILE_SCOPE(&_profiler, "ImGui Draw");
     _imguiManager.BeginImGuiContext();
     if (ImGui::Begin("Vulkan Engine")) {
         ImGui::SetWindowPos(ImVec2(0, 0), ImGuiCond_Once);
         ImGui::SetWindowSize(ImVec2(400, 400), ImGuiCond_Once);
         ImGui::Text("Framerate: %f", 1 / _deltaTimer.GetDeltaTime());
         ImGui::Separator();
-        ImGui::Text("Camera");
-        if (ImGui::BeginChild("Camera")) {
+        ImGui::SeparatorText("Camera");
+        {
             ImGui::Text(
                 "Position: (%f, %f, %f)",
                 _mainCamera.GetPosition().x,
@@ -1305,9 +1314,26 @@ void VulkanEngine::drawImGui() {
                 ImGui::Text("View Mode: Deactive");
             }
         }
-        ImGui::EndChild();
+
+        ImGui::SeparatorText("Profiler");
+        {
+            std::unique_ptr<std::vector<Profiler::Entry>> lastProfileData
+                = _profiler.GetLastProfile();
+            for (Profiler::Entry& entry : *lastProfileData) {
+                ImGui::Text("level: %i", entry.level);
+                ImGui::Text("%s ms", entry.name);
+                ImGui::Text(
+                    "Time: %f",
+                    std::chrono::
+                        duration<double, std::chrono::milliseconds::period>(
+                            entry.end - entry.begin
+                        )
+                            .count()
+                );
+            }
+        }
     }
-    ImGui::End();
+    ImGui::End(); // VulkanEngine
     _entityViewerSystem->DrawImGui();
     _imguiManager.EndImGuiContext();
 }

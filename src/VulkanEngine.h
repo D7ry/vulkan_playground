@@ -2,6 +2,7 @@
 #include "components/Camera.h"
 #include "components/DeltaTimer.h"
 #include "components/InputManager.h"
+#include "components/Profiler.h"
 #include "ecs/system/EntityViewerSystem.h"
 #include "ecs/system/GlobalGridSystem.h"
 #include <cstdint>
@@ -253,6 +254,7 @@ class VulkanEngine
     DeltaTimer _deltaTimer;
     Camera _mainCamera = Camera(0, 0, 0, 0, 0, 0);
     InputManager _inputManager;
+    Profiler _profiler;
 
     bool _lockCursor;
     void cursorPosCallback(GLFWwindow* window, double xpos, double ypos);

@@ -27,12 +27,14 @@ struct GraphicsTickData
     glm::mat4 mainProjectionMatrix;
 };
 
+class Profiler;
 struct TickData
 {
     const Camera* mainCamera;
     // std::vector<VkFramebuffer>* swapChainFB;
     double deltaTime;
     GraphicsTickData graphics;
+    Profiler* profiler;
 };
 
 class VQDevice;
