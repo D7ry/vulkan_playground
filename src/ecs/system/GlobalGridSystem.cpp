@@ -1,5 +1,6 @@
 #include "GlobalGridSystem.h"
 #include "components/Camera.h"
+#include "components/Profiler.h"
 #include "components/ShaderUtils.h"
 #include "components/VulkanUtils.h"
 #include "lib/VQDevice.h"
@@ -381,6 +382,7 @@ void GlobalGridSystem::createGraphicsPipeline(const VkRenderPass renderPass, con
 }
 
 void GlobalGridSystem::Tick(const TickData* tickData) {
+    PROFILE_SCOPE(tickData->profiler, "Global grid system tick");
     VkCommandBuffer CB = tickData->graphics.currentCB;
     VkFramebuffer FB = tickData->graphics.currentFB;
     VkExtent2D FBExt = tickData->graphics.currentFBextend;

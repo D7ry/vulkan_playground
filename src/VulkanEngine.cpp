@@ -1104,6 +1104,7 @@ void VulkanEngine::flushEngineUBOStatic(uint8_t frame) {
 
 void VulkanEngine::drawFrame(TickData* tickData, uint8_t frame) {
     //  Wait for the previous frame to finish
+    PROFILE_SCOPE(&_profiler, "Render Tick");
     vkWaitForFences(
         _device->logicalDevice,
         1,
@@ -1320,16 +1321,24 @@ void VulkanEngine::drawImGui() {
             std::unique_ptr<std::vector<Profiler::Entry>> lastProfileData
                 = _profiler.GetLastProfile();
             for (Profiler::Entry& entry : *lastProfileData) {
-                ImGui::Text("level: %i", entry.level);
-                ImGui::Text("%s ms", entry.name);
+                int indentWidth = entry.level * 10;
+                if (indentWidth != 0) {
+                    ImGui::Indent(indentWidth);
+                }
+                // entry name
+                ImGui::Text("%s", entry.name);
+                // ms time
                 ImGui::Text(
-                    "Time: %f",
+                    "%f MS",
                     std::chrono::
                         duration<double, std::chrono::milliseconds::period>(
                             entry.end - entry.begin
                         )
                             .count()
                 );
+                if (indentWidth != 0) {
+                    ImGui::Unindent(indentWidth);
+                }
             }
         }
     }

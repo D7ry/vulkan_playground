@@ -1,3 +1,4 @@
+#include "components/Profiler.h"
 #include "components/ShaderUtils.h"
 #include "components/VulkanUtils.h"
 #include "lib/VQDevice.h"
@@ -48,6 +49,7 @@ void PhongRenderSystemInstanced::Cleanup() {
 }
 
 void PhongRenderSystemInstanced::Tick(const TickData* tickData) {
+    PROFILE_SCOPE(tickData->profiler, "Phong Instanced System Tick");
     VkCommandBuffer CB = tickData->graphics.currentCB;
     VkFramebuffer FB = tickData->graphics.currentFB;
     VkExtent2D FBExt = tickData->graphics.currentFBextend;
