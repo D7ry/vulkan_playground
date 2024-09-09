@@ -22,7 +22,6 @@
 
 #include "VulkanEngine.h"
 #include "components/Camera.h"
-#include "components/TextureManager.h"
 
 static Entity* entityInstanced = new Entity("instanced entity");
 static Entity* entityInstanced2 = new Entity("instanced entity2");
@@ -106,11 +105,8 @@ void VulkanEngine::Init() {
     INFO("Initializing Render Manager...");
     glfwSetFramebufferSizeCallback(_window, this->framebufferResizeCallback);
     this->initVulkan();
-    TextureManager::GetSingleton()->Init(_device
-    ); // pass device to texture manager for it to start loading
-    this->_deletionStack.push([this]() {
-        TextureManager::GetSingleton()->Cleanup();
-    });
+    _textureManager.Init(_device);
+    this->_deletionStack.push([this]() { _textureManager.Cleanup(); });
 
     // create static engine ubo
     {
@@ -135,8 +131,7 @@ void VulkanEngine::Init() {
         InitData initData;
         { // populate initData
             initData.device = this->_device.get();
-            initData.textureManager = TextureManager::GetSingleton(
-            ); // TODO: get rid of singleton pattern
+            initData.textureManager = &_textureManager;
             initData.swapChainImageFormat = this->_swapChainImageFormat;
             initData.renderPass.mainPass = _mainRenderPass;
             for (int i = 0; i < _engineUBOStatic.size(); i++) {
@@ -480,7 +475,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL VulkanEngine::debugCallback(
     const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
     void* pUserData
 ) {
-    std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
+    DEBUG("{}", pCallbackData->pMessage);
     return VK_FALSE;
 }
 
@@ -668,7 +663,7 @@ void VulkanEngine::createSwapChain() {
 
     _swapChainImageFormat = surfaceFormat.format;
     _swapChainExtent = extent;
-    INFO("Swap chain created!\n");
+    INFO("Swap chain created!");
 }
 
 void VulkanEngine::cleanupSwapChain() {

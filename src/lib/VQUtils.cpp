@@ -236,6 +236,7 @@ void VQUtils::meshToBuffer(
     std::vector<Vertex> vertices;
     std::vector<uint32_t> indices;
     CoreUtils::loadModel(meshFilePath, vertices, indices);
+    DEBUG("loaded mode {}, {} vertices, {} indices", meshFilePath, vertices.size(), indices.size());
     createVertexBuffer(vertices, vertexBuffer, vqDevice);
     createIndexBuffer(indices, indexBuffer, vqDevice);
     INFO("Mesh loaded");
