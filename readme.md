@@ -114,12 +114,90 @@ struct Instance
 - number of instances to draw
 - number of indices to use, starting from the base index
 - base index to start, when reading the `index buffer array`
+    - for example, for `Mesh 2` above, set the offset to 3
 - offset to the base vertex, when reading the `vertex buffer array`
+    - for example, for `Mesh 2` above, set the offset to 4.
 
 ```
-|DrawCMD1 |DrawCMD2 |DrawCMD3 |DrawCMD4 ...
+|DrawCMD1 |DrawCMD2 |DrawCMD3 |DrawCMD4 |DrawCMDN
 ```
 Note that all the above arrays are store on the GPU
+
+At render time, the vulkan API provides the `vkCmdDrawIndexedIndirect` call,
+that iterates over all the draw commands, in parallel, and executes the draws.
+
+#### Handling Complexities -- Perf Analysis
+
+The above implementation may work well when we have a 
+__fixed number of instances__. But let's also shed light
+on the following complex runtime cases:
+
+##### Assumptions
+
+1. we assume the GPU is capable of having large enough VRAM to
+store all vertex & index buffers of a scene. The cost is estimated to be small;
+estimating a rough 1,000 different meshes, with 3,000 vertex + indices in each,
+leads to 3,000,000 vertices. Giving the conservative assumption that, each vertex/index consists of 5 `vec3` -- 
+60 bytes each, storing all vertices/indices on GPU would cost `60 * 3,000,000 / 1e-6` = `180 mb` of
+vram -- a relatively small tax on the GPU, if we put electron apps into context.
+
+
+##### Runtime addition/deletion of mesh instances
+
+Instanced&indirect rendering adds complexity to choosing which instance to render.
+This is important for unloading mesh instances from the scene, and more importantly,
+instance culling.
+
+A traditional & native rendering pipeline would do the following:
+
+```cpp
+extern std::vector<MeshInstance*> _instances;
+for (MeshInstance* instance: _instances) {
+    setUniform("model", mesh->modelMat);
+    bindVertexBuffer(instance->vertexBuffer);
+    bindIndexBuffer(instance->indexBuffer);
+    bindTexture("albedo", instance->albedoTexture);
+    //...
+    drawCall();
+}
+```
+Removing an instance is as simple as popping it from the vector on the CPU side.
+
+However, when doing indirect rendering, we only have control over the number of 
+instances to render, as well as write access to the instance data array.
+
+Given that we wish to indirect & instance render everything, the following each presents
+a solution and tradeoffs:
+
+1. "Replace and decrement"
+This is a rather simple solution. As we keep track of the total number of instances to render,
+when removing an arbitrary instance, we:  
+    a. copy over the last instance's data to the removed instance.  
+    b. decrement the number of instances in the instance array by one.  
+
+Before:  
+```
+|Instance 1|Instance 2|Instance 3| ....
+```
+After(remove 1):  
+```
+|Instance 3|Instance 2| ....
+```
+The main overhead of the solution comes from copying over instance data -- 
+which would become a problem when done in quick succession: for example, when the frustum-culled
+camera rapidly turns around, many instance data end up getting copied over and over.
+The CPU also has to re-flush the instance data back to the buffer, after their removal.
+
+However, for simple removal of mesh instance(implying the instance is never to be rendered
+again), the method works well.
+
+2. "Replace and decrement" with an additional layer of indirection  
+We create an additional "Instance Index" array, and similar to the "Replace and decrement" method -- we
+perform such operation on the array. The index array points to the instance datas, whereas the
+instance data array remains unchanged.
+
+The overhead of this method has been significantly reduced -- as one only needs to shuffle around 
+the index array of 4 byte entries.
 
 ## Fancy Profiler
 
