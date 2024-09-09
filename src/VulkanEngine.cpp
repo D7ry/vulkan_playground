@@ -1346,6 +1346,7 @@ void VulkanEngine::drawImGuiPerfPlots() {
         ImPlot::BeginPlot("Profiler");
 
         { // set up x and y boundary
+            ImPlot::SetupAxis(ImAxis_X1, "Time(Sec)");
             ImPlot::SetupAxisLimits(
                 ImAxis_X1,
                 _timeSinceStartSeconds
@@ -1354,6 +1355,7 @@ void VulkanEngine::drawImGuiPerfPlots() {
                 ImPlotCond_Always
             );
 
+            ImPlot::SetupAxis(ImAxis_Y1, "Cost(Ms)");
             // adaptively set y range
             const int deltaTimeMiliseconds
                 = _deltaTimer.GetDeltaTimeMiliseconds();

@@ -17,6 +17,8 @@ It's like writing an OS
 
 # Results
 
+### Global Instanced Rendering
+
 Instanced rendering of 5000 cows. Every entity is backed by instanced rendering so the programmer
 doens't need to worry about doing instancing themselves. Instance data such as transform & texture, live in GPU and the engine
 provides nice abstractions to update them.
@@ -43,6 +45,22 @@ for (int i = 0; i < INSTANCE_NUM; i++) {
 ```
 
 ![cows](images/instance_everything.gif)
+
+### Fancy Profiler
+
+A fancy profiler GUI to show performance metrics, inspired by my own work on an nvidia internal profiler
+
+![profiler](images/profiler_lineplot.gif)
+
+Profiling entries are declarative and bound to scope. 
+This means one can easily profil a function by simply inserting a macro as follows:
+```cpp
+void UpdateEnginePhysics(Context* ctx) {
+    PROFILE_SCOPE(ctx->profiler, "engine physics update");
+    // .. bunch of transforms, culling, buffer shoving around etc
+}
+// profiler goes out of scope here, and the entry "engine physics update" will get recorded
+```
 
 # Rant
 
