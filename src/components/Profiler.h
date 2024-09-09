@@ -82,7 +82,7 @@ class Profiler
 
 #ifdef USE_PROFILER
 #define PROFILE_SCOPE(profiler, name)                                          \
-    auto __profling = Profiler::Profling(profiler, name);
+    const auto __profling = Profiler::Profling(profiler, name);
 #else
 #define PROFILE_SCOPE(profiler) (0)
 #endif
