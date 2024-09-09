@@ -18,4 +18,12 @@ namespace DEFAULTS
     const float FOV = 90.f;
     const float ZNEAR = 0.1f;
     const float ZFAR = 100.f;
+
+    const float PROFILER_PERF_PLOT_RANGE_SECONDS = 10; // how large the plot window is
+
+#if !__APPLE__
+    const float MAX_FPS = 144.f;
+#else
+    const float MAX_FPS = 60.f;
+#endif // __APPLE__
 }

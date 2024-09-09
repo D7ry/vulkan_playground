@@ -1,23 +1,28 @@
-#include "components/TextureManager.h"
 #include <algorithm>
 #include <cinttypes>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <deque>
 #include <functional>
 #include <iostream>
 #include <limits>
 #include <set>
 
-#include <cstddef>
+// graphics libraries
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #include <vulkan/vk_enum_string_helper.h>
 #include <vulkan/vulkan_core.h>
 
+// imgui
+#include "imgui.h"
+#include "implot.h"
+
 #include "VulkanEngine.h"
 #include "components/Camera.h"
+#include "components/TextureManager.h"
 
 static Entity* entityInstanced = new Entity("instanced entity");
 static Entity* entityInstanced2 = new Entity("instanced entity2");
@@ -181,7 +186,7 @@ void VulkanEngine::Init() {
             // phongMeshComponent2->FlagAsDirty(entityInstanced2);
 
             // let's go crazy
-            for (int i = 0; i < 10000; i++) {
+            for (int i = 0; i < 10; i++) {
                 Entity* spot = new Entity("Spot");
                 spot->AddComponent(new TransformComponent());
                 spot->AddComponent(
@@ -189,12 +194,12 @@ void VulkanEngine::Init() {
                         ->MakePhongRenderSystemInstancedComponent(
                             "../resources/spot.obj",
                             "../resources/spot.png",
-                            10000 // give it a large hint so don't need to
-                                  // resize
+                            20 // give it a large hint so don't need to
+                               // resize
                         )
                 );
                 // Generate spherical coordinates
-                float radius = 30.0f;
+                float radius = 5.0f;
                 float theta = static_cast<float>(rand()) / RAND_MAX * 2 * M_PI;
                 float phi = acos(2 * static_cast<float>(rand()) / RAND_MAX - 1);
 
@@ -227,19 +232,25 @@ void VulkanEngine::Run() {
 void VulkanEngine::Tick() {
     {
         PROFILE_SCOPE(&_profiler, "Main Tick");
-        glfwPollEvents();
-        _deltaTimer.Tick();
-        double deltaTime = _deltaTimer.GetDeltaTime();
-        _inputManager.Tick(deltaTime);
-        TickData tickData{&_mainCamera, deltaTime};
-
-        tickData.profiler = &_profiler;
-        drawImGui();
-
-        flushEngineUBOStatic(_currentFrame);
-        drawFrame(&tickData, _currentFrame);
-        _currentFrame = (_currentFrame + 1) % NUM_FRAME_IN_FLIGHT;
-        vkDeviceWaitIdle(this->_device->logicalDevice);
+        {
+            PROFILE_SCOPE(&_profiler, "CPU");
+            // CPU-exclusive workloads
+            glfwPollEvents();
+            _deltaTimer.Tick();
+            double deltaTime = _deltaTimer.GetDeltaTime();
+            _timeSinceStartSeconds += deltaTime;
+            _inputManager.Tick(deltaTime);
+            TickData tickData{&_mainCamera, deltaTime};
+            tickData.profiler = &_profiler;
+            drawImGui();
+            flushEngineUBOStatic(_currentFrame);
+            drawFrame(&tickData, _currentFrame);
+            _currentFrame = (_currentFrame + 1) % NUM_FRAME_IN_FLIGHT;
+        }
+        {
+            PROFILE_SCOPE(&_profiler, "GPU");
+            vkDeviceWaitIdle(this->_device->logicalDevice);
+        }
     }
     _profiler.NewProfile();
 }
@@ -1287,13 +1298,124 @@ void VulkanEngine::initSwapChain() {
     this->_deletionStack.push([this]() { this->cleanupSwapChain(); });
 }
 
+struct ScrollingBuffer
+{
+    int MaxSize;
+    int Offset;
+    ImVector<ImVec2> Data;
+
+    // need as many frame to hold the points
+    ScrollingBuffer(
+        int max_size
+        = DEFAULTS::PROFILER_PERF_PLOT_RANGE_SECONDS * DEFAULTS::MAX_FPS
+    ) {
+        MaxSize = max_size;
+        Offset = 0;
+        Data.reserve(MaxSize);
+    }
+
+    void AddPoint(float x, float y) {
+        if (Data.size() < MaxSize)
+            Data.push_back(ImVec2(x, y));
+        else {
+            Data[Offset] = ImVec2(x, y);
+            Offset = (Offset + 1) % MaxSize;
+        }
+    }
+
+    void Erase() {
+        if (Data.size() > 0) {
+            Data.shrink(0);
+            Offset = 0;
+        }
+    }
+};
+
+// TODO: an imgui helper class?
+// https://github.com/epezent/implot/blob/f156599faefe316f7dd20fe6c783bf87c8bb6fd9/implot_demo.cpp#L801
+void VulkanEngine::drawImGuiPerfPlots() {
+    // <profile name -> scrolling buffer>
+    // this design assumes all profile names are bijective to the actual profile
+    static std::map<const char*, ScrollingBuffer> scrollingBuffers;
+    { // Profiler
+        ImGui::SeparatorText("Profiler");
+        ImGui::Text("Framerate: %f", 1 / _deltaTimer.GetDeltaTime());
+        std::unique_ptr<std::vector<Profiler::Entry>> lastProfileData
+            = _profiler.GetLastProfile();
+
+        ImPlot::BeginPlot("Profiler");
+
+        { // set up x and y boundary
+            ImPlot::SetupAxisLimits(
+                ImAxis_X1,
+                _timeSinceStartSeconds
+                    - DEFAULTS::PROFILER_PERF_PLOT_RANGE_SECONDS,
+                _timeSinceStartSeconds,
+                ImPlotCond_Always
+            );
+
+            // adaptively set y range
+            const int deltaTimeMiliseconds
+                = _deltaTimer.GetDeltaTimeMiliseconds();
+            ImPlot::SetupAxisLimits(
+                ImAxis_Y1,
+                0,
+                deltaTimeMiliseconds < 15 ? 15 : 30,
+                ImPlotCond_Always
+            );
+        }
+
+        // iterate over entries, update scrolling buffers and plot
+        // also shows text for the raw numbers under the plot
+        for (Profiler::Entry& entry : *lastProfileData) {
+            auto it = scrollingBuffers.find(entry.name);
+            if (it == scrollingBuffers.end()) {
+                auto res
+                    = scrollingBuffers.emplace(entry.name, ScrollingBuffer());
+                ASSERT(res.second); // insertion success
+                it = res.first;
+            }
+            ScrollingBuffer& buf = it->second;
+
+            // ms time
+            double ms = std::chrono::
+                            duration<double, std::chrono::milliseconds::period>(
+                                entry.end - entry.begin
+                            )
+                                .count();
+            buf.AddPoint(_timeSinceStartSeconds, ms);
+            ImPlot::PlotLine(
+                entry.name,
+                &buf.Data[0].x,
+                &buf.Data[0].y,
+                buf.Data.size(),
+                0,
+                buf.Offset,
+                2 * sizeof(float)
+            );
+            { // text section
+                int indentWidth = entry.level * 10;
+                if (indentWidth != 0) {
+                    ImGui::Indent(indentWidth);
+                }
+                // entry name
+                ImGui::Text("%s", entry.name);
+                ImGui::Text("%f MS", ms);
+                if (indentWidth != 0) {
+                    ImGui::Unindent(indentWidth);
+                }
+            }
+        }
+        ImPlot::EndPlot();
+    }
+}
+
 void VulkanEngine::drawImGui() {
     PROFILE_SCOPE(&_profiler, "ImGui Draw");
     _imguiManager.BeginImGuiContext();
     if (ImGui::Begin("Vulkan Engine")) {
         ImGui::SetWindowPos(ImVec2(0, 0), ImGuiCond_Once);
         ImGui::SetWindowSize(ImVec2(400, 400), ImGuiCond_Once);
-        ImGui::Text("Framerate: %f", 1 / _deltaTimer.GetDeltaTime());
         ImGui::Separator();
         ImGui::SeparatorText("Camera");
         {
@@ -1315,32 +1437,7 @@ void VulkanEngine::drawImGui() {
                 ImGui::Text("View Mode: Deactive");
             }
         }
-
-        ImGui::SeparatorText("Profiler");
-        {
-            std::unique_ptr<std::vector<Profiler::Entry>> lastProfileData
-                = _profiler.GetLastProfile();
-            for (Profiler::Entry& entry : *lastProfileData) {
-                int indentWidth = entry.level * 10;
-                if (indentWidth != 0) {
-                    ImGui::Indent(indentWidth);
-                }
-                // entry name
-                ImGui::Text("%s", entry.name);
-                // ms time
-                ImGui::Text(
-                    "%f MS",
-                    std::chrono::
-                        duration<double, std::chrono::milliseconds::period>(
-                            entry.end - entry.begin
-                        )
-                            .count()
-                );
-                if (indentWidth != 0) {
-                    ImGui::Unindent(indentWidth);
-                }
-            }
-        }
+        drawImGuiPerfPlots();
     }
     ImGui::End(); // VulkanEngine
     _entityViewerSystem->DrawImGui();

@@ -76,6 +76,7 @@ class VulkanEngine
     };
 
 
+    void drawImGuiPerfPlots();
     void drawImGui();
 
     void initGLFW();
@@ -266,4 +267,5 @@ class VulkanEngine
     std::array<VQBuffer, NUM_FRAME_IN_FLIGHT> _engineUBOStatic;
 
     float _FOV = 90;
+    float _timeSinceStartSeconds; // seconds in time since engine start
 };

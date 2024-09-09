@@ -4,6 +4,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 17)
  
 # imgui
+set(IMPLOT_INCLUDE extern/implot)
 set(IMGUI_INCLUDE extern/imgui)
 set(IMGUI_SRC 
     extern/imgui/imgui.cpp
@@ -13,6 +14,8 @@ set(IMGUI_SRC
     extern/imgui/imgui_tables.cpp
     extern/imgui/backends/imgui_impl_glfw.cpp
     extern/imgui/backends/imgui_impl_vulkan.cpp
+    extern/implot/implot.cpp
+    extern/implot/implot_items.cpp
 )
 
 # stb
@@ -67,6 +70,7 @@ target_sources(${PROJECT_NAME}
 target_include_directories(vulkan_playground
     PRIVATE ${STB_INCLUDE}
     PRIVATE ${IMGUI_INCLUDE}
+    PRIVATE ${IMPLOT_INCLUDE}
     PRIVATE ${SPDLOG_INCLUDE}
     PRIVATE ${GLFW_INCLUDE}
     PRIVATE ${GLM_INCLUDE}

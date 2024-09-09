@@ -7,6 +7,8 @@ class DeltaTimer
     DeltaTimer();
     void Tick();
     double GetDeltaTime();
+    double GetDeltaTimeSeconds();
+    double GetDeltaTimeMiliseconds();
 
   private:
     std::chrono::time_point<std::chrono::high_resolution_clock> _prev;

@@ -1,11 +1,13 @@
 #include "ImGuiManager.h"
 #include "backends/imgui_impl_glfw.h"
 #include "imgui.h"
+#include "implot.h"
 
 void ImGuiManager::InitializeImgui() {
     INFO("Initializing imgui...");
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
+    ImPlot::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags
         |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
@@ -183,6 +185,7 @@ void ImGuiManager::Cleanup(VkDevice logicalDevice) {
     INFO("Cleaning up imgui...");
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplGlfw_Shutdown();
+    ImPlot::DestroyContext();
     ImGui::DestroyContext();
 
     vkDestroyRenderPass(logicalDevice, _imGuiRenderPass, nullptr);

@@ -7,7 +7,9 @@ It's like writing an OS
 - [x] graphics pipeline abstractions
 - [x] basic game entity abstractions
 - [x] object viewer window
+    - [x] a fancy profiler UI
 - [x] global instancing -- instance everything
+    - [ ] instance clustered frustum culling
 
 
 ## TODO
