@@ -128,7 +128,7 @@ void VulkanEngine::Init() {
         this->_phongSystem = new PhongRenderSystem();
         this->_phongSystemInstanced = new PhongRenderSystemInstanced();
         this->_globalGridSystem = new GlobalGridSystem();
-        InitData initData;
+        InitContext initData;
         { // populate initData
             initData.device = this->_device.get();
             initData.textureManager = &_textureManager;
@@ -235,7 +235,7 @@ void VulkanEngine::Tick() {
             double deltaTime = _deltaTimer.GetDeltaTime();
             _timeSinceStartSeconds += deltaTime;
             _inputManager.Tick(deltaTime);
-            TickData tickData{&_mainCamera, deltaTime};
+            TickContext tickData{&_mainCamera, deltaTime};
             tickData.profiler = &_profiler;
             drawImGui();
             flushEngineUBOStatic(_currentFrame);
@@ -1018,7 +1018,7 @@ void VulkanEngine::createFramebuffers() {
 void VulkanEngine::recordCommandBuffer(
     VkCommandBuffer commandBuffer,
     uint32_t imageIndex,
-    TickData* tickData
+    TickContext* tickData
 ) { // called every frame
 
     // start render pass
@@ -1105,7 +1105,7 @@ void VulkanEngine::flushEngineUBOStatic(uint8_t frame) {
     memcpy(buf.bufferAddress, &ubo, sizeof(ubo));
 }
 
-void VulkanEngine::drawFrame(TickData* tickData, uint8_t frame) {
+void VulkanEngine::drawFrame(TickContext* tickData, uint8_t frame) {
     EngineSynchronizationPrimitives& sync = _synchronizationPrimitives[frame];
 
     //  Wait for the previous frame to finish

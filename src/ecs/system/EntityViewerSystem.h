@@ -8,11 +8,11 @@ class EntityViewerSystem : public ImGuiSystem
   public:
     virtual void DrawImGui() override;
 
-    virtual void Init(const InitData* initData) override {};
+    virtual void Init(const InitContext* initData) override {};
 
     // iterate through all its nodes, and perform update logic on the nodes'
     // data
-    virtual void Tick(const TickData* tickData) override {};
+    virtual void Tick(const TickContext* tickData) override {};
     virtual void Cleanup() override{};
   private:
     void drawEntity(Entity* entity);

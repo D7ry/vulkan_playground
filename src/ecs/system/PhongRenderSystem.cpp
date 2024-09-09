@@ -10,7 +10,7 @@
 #include "PhongRenderSystem.h"
 #include "ecs/component/TransformComponent.h"
 
-void PhongRenderSystem::Init(const InitData* initData) {
+void PhongRenderSystem::Init(const InitContext* initData) {
     _device = initData->device;
     _textureManager = initData->textureManager;
     _dynamicUBOAlignmentSize
@@ -51,7 +51,7 @@ void PhongRenderSystem::Cleanup() {
     // note: texture is handled by TextureManager so no need to clean that up
 }
 
-void PhongRenderSystem::Tick(const TickData* tickData) {
+void PhongRenderSystem::Tick(const TickContext* tickData) {
     VkCommandBuffer CB = tickData->graphics.currentCB;
     VkFramebuffer FB = tickData->graphics.currentFB;
     VkExtent2D FBExt = tickData->graphics.currentFBextend;
@@ -131,7 +131,7 @@ void PhongRenderSystem::Tick(const TickData* tickData) {
 
 }
 
-void PhongRenderSystem::createGraphicsPipeline(const VkRenderPass renderPass, const InitData* initData) {
+void PhongRenderSystem::createGraphicsPipeline(const VkRenderPass renderPass, const InitContext* initData) {
     /////  ---------- descriptor ---------- /////
     VkDescriptorSetLayoutBinding uboStaticBinding{};
     VkDescriptorSetLayoutBinding uboDynamicBinding{};

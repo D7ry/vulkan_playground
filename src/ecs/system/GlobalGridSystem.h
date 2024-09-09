@@ -16,16 +16,16 @@ class GlobalGridSystem : public ISingletonSystem, IRenderSystem
         VQBuffer buffer;
     };
 
-    virtual void Init(const InitData* initData) override;
+    virtual void Init(const InitContext* initData) override;
 
-    virtual void Tick(const TickData* tickData) override;
+    virtual void Tick(const TickContext* tickData) override;
 
     virtual void Cleanup() override;
 
   private:
     const char* VERTEX_SHADER_SRC = "../shaders/global_grid.vert.spv";
     const char* FRAGMENT_SHADER_SRC = "../shaders/global_grid.frag.spv";
-    void createGraphicsPipeline(const VkRenderPass renderPass, const InitData* initData);
+    void createGraphicsPipeline(const VkRenderPass renderPass, const InitContext* initData);
     enum class BindingLocation : unsigned int
     {
         UBO_STATIC_ENGINE= 0,

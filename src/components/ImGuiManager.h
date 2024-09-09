@@ -51,7 +51,7 @@ class ImGuiManager
     void EndImGuiContext();
 
     // Push all recorded ImGui UI elements onto the CB.
-    void RecordCommandBuffer(const TickData* tickData);
+    void RecordCommandBuffer(const TickContext* tickData);
 
     void Cleanup(VkDevice logicalDevice);
 

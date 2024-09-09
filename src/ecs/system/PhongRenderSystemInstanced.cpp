@@ -11,7 +11,7 @@
 #include "PhongRenderSystemInstanced.h"
 #include "ecs/component/TransformComponent.h"
 
-void PhongRenderSystemInstanced::Init(const InitData* initData) {
+void PhongRenderSystemInstanced::Init(const InitContext* initData) {
     _device = initData->device;
     _textureManager = initData->textureManager;
     // create graphics pipeline
@@ -48,7 +48,7 @@ void PhongRenderSystemInstanced::Cleanup() {
     // note: texture is handled by TextureManager so no need to clean that up
 }
 
-void PhongRenderSystemInstanced::Tick(const TickData* tickData) {
+void PhongRenderSystemInstanced::Tick(const TickContext* tickData) {
     PROFILE_SCOPE(tickData->profiler, "Phong Instanced System Tick");
     VkCommandBuffer CB = tickData->graphics.currentCB;
     VkFramebuffer FB = tickData->graphics.currentFB;
@@ -124,7 +124,7 @@ void PhongRenderSystemInstanced::Tick(const TickData* tickData) {
 
 void PhongRenderSystemInstanced::createGraphicsPipeline(
     const VkRenderPass renderPass,
-    const InitData* initData
+    const InitContext* initData
 ) {
     /////  ---------- descriptor ---------- /////
     VkDescriptorSetLayoutBinding uboStaticBinding{};

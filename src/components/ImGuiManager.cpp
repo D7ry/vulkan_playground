@@ -192,7 +192,7 @@ void ImGuiManager::Cleanup(VkDevice logicalDevice) {
     vkDestroyDescriptorPool(logicalDevice, _imguiDescriptorPool, nullptr);
 }
 
-void ImGuiManager::RecordCommandBuffer(const TickData* tickData) {
+void ImGuiManager::RecordCommandBuffer(const TickContext* tickData) {
     auto CB = tickData->graphics.currentCB;
     auto FB = tickData->graphics.currentFB;
     auto extent = tickData->graphics.currentFBextend;

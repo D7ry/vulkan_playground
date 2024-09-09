@@ -47,8 +47,8 @@ class PhongRenderSystem : public IRenderSystem
         PhongMeshComponent*& component
     );
 
-    virtual void Init(const InitData* initData) override;
-    virtual void Tick(const TickData* tickData) override;
+    virtual void Init(const InitContext* initData) override;
+    virtual void Tick(const TickContext* tickData) override;
 
     virtual void Cleanup() override;
 
@@ -94,7 +94,7 @@ class PhongRenderSystem : public IRenderSystem
     // and the pipeline itself
     void createGraphicsPipeline(
         const VkRenderPass renderPass,
-        const InitData* initData
+        const InitContext* initData
     );
 
     // all phong meshes created

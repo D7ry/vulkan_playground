@@ -5,7 +5,7 @@
 #include "lib/VQBuffer.h"
 class Camera;
 
-struct GraphicsTickData
+struct GraphicsContext
 {
     int currentFrameInFlight; // used to index into command buffer of render
                               // systems
@@ -22,19 +22,19 @@ struct GraphicsTickData
 
 class Profiler;
 
-struct TickData
+struct TickContext
 {
     const Camera* mainCamera;
     // std::vector<VkFramebuffer>* swapChainFB;
     double deltaTime;
-    GraphicsTickData graphics;
+    GraphicsContext graphics;
     Profiler* profiler;
 };
 
 class VQDevice;
 class TextureManager;
 
-struct InitData
+struct InitContext
 {
     VQDevice* device;
     VkFormat swapChainImageFormat;

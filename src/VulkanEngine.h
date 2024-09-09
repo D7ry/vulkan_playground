@@ -34,7 +34,7 @@
 #include "components/Profiler.h"
 #include "components/TextureManager.h"
 
-class TickData;
+class TickContext;
 
 class VulkanEngine
 {
@@ -142,14 +142,14 @@ class VulkanEngine
     void flushEngineUBOStatic(uint8_t frame);
     void drawImGuiPerfPlots();
     void drawImGui();
-    void drawFrame(TickData* tickData, uint8_t frame);
+    void drawFrame(TickContext* tickData, uint8_t frame);
 
     // record command buffer to perform some example GPU
     // operations. currently not used anymore
     void recordCommandBuffer(
         VkCommandBuffer commandBuffer,
         uint32_t imageIndex,
-        TickData* tickData
+        TickContext* tickData
     );
 
     /* ---------- Top-level data ---------- */

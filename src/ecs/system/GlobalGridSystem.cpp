@@ -8,7 +8,7 @@
 
 // FIXME: too much repetitive code, graphics pipeline creation can be
 // encapsulated
-void GlobalGridSystem::createGraphicsPipeline(const VkRenderPass renderPass, const InitData* initData) {
+void GlobalGridSystem::createGraphicsPipeline(const VkRenderPass renderPass, const InitContext* initData) {
     /////  ---------- descriptor ---------- /////
     VkDescriptorSetLayoutBinding uboStaticBinding{};
     { // UBO static -- vertex
@@ -381,7 +381,7 @@ void GlobalGridSystem::createGraphicsPipeline(const VkRenderPass renderPass, con
     vkDestroyShaderModule(_device->logicalDevice, vertShaderModule, nullptr);
 }
 
-void GlobalGridSystem::Tick(const TickData* tickData) {
+void GlobalGridSystem::Tick(const TickContext* tickData) {
     PROFILE_SCOPE(tickData->profiler, "Global grid system tick");
     VkCommandBuffer CB = tickData->graphics.currentCB;
     VkFramebuffer FB = tickData->graphics.currentFB;
@@ -420,7 +420,7 @@ void GlobalGridSystem::Tick(const TickData* tickData) {
     vkCmdDraw(CB, _numLines * 2, 1, 0, 0);
 }
 
-void GlobalGridSystem::Init(const InitData* initData) {
+void GlobalGridSystem::Init(const InitContext* initData) {
     this->_device = initData->device;
     this->createGraphicsPipeline(initData->renderPass.mainPass, initData);
 
