@@ -7,7 +7,7 @@
 #include <vulkan/vulkan_core.h>
 
 #include "VulkanUtils.h"
-#include "structs/TickData.h"
+#include "structs/SharedEngineStructs.h"
 
 class ImGuiManager
 {

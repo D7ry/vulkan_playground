@@ -16,7 +16,7 @@
 #include <vulkan/vulkan_beta.h> // VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME
 #endif
 
-#include "structs/TickData.h"
+#include "structs/SharedEngineStructs.h"
 
 #include "components/ImGuiManager.h"
 #include "imgui.h"

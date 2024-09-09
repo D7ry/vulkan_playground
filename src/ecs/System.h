@@ -1,6 +1,6 @@
 #pragma once
 
-#include "structs/TickData.h"
+#include "structs/SharedEngineStructs.h"
 
 #include "Component.h"
 #include "Entity.h"
