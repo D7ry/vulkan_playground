@@ -1128,10 +1128,10 @@ void VulkanEngine::drawFrame(TickContext* tickData, uint8_t frame) {
         VK_NULL_HANDLE,
         &imageIndex
     );
-    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) { [[unlikely]]
         this->recreateSwapChain();
         return;
-    } else if (result != VK_SUCCESS) {
+    } else if (result != VK_SUCCESS) { [[unlikely]]
         FATAL("Failed to acquire swap chain image!");
     }
 
@@ -1168,7 +1168,7 @@ void VulkanEngine::drawFrame(TickContext* tickData, uint8_t frame) {
         beginInfo.flags = 0;                  // Optional
         beginInfo.pInheritanceInfo = nullptr; // Optional
 
-        if (vkBeginCommandBuffer(CB, &beginInfo) != VK_SUCCESS) {
+        if (vkBeginCommandBuffer(CB, &beginInfo) != VK_SUCCESS) { [[unlikely]]
             FATAL("Failed to begin recording command buffer!");
         }
     }
@@ -1220,7 +1220,7 @@ void VulkanEngine::drawFrame(TickContext* tickData, uint8_t frame) {
 
     _imguiManager.RecordCommandBuffer(tickData);
     { // end command buffer
-        if (vkEndCommandBuffer(CB) != VK_SUCCESS) {
+        if (vkEndCommandBuffer(CB) != VK_SUCCESS) { [[unlikely]]
             FATAL("Failed to record command buffer!");
         }
     }
@@ -1283,11 +1283,11 @@ void VulkanEngine::drawFrame(TickContext* tickData, uint8_t frame) {
     // the present doesn't happen until the render is finished, and the
     // semaphore is signaled(result of vkQueueSubimt)
     result = vkQueuePresentKHR(_device->presentationQueue, &presentInfo);
-    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR
-        || this->_framebufferResized) {
+    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR 
+        || this->_framebufferResized) { [[unlikely]]
         this->recreateSwapChain();
         this->_framebufferResized = false;
-    } else if (result != VK_SUCCESS) {
+    } else if (result != VK_SUCCESS) { [[unlikely]]
         FATAL("Failed to present swap chain image!");
     }
 }
