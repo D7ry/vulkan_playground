@@ -22,7 +22,6 @@
 
 #include "VulkanEngine.h"
 #include "components/Camera.h"
-#include "components/TextureManager.h"
 
 static Entity* entityInstanced = new Entity("instanced entity");
 static Entity* entityInstanced2 = new Entity("instanced entity2");
@@ -106,11 +105,8 @@ void VulkanEngine::Init() {
     INFO("Initializing Render Manager...");
     glfwSetFramebufferSizeCallback(_window, this->framebufferResizeCallback);
     this->initVulkan();
-    TextureManager::GetSingleton()->Init(_device
-    ); // pass device to texture manager for it to start loading
-    this->_deletionStack.push([this]() {
-        TextureManager::GetSingleton()->Cleanup();
-    });
+    _textureManager.Init(_device);
+    this->_deletionStack.push([this]() { _textureManager.Cleanup(); });
 
     // create static engine ubo
     {
@@ -135,8 +131,7 @@ void VulkanEngine::Init() {
         InitData initData;
         { // populate initData
             initData.device = this->_device.get();
-            initData.textureManager = TextureManager::GetSingleton(
-            ); // TODO: get rid of singleton pattern
+            initData.textureManager = &_textureManager;
             initData.swapChainImageFormat = this->_swapChainImageFormat;
             initData.renderPass.mainPass = _mainRenderPass;
             for (int i = 0; i < _engineUBOStatic.size(); i++) {
@@ -279,9 +274,6 @@ void VulkanEngine::createDevice() {
 void VulkanEngine::initVulkan() {
     INFO("Initializing Vulkan...");
     this->createInstance();
-    if (this->enableValidationLayers) {
-        // this->setupDebugMessenger();
-    }
     this->createSurface();
     this->createDevice();
     this->initSwapChain();
@@ -321,7 +313,7 @@ bool VulkanEngine::checkValidationLayerSupport() {
     std::vector<VkLayerProperties> availableLayers(layerCount);
     vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
 
-    for (const char* layerName : VALIDATION_LAYERS) {
+    for (const char* layerName : DEFAULTS::Engine::VALIDATION_LAYERS) {
         bool layerFound = false;
         for (const auto& layerProperties : availableLayers) {
             if (strcmp(layerName, layerProperties.layerName) == 0) {
@@ -338,7 +330,7 @@ bool VulkanEngine::checkValidationLayerSupport() {
 
 void VulkanEngine::createInstance() {
     INFO("Creating Vulkan instance...");
-    if (this->enableValidationLayers) {
+    if (DEFAULTS::Engine::ENABLE_VALIDATION_LAYERS) {
         if (!this->checkValidationLayerSupport()) {
             ERROR("Validation layers requested, but not available!");
         } else {
@@ -349,11 +341,19 @@ void VulkanEngine::createInstance() {
     INFO("Populating Vulkan application info...");
     VkApplicationInfo appInfo{};
     appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    appInfo.pApplicationName = this->APPLICATION_NAME;
-    appInfo.applicationVersion = this->APPLICATION_VERSION;
-    appInfo.pEngineName = this->ENGINE_NAME;
-    appInfo.engineVersion = this->ENGINE_VERSION;
-    appInfo.apiVersion = this->API_VERSION;
+    appInfo.pApplicationName = DEFAULTS::Engine::APPLICATION_NAME;
+    appInfo.applicationVersion = VK_MAKE_VERSION(
+        DEFAULTS::Engine::APPLICATION_VERSION.major,
+        DEFAULTS::Engine::APPLICATION_VERSION.minor,
+        DEFAULTS::Engine::APPLICATION_VERSION.patch
+    );
+    appInfo.pEngineName = DEFAULTS::Engine::ENGINE_NAME;
+    appInfo.engineVersion = VK_MAKE_VERSION(
+        DEFAULTS::Engine::ENGINE_VERSION.major,
+        DEFAULTS::Engine::ENGINE_VERSION.minor,
+        DEFAULTS::Engine::ENGINE_VERSION.patch
+    );
+    appInfo.apiVersion = VK_API_VERSION_1_0;
 
     INFO("Populating Vulkan instance create info...");
     // initialize and populate createInfo, which contains the application info
@@ -386,14 +386,15 @@ void VulkanEngine::createInstance() {
     VkDebugUtilsMessengerCreateInfoEXT debugMessengerCreateInfo{};
 
     createInfo.enabledLayerCount = 0;
-    if (this->enableValidationLayers) { // populate debug messenger create info
+    if (DEFAULTS::Engine::ENABLE_VALIDATION_LAYERS) {
         createInfo.enabledLayerCount
-            = static_cast<uint32_t>(VALIDATION_LAYERS.size());
-        createInfo.ppEnabledLayerNames = VALIDATION_LAYERS.data();
+            = static_cast<uint32_t>(DEFAULTS::Engine::VALIDATION_LAYERS.size());
+        createInfo.ppEnabledLayerNames
+            = DEFAULTS::Engine::VALIDATION_LAYERS.data();
 
         this->populateDebugMessengerCreateInfo(debugMessengerCreateInfo);
         createInfo.pNext
-            = (VkDebugUtilsMessengerCreateInfoEXT*)&debugMessengerCreateInfo;
+            = (VkDebugUtilsMessengerCreateInfoEXT*)(&debugMessengerCreateInfo);
     } else {
         createInfo.enabledLayerCount = 0;
         createInfo.pNext = nullptr;
@@ -425,25 +426,6 @@ void VulkanEngine::createSurface() {
     });
 }
 
-VkResult VulkanEngine::CreateDebugUtilsMessengerEXT(
-    VkInstance instance,
-    const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,
-    const VkAllocationCallbacks* pAllocator,
-    VkDebugUtilsMessengerEXT* pDebugMessenger
-) {
-    INFO("setting up debug messenger .... ");
-    auto func = (PFN_vkCreateDebugUtilsMessengerEXT
-    )vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
-
-    if (func != nullptr) {
-        return func(instance, pCreateInfo, pAllocator, pDebugMessenger);
-    } else {
-        ERROR("Failed to set up debug messenger. Function "
-              "\"vkCreateDebugUtilsMessengerEXT\" not found.");
-        return VK_ERROR_EXTENSION_NOT_PRESENT;
-    }
-}
-
 void VulkanEngine::populateDebugMessengerCreateInfo(
     VkDebugUtilsMessengerCreateInfoEXT& createInfo
 ) {
@@ -460,21 +442,31 @@ void VulkanEngine::populateDebugMessengerCreateInfo(
 }
 
 void VulkanEngine::setupDebugMessenger() {
-    if (!this->enableValidationLayers) {
-        ERROR(
-            "Validation layers are not enabled, cannot set up debug messenger."
-        );
-    }
-
     VkDebugUtilsMessengerCreateInfoEXT createInfo;
     populateDebugMessengerCreateInfo(createInfo);
-
-    if (CreateDebugUtilsMessengerEXT(
-            this->_instance, &createInfo, nullptr, &this->_debugMessenger
-        )
-        != VK_SUCCESS) {
-        FATAL("Failed to set up debug messenger!");
+    { // create debug messenger
+        auto func = (PFN_vkCreateDebugUtilsMessengerEXT
+        )vkGetInstanceProcAddr(_instance, "vkCreateDebugUtilsMessengerEXT");
+        if (!func) {
+            PANIC("Failed to find fnptr to vkCreateDebugUtilsMessengerEXT!");
+        }
+        if (func(_instance, &createInfo, nullptr, &_debugMessenger)
+            != VK_SUCCESS) {
+            FATAL("Failed to create debug util messenger!");
+        }
     }
+    _deletionStack.push([this]() {
+        auto func = (PFN_vkDestroyDebugUtilsMessengerEXT
+        )vkGetInstanceProcAddr(_instance, "vkDestroyDebugUtilsMessengerEXT");
+        if (!func) {
+            PANIC("Failed to find fnptr to vkDestroyDebugUtilsMessengerEXT!");
+        }
+        func(
+            _instance,       // instance
+            _debugMessenger, // debug messenger
+            nullptr          // allocator
+        );
+    });
 }
 
 VKAPI_ATTR VkBool32 VKAPI_CALL VulkanEngine::debugCallback(
@@ -483,7 +475,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL VulkanEngine::debugCallback(
     const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
     void* pUserData
 ) {
-    std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
+    DEBUG("{}", pCallbackData->pMessage);
     return VK_FALSE;
 }
 
@@ -516,12 +508,12 @@ VulkanEngine::QueueFamilyIndices VulkanEngine::findQueueFamilies(
             indices.presentationFamily = i;
             INFO("Presentation family found at {}", i);
         }
-        if (indices.isComplete()) {
+        if (indices.presentationFamily.has_value()
+            && indices.graphicsFamily.has_value()) {
             break;
         }
         i++;
     }
-    std::optional<uint32_t> graphicsFamily;
     return indices;
 }
 
@@ -550,20 +542,26 @@ bool VulkanEngine::checkDeviceExtensionSupport(VkPhysicalDevice device) {
 
 bool VulkanEngine::isDeviceSuitable(VkPhysicalDevice device) {
     DEBUG("checking is device suitable");
+
+    // check device properties and features
     VkPhysicalDeviceProperties deviceProperties;
     VkPhysicalDeviceFeatures deviceFeatures;
     vkGetPhysicalDeviceProperties(device, &deviceProperties);
     vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
+    bool platformRequirements =
+#if __APPLE__
+        true;
+#else
+        deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU
+        && deviceFeatures.geometryShader;
+#endif // __APPLE__
 
-    if (
-#if !__APPLE__
-        deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU &&
-        deviceFeatures.geometryShader &&
-#endif
-        true) {
+    // check queue families
+    if (platformRequirements) {
         QueueFamilyIndices indices
             = this->findQueueFamilies(device); // look for queue familieis
-        return indices.isComplete()
+        return indices.graphicsFamily.has_value()
+               && indices.presentationFamily.has_value()
                && checkDeviceExtensionSupport(device); // found graphics queue
     } else {
         return false;
@@ -665,7 +663,7 @@ void VulkanEngine::createSwapChain() {
 
     _swapChainImageFormat = surfaceFormat.format;
     _swapChainExtent = extent;
-    INFO("Swap chain created!\n");
+    INFO("Swap chain created!");
 }
 
 void VulkanEngine::cleanupSwapChain() {
@@ -832,9 +830,7 @@ void VulkanEngine::createImageViews() {
 
 void VulkanEngine::createSynchronizationObjects() {
     INFO("Creating synchronization objects...");
-    this->_semaImageAvailable.resize(NUM_FRAME_IN_FLIGHT);
-    this->_semaRenderFinished.resize(NUM_FRAME_IN_FLIGHT);
-    this->_fenceInFlight.resize(NUM_FRAME_IN_FLIGHT);
+    ASSERT(_synchronizationPrimitives.size() == NUM_FRAME_IN_FLIGHT);
 
     VkSemaphoreCreateInfo semaphoreInfo{};
     semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -844,41 +840,43 @@ void VulkanEngine::createSynchronizationObjects() {
         = VK_FENCE_CREATE_SIGNALED_BIT; // create with a signaled bit so that
                                         // the 1st frame can start right away
     for (size_t i = 0; i < NUM_FRAME_IN_FLIGHT; i++) {
+        EngineSynchronizationPrimitives& primitive = _synchronizationPrimitives[i];
         if (vkCreateSemaphore(
                 _device->logicalDevice,
                 &semaphoreInfo,
                 nullptr,
-                &_semaImageAvailable[i]
+                &primitive.semaImageAvailable
             ) != VK_SUCCESS
             || vkCreateSemaphore(
                    _device->logicalDevice,
                    &semaphoreInfo,
                    nullptr,
-                   &_semaRenderFinished[i]
+                    &primitive.semaRenderFinished
                ) != VK_SUCCESS
             || vkCreateFence(
                    _device->logicalDevice,
                    &fenceInfo,
                    nullptr,
-                   &_fenceInFlight[i]
+                    &primitive.fenceInFlight
                ) != VK_SUCCESS) {
             FATAL("Failed to create synchronization objects for a frame!");
         }
     }
     this->_deletionStack.push([this]() {
         for (size_t i = 0; i < NUM_FRAME_IN_FLIGHT; i++) {
+            EngineSynchronizationPrimitives& primitive = _synchronizationPrimitives[i];
             vkDestroySemaphore(
                 this->_device->logicalDevice,
-                this->_semaRenderFinished[i],
+                primitive.semaRenderFinished,
                 nullptr
             );
             vkDestroySemaphore(
                 this->_device->logicalDevice,
-                this->_semaImageAvailable[i],
+                primitive.semaImageAvailable,
                 nullptr
             );
             vkDestroyFence(
-                this->_device->logicalDevice, this->_fenceInFlight[i], nullptr
+                this->_device->logicalDevice, primitive.fenceInFlight, nullptr
             );
         }
     });
@@ -887,14 +885,6 @@ void VulkanEngine::createSynchronizationObjects() {
 void VulkanEngine::Cleanup() {
     INFO("Cleaning up...");
     _deletionStack.flush();
-    if (enableValidationLayers) {
-        if (this->_debugMessenger != nullptr) {
-            // TODO: implement this
-            // vkDestroyDebugUtilsMessengerEXT(_instance, _debugMessenger,
-            // nullptr);
-        }
-    }
-    postCleanup();
     INFO("Resource cleaned up.");
 }
 
@@ -1111,16 +1101,19 @@ void VulkanEngine::flushEngineUBOStatic(uint8_t frame) {
     };
     getMainProjectionMatrix(ubo.proj);
     ubo.timeSinceStartSeconds = _timeSinceStartSeconds;
+    ubo.sinWave = (sin(_timeSinceStartSeconds) + 1) / 2.f; // offset to [0, 1]
     memcpy(buf.bufferAddress, &ubo, sizeof(ubo));
 }
 
 void VulkanEngine::drawFrame(TickData* tickData, uint8_t frame) {
+    EngineSynchronizationPrimitives& sync = _synchronizationPrimitives[frame];
+
     //  Wait for the previous frame to finish
     PROFILE_SCOPE(&_profiler, "Render Tick");
     vkWaitForFences(
         _device->logicalDevice,
         1,
-        &this->_fenceInFlight[frame],
+        &sync.fenceInFlight,
         VK_TRUE,
         UINT64_MAX
     );
@@ -1131,7 +1124,7 @@ void VulkanEngine::drawFrame(TickData* tickData, uint8_t frame) {
         this->_device->logicalDevice,
         _swapChain,
         UINT64_MAX,
-        _semaImageAvailable[frame],
+        sync.semaImageAvailable,
         VK_NULL_HANDLE,
         &imageIndex
     );
@@ -1144,7 +1137,7 @@ void VulkanEngine::drawFrame(TickData* tickData, uint8_t frame) {
 
     // lock the fence
     vkResetFences(
-        this->_device->logicalDevice, 1, &this->_fenceInFlight[frame]
+        this->_device->logicalDevice, 1, &sync.fenceInFlight
     );
 
     VkFramebuffer FB = this->_swapChainData.frameBuffer[imageIndex];
@@ -1237,7 +1230,7 @@ void VulkanEngine::drawFrame(TickData* tickData, uint8_t frame) {
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
     VkSemaphore waitSemaphores[]
-        = {_semaImageAvailable[frame]}; // use imageAvailable semaphore
+        = {sync.semaImageAvailable}; // use imageAvailable semaphore
                                         // to make sure that the image
                                         // is available before drawing
     VkPipelineStageFlags waitStages[]
@@ -1252,7 +1245,7 @@ void VulkanEngine::drawFrame(TickData* tickData, uint8_t frame) {
         = static_cast<uint32_t>(submitCommandBuffers.size());
     submitInfo.pCommandBuffers = submitCommandBuffers.data();
 
-    VkSemaphore signalSemaphores[] = {_semaRenderFinished[frame]};
+    VkSemaphore signalSemaphores[] = {sync.semaRenderFinished};
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signalSemaphores;
 
@@ -1263,7 +1256,7 @@ void VulkanEngine::drawFrame(TickData* tickData, uint8_t frame) {
         // and downs the corresponding _semaRenderFinished semapohre once it's
         // done.
         if (vkQueueSubmit(
-                _device->graphicsQueue, 1, &submitInfo, _fenceInFlight[frame]
+                _device->graphicsQueue, 1, &submitInfo, sync.fenceInFlight
             )
             != VK_SUCCESS) {
             FATAL("Failed to submit draw command buffer!");

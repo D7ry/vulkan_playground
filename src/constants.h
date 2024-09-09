@@ -38,4 +38,34 @@ const float DEFAULT_FONT_SIZE = 20;
 #endif // __APPLE__
 } // namespace ImGui
 
+namespace Engine
+{
+#ifdef NDEBUG
+const bool ENABLE_VALIDATION_LAYERS = false;
+#else
+const bool ENABLE_VALIDATION_LAYERS = true;
+#endif // NDEBUG
+
+const std::array<const char*, 1> VALIDATION_LAYERS
+    = {"VK_LAYER_KHRONOS_validation"};
+
+const char* const APPLICATION_NAME = "Vulkan Application";
+
+const struct
+{
+    uint32_t major = 1;
+    uint32_t minor = 0;
+    uint32_t patch = 0;
+} APPLICATION_VERSION;
+
+const char* const ENGINE_NAME = "Vulkan Engine";
+
+const struct
+{
+    uint32_t major = 1;
+    uint32_t minor = 0;
+    uint32_t patch = 0;
+} ENGINE_VERSION;
+} // namespace Engine
+
 } // namespace DEFAULTS

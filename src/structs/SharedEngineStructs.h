@@ -5,15 +5,6 @@
 #include "lib/VQBuffer.h"
 class Camera;
 
-// static ubo that gets updated by the engine every frame
-struct EngineUBOStatic
-{
-    glm::mat4 view;              // view matrix
-    glm::mat4 proj;              // proj matrix
-    float timeSinceStartSeconds; // time (seconds) since engine start; may use
-                                 // it for some interesting interpolation
-};
-
 struct GraphicsTickData
 {
     int currentFrameInFlight; // used to index into command buffer of render
