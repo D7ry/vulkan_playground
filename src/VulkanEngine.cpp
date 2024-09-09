@@ -1256,13 +1256,18 @@ void VulkanEngine::drawFrame(TickData* tickData, uint8_t frame) {
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signalSemaphores;
 
-    // the submission does not start until vkAcquireNextImageKHR returns, and
-    // downs the corresponding _semaRenderFinished semapohre once it's done.
-    if (vkQueueSubmit(
-            _device->graphicsQueue, 1, &submitInfo, _fenceInFlight[frame]
-        )
-        != VK_SUCCESS) {
-        FATAL("Failed to submit draw command buffer!");
+    {
+        // wait time tend to be long if framerate is hardware-capped.
+        PROFILE_SCOPE(&_profiler, "wait: vkAcquireNextImageKHR");
+        // the submission does not start until vkAcquireNextImageKHR returns,
+        // and downs the corresponding _semaRenderFinished semapohre once it's
+        // done.
+        if (vkQueueSubmit(
+                _device->graphicsQueue, 1, &submitInfo, _fenceInFlight[frame]
+            )
+            != VK_SUCCESS) {
+            FATAL("Failed to submit draw command buffer!");
+        }
     }
 
     //  Present the swap chain image
