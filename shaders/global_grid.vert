@@ -3,6 +3,7 @@
 layout(binding = 0) uniform EngineUboStatic {
     mat4 view;
     mat4 proj;
+    float timeSinceStartSeconds;
 } engineUboStatic;
 
 layout(binding = 1) uniform UBOStatic {
@@ -22,4 +23,12 @@ void main() {
     gl_Position = engineUboStatic.proj * engineUboStatic.view * model * vec4(inPosition, 1.0);
 
     fragColor = uboStatic.gridColor;
+    
+    float sinWave = sin(engineUboStatic.timeSinceStartSeconds);
+    sinWave = (sinWave + 1) / 2; // [-1,1] -> [0, 1]
+
+    // logitech breathing effect
+    fragColor.r = 0.3;
+    fragColor.g = mix(0.3, 1, sinWave);
+    fragColor.b = mix(0.3, 1, sinWave);
 }
