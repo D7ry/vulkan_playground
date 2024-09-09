@@ -6,7 +6,7 @@
 	url = https://github.com/ocornut/imgui
 [submodule "extern/implot"]
 	path = extern/implot
-    url = https://https://github.com/epezent/implot
+    url = https://github.com/epezent/implot
 [submodule "extern/glfw"]
 	path = extern/glfw
 	url = git@github.com:glfw/glfw.git
