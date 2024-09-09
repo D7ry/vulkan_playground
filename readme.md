@@ -285,4 +285,4 @@ gotten zero-initialized.
 
 Update: turns out it's a memory corruption of me trying to write to another stack-allocated static
 variable that overwrites into other parts of the code section. Segfault didn't happen because all
-the memory operations the program was doing was smearing over the code section.
+the memory operations the program was doing was smearing over the static section.
