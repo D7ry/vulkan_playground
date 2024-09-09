@@ -2,7 +2,36 @@
 
 It's like writing an OS
 
-## Stuff Done
+## Build
+
+### Windows
+
+nobody uses windows anyways
+
+### Linux
+
+Grab [Vulkan SDK](https://vulkan.lunarg.com/doc/view/latest/linux/getting_started_ubuntu.html)
+```
+git submodule update --init --recursive 
+mkdir build
+cd build
+cmake -G "Ninja" ../
+ninja
+```
+
+### Apple
+
+Grab [Vulkan SDK](https://vulkan.lunarg.com/doc/sdk/1.3.290.0/mac/getting_started.html)
+
+Specify path to the library, as well as include folder, in `CMakeLists.txt`
+
+Note that Apple build uses MoltenVK to link to metal. 
+Extensions such as `VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME` must be enabled to setup
+the translation layer.
+
+Some extensions may not work.
+
+## TODOs
 
 - [x] graphics pipeline abstractions
 - [x] basic game entity abstractions
@@ -11,10 +40,8 @@ It's like writing an OS
 - [x] global instancing -- instance everything
     - [ ] instance clustered frustum culling
 - [ ] indirect rendering
+    - [ ] a performant object instance GC?
 
-
-## TODO
-- [ ] deferred shading
 
 # Results
 
@@ -125,6 +152,9 @@ Note that all the above arrays are store on the GPU
 
 At render time, the vulkan API provides the `vkCmdDrawIndexedIndirect` call,
 that iterates over all the draw commands, in parallel, and executes the draws.
+
+Note that the tight layout of mesh instances in the SSBO also provides opportunities
+for compute shader to modify instance data -- such as transforms, in parallel.
 
 #### Handling Complexities -- Perf Analysis
 
