@@ -279,9 +279,6 @@ void VulkanEngine::createDevice() {
 void VulkanEngine::initVulkan() {
     INFO("Initializing Vulkan...");
     this->createInstance();
-    if (this->enableValidationLayers) {
-        // this->setupDebugMessenger();
-    }
     this->createSurface();
     this->createDevice();
     this->initSwapChain();
@@ -321,7 +318,7 @@ bool VulkanEngine::checkValidationLayerSupport() {
     std::vector<VkLayerProperties> availableLayers(layerCount);
     vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
 
-    for (const char* layerName : VALIDATION_LAYERS) {
+    for (const char* layerName : DEFAULTS::Engine::VALIDATION_LAYERS) {
         bool layerFound = false;
         for (const auto& layerProperties : availableLayers) {
             if (strcmp(layerName, layerProperties.layerName) == 0) {
@@ -338,7 +335,7 @@ bool VulkanEngine::checkValidationLayerSupport() {
 
 void VulkanEngine::createInstance() {
     INFO("Creating Vulkan instance...");
-    if (this->enableValidationLayers) {
+    if (DEFAULTS::Engine::ENABLE_VALIDATION_LAYERS) {
         if (!this->checkValidationLayerSupport()) {
             ERROR("Validation layers requested, but not available!");
         } else {
@@ -349,11 +346,19 @@ void VulkanEngine::createInstance() {
     INFO("Populating Vulkan application info...");
     VkApplicationInfo appInfo{};
     appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    appInfo.pApplicationName = this->APPLICATION_NAME;
-    appInfo.applicationVersion = this->APPLICATION_VERSION;
-    appInfo.pEngineName = this->ENGINE_NAME;
-    appInfo.engineVersion = this->ENGINE_VERSION;
-    appInfo.apiVersion = this->API_VERSION;
+    appInfo.pApplicationName = DEFAULTS::Engine::APPLICATION_NAME;
+    appInfo.applicationVersion = VK_MAKE_VERSION(
+        DEFAULTS::Engine::APPLICATION_VERSION.major,
+        DEFAULTS::Engine::APPLICATION_VERSION.minor,
+        DEFAULTS::Engine::APPLICATION_VERSION.patch
+    );
+    appInfo.pEngineName = DEFAULTS::Engine::ENGINE_NAME;
+    appInfo.engineVersion = VK_MAKE_VERSION(
+        DEFAULTS::Engine::ENGINE_VERSION.major,
+        DEFAULTS::Engine::ENGINE_VERSION.minor,
+        DEFAULTS::Engine::ENGINE_VERSION.patch
+    );
+    appInfo.apiVersion = VK_API_VERSION_1_0;
 
     INFO("Populating Vulkan instance create info...");
     // initialize and populate createInfo, which contains the application info
@@ -386,14 +391,15 @@ void VulkanEngine::createInstance() {
     VkDebugUtilsMessengerCreateInfoEXT debugMessengerCreateInfo{};
 
     createInfo.enabledLayerCount = 0;
-    if (this->enableValidationLayers) { // populate debug messenger create info
+    if (DEFAULTS::Engine::ENABLE_VALIDATION_LAYERS) {
         createInfo.enabledLayerCount
-            = static_cast<uint32_t>(VALIDATION_LAYERS.size());
-        createInfo.ppEnabledLayerNames = VALIDATION_LAYERS.data();
+            = static_cast<uint32_t>(DEFAULTS::Engine::VALIDATION_LAYERS.size());
+        createInfo.ppEnabledLayerNames
+            = DEFAULTS::Engine::VALIDATION_LAYERS.data();
 
         this->populateDebugMessengerCreateInfo(debugMessengerCreateInfo);
         createInfo.pNext
-            = (VkDebugUtilsMessengerCreateInfoEXT*)&debugMessengerCreateInfo;
+            = (VkDebugUtilsMessengerCreateInfoEXT*)(&debugMessengerCreateInfo);
     } else {
         createInfo.enabledLayerCount = 0;
         createInfo.pNext = nullptr;
@@ -425,25 +431,6 @@ void VulkanEngine::createSurface() {
     });
 }
 
-VkResult VulkanEngine::CreateDebugUtilsMessengerEXT(
-    VkInstance instance,
-    const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,
-    const VkAllocationCallbacks* pAllocator,
-    VkDebugUtilsMessengerEXT* pDebugMessenger
-) {
-    INFO("setting up debug messenger .... ");
-    auto func = (PFN_vkCreateDebugUtilsMessengerEXT
-    )vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
-
-    if (func != nullptr) {
-        return func(instance, pCreateInfo, pAllocator, pDebugMessenger);
-    } else {
-        ERROR("Failed to set up debug messenger. Function "
-              "\"vkCreateDebugUtilsMessengerEXT\" not found.");
-        return VK_ERROR_EXTENSION_NOT_PRESENT;
-    }
-}
-
 void VulkanEngine::populateDebugMessengerCreateInfo(
     VkDebugUtilsMessengerCreateInfoEXT& createInfo
 ) {
@@ -460,21 +447,31 @@ void VulkanEngine::populateDebugMessengerCreateInfo(
 }
 
 void VulkanEngine::setupDebugMessenger() {
-    if (!this->enableValidationLayers) {
-        ERROR(
-            "Validation layers are not enabled, cannot set up debug messenger."
-        );
-    }
-
     VkDebugUtilsMessengerCreateInfoEXT createInfo;
     populateDebugMessengerCreateInfo(createInfo);
-
-    if (CreateDebugUtilsMessengerEXT(
-            this->_instance, &createInfo, nullptr, &this->_debugMessenger
-        )
-        != VK_SUCCESS) {
-        FATAL("Failed to set up debug messenger!");
+    { // create debug messenger
+        auto func = (PFN_vkCreateDebugUtilsMessengerEXT
+        )vkGetInstanceProcAddr(_instance, "vkCreateDebugUtilsMessengerEXT");
+        if (!func) {
+            PANIC("Failed to find fnptr to vkCreateDebugUtilsMessengerEXT!");
+        }
+        if (func(_instance, &createInfo, nullptr, &_debugMessenger)
+            != VK_SUCCESS) {
+            FATAL("Failed to create debug util messenger!");
+        }
     }
+    _deletionStack.push([this]() {
+        auto func = (PFN_vkDestroyDebugUtilsMessengerEXT
+        )vkGetInstanceProcAddr(_instance, "vkDestroyDebugUtilsMessengerEXT");
+        if (!func) {
+            PANIC("Failed to find fnptr to vkDestroyDebugUtilsMessengerEXT!");
+        }
+        func(
+            _instance,       // instance
+            _debugMessenger, // debug messenger
+            nullptr          // allocator
+        );
+    });
 }
 
 VKAPI_ATTR VkBool32 VKAPI_CALL VulkanEngine::debugCallback(
@@ -516,12 +513,12 @@ VulkanEngine::QueueFamilyIndices VulkanEngine::findQueueFamilies(
             indices.presentationFamily = i;
             INFO("Presentation family found at {}", i);
         }
-        if (indices.isComplete()) {
+        if (indices.presentationFamily.has_value()
+            && indices.graphicsFamily.has_value()) {
             break;
         }
         i++;
     }
-    std::optional<uint32_t> graphicsFamily;
     return indices;
 }
 
@@ -550,20 +547,26 @@ bool VulkanEngine::checkDeviceExtensionSupport(VkPhysicalDevice device) {
 
 bool VulkanEngine::isDeviceSuitable(VkPhysicalDevice device) {
     DEBUG("checking is device suitable");
+
+    // check device properties and features
     VkPhysicalDeviceProperties deviceProperties;
     VkPhysicalDeviceFeatures deviceFeatures;
     vkGetPhysicalDeviceProperties(device, &deviceProperties);
     vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
+    bool platformRequirements =
+#if __APPLE__
+        true;
+#else
+        deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU
+        && deviceFeatures.geometryShader;
+#endif // __APPLE__
 
-    if (
-#if !__APPLE__
-        deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU &&
-        deviceFeatures.geometryShader &&
-#endif
-        true) {
+    // check queue families
+    if (platformRequirements) {
         QueueFamilyIndices indices
             = this->findQueueFamilies(device); // look for queue familieis
-        return indices.isComplete()
+        return indices.graphicsFamily.has_value()
+               && indices.presentationFamily.has_value()
                && checkDeviceExtensionSupport(device); // found graphics queue
     } else {
         return false;
@@ -887,14 +890,6 @@ void VulkanEngine::createSynchronizationObjects() {
 void VulkanEngine::Cleanup() {
     INFO("Cleaning up...");
     _deletionStack.flush();
-    if (enableValidationLayers) {
-        if (this->_debugMessenger != nullptr) {
-            // TODO: implement this
-            // vkDestroyDebugUtilsMessengerEXT(_instance, _debugMessenger,
-            // nullptr);
-        }
-    }
-    postCleanup();
     INFO("Resource cleaned up.");
 }
 
@@ -1111,6 +1106,7 @@ void VulkanEngine::flushEngineUBOStatic(uint8_t frame) {
     };
     getMainProjectionMatrix(ubo.proj);
     ubo.timeSinceStartSeconds = _timeSinceStartSeconds;
+    ubo.sinWave = (sin(_timeSinceStartSeconds) + 1) / 2.f; // offset to [0, 1]
     memcpy(buf.bufferAddress, &ubo, sizeof(ubo));
 }
 

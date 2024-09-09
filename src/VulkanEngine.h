@@ -20,8 +20,8 @@
 
 #include "components/ImGuiManager.h"
 #include "imgui.h"
-#include "lib/VQDevice.h"
 #include "lib/VQBuffer.h"
+#include "lib/VQDevice.h"
 
 #include <filesystem>
 
@@ -32,7 +32,6 @@
 
 class TickData;
 
-
 // TODO: create a serialization scheme for tweakable settings.
 
 /**
@@ -41,6 +40,18 @@ class TickData;
 class VulkanEngine
 {
   public:
+    // static ubo that gets updated by the engine every frame
+    struct EngineUBOStatic
+    {
+        glm::mat4 view; // view matrix
+        glm::mat4 proj; // proj matrix
+        float
+            timeSinceStartSeconds; // time (seconds) since engine start; may use
+                                   // it for some interesting interpolation
+        float sinWave; // a number updated with a sign wave function in between
+                       // [0, 1]
+    };
+
     /**
      * @brief Initialize render manager, create necessary vulkan resources and
      * bindings.
@@ -50,22 +61,11 @@ class VulkanEngine
     void Tick();
     void Cleanup();
 
-
-    void SetImguiRenderCallback(std::function<void()> imguiFunction);
-
-    inline std::pair<uint32_t, uint32_t> GetSwapchainExtent() {
-        return {_swapChainExtent.width, _swapChainExtent.height};
-    }
-
   protected:
     struct QueueFamilyIndices
     {
         std::optional<uint32_t> graphicsFamily;
         std::optional<uint32_t> presentationFamily;
-
-        inline bool isComplete() {
-            return graphicsFamily.has_value() && presentationFamily.has_value();
-        }
     };
 
     struct SwapChainSupportDetails
@@ -74,7 +74,6 @@ class VulkanEngine
         std::vector<VkSurfaceFormatKHR> formats;
         std::vector<VkPresentModeKHR> presentModes;
     };
-
 
     void drawImGuiPerfPlots();
     void drawImGui();
@@ -147,54 +146,32 @@ class VulkanEngine
     // flush data to _engineUBOStatic
     void flushEngineUBOStatic(uint8_t frame);
 
-    virtual void drawFrame(TickData* tickData, uint8_t frame);
+    void drawFrame(TickData* tickData, uint8_t frame);
 
-    virtual void postCleanup() {};
 
-    // validation layers, enable under debug mode only
-#ifdef NDEBUG
-    const bool enableValidationLayers = false;
-#else
-    const bool enableValidationLayers = true;
-#endif
-    static inline const std::vector<const char*> VALIDATION_LAYERS
-        = {"VK_LAYER_KHRONOS_validation"};
-    static inline const std::vector<const char*> DEVICE_EXTENSIONS
-        = {VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+    static inline const std::vector<const char*> DEVICE_EXTENSIONS = {
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 #if __APPLE__ // molten vk support
-           VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME,
-           //VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME
-           // NOTE: appple M3 does not have this extension, 
-           // but disabling it leads to a trivial validation layer error
-           // that may be safely ignored.
+        VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME,
+    // VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME
+    //  NOTE: appple M3 does not have this extension,
+    //  but disabling it leads to a trivial validation layer error
+    //  that may be safely ignored.
 #endif // __APPLE__
     };
     bool checkValidationLayerSupport();
 
     // debug messenger setup
-    static VkResult CreateDebugUtilsMessengerEXT(
-        VkInstance instance,
-        const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,
-        const VkAllocationCallbacks* pAllocator,
-        VkDebugUtilsMessengerEXT* pDebugMessenger
-    );
     void populateDebugMessengerCreateInfo(
         VkDebugUtilsMessengerCreateInfoEXT& createInfo
     );
-    void setupDebugMessenger();
+    void setupDebugMessenger(); // unused for now
     static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
         VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
         VkDebugUtilsMessageTypeFlagsEXT messageType,
         const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
         void* pUserData
     );
-
-    // private fields
-    static inline const char* APPLICATION_NAME = "Vulkan Application";
-    static inline const uint32_t APPLICATION_VERSION = VK_MAKE_VERSION(1, 0, 0);
-    static inline const char* ENGINE_NAME = "No Engine";
-    static inline const uint32_t ENGINE_VERSION = VK_MAKE_VERSION(1, 0, 0);
-    static inline const uint32_t API_VERSION = VK_API_VERSION_1_0;
 
     static void framebufferResizeCallback(
         GLFWwindow* window,
@@ -213,12 +190,14 @@ class VulkanEngine
     VkSwapchainKHR _swapChain = VK_NULL_HANDLE;
     VkFormat _swapChainImageFormat;
     VkExtent2D _swapChainExtent; // resolution of the swapchain images
+
     struct
     {
         std::vector<VkFramebuffer> frameBuffer;
         std::vector<VkImage> image;
         std::vector<VkImageView> imageView;
-    } _swapChainData; // sets of data, ith element of each vec corrsponds to ith image
+    } _swapChainData; // sets of data, ith element of each vec corrsponds to ith
+                      // image
 
     // main render pass, and currently the only render pass
     VkRenderPass _mainRenderPass = VK_NULL_HANDLE;
