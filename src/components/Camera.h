@@ -11,7 +11,7 @@ class Camera
   public:
     // default constructor creates a camera at origin
     Camera()
-        : _position(0, 0, 0), _rotation(0, 0, 0), _viewMatrix(glm::mat4(1.f)) {}
+        : _position(0, 0, 0), _rotation(0, 0, 0){ updateViewMatrix();}
 
     Camera(float x, float y, float z, float yaw, float pitch, float roll);
     Camera(glm::vec3 position, glm::vec3 rotation);
