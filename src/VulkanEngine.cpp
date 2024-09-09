@@ -830,9 +830,7 @@ void VulkanEngine::createImageViews() {
 
 void VulkanEngine::createSynchronizationObjects() {
     INFO("Creating synchronization objects...");
-    this->_semaImageAvailable.resize(NUM_FRAME_IN_FLIGHT);
-    this->_semaRenderFinished.resize(NUM_FRAME_IN_FLIGHT);
-    this->_fenceInFlight.resize(NUM_FRAME_IN_FLIGHT);
+    ASSERT(_synchronizationPrimitives.size() == NUM_FRAME_IN_FLIGHT);
 
     VkSemaphoreCreateInfo semaphoreInfo{};
     semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -842,41 +840,43 @@ void VulkanEngine::createSynchronizationObjects() {
         = VK_FENCE_CREATE_SIGNALED_BIT; // create with a signaled bit so that
                                         // the 1st frame can start right away
     for (size_t i = 0; i < NUM_FRAME_IN_FLIGHT; i++) {
+        EngineSynchronizationPrimitives& primitive = _synchronizationPrimitives[i];
         if (vkCreateSemaphore(
                 _device->logicalDevice,
                 &semaphoreInfo,
                 nullptr,
-                &_semaImageAvailable[i]
+                &primitive.semaImageAvailable
             ) != VK_SUCCESS
             || vkCreateSemaphore(
                    _device->logicalDevice,
                    &semaphoreInfo,
                    nullptr,
-                   &_semaRenderFinished[i]
+                    &primitive.semaRenderFinished
                ) != VK_SUCCESS
             || vkCreateFence(
                    _device->logicalDevice,
                    &fenceInfo,
                    nullptr,
-                   &_fenceInFlight[i]
+                    &primitive.fenceInFlight
                ) != VK_SUCCESS) {
             FATAL("Failed to create synchronization objects for a frame!");
         }
     }
     this->_deletionStack.push([this]() {
         for (size_t i = 0; i < NUM_FRAME_IN_FLIGHT; i++) {
+            EngineSynchronizationPrimitives& primitive = _synchronizationPrimitives[i];
             vkDestroySemaphore(
                 this->_device->logicalDevice,
-                this->_semaRenderFinished[i],
+                primitive.semaRenderFinished,
                 nullptr
             );
             vkDestroySemaphore(
                 this->_device->logicalDevice,
-                this->_semaImageAvailable[i],
+                primitive.semaImageAvailable,
                 nullptr
             );
             vkDestroyFence(
-                this->_device->logicalDevice, this->_fenceInFlight[i], nullptr
+                this->_device->logicalDevice, primitive.fenceInFlight, nullptr
             );
         }
     });
@@ -1106,12 +1106,14 @@ void VulkanEngine::flushEngineUBOStatic(uint8_t frame) {
 }
 
 void VulkanEngine::drawFrame(TickData* tickData, uint8_t frame) {
+    EngineSynchronizationPrimitives& sync = _synchronizationPrimitives[frame];
+
     //  Wait for the previous frame to finish
     PROFILE_SCOPE(&_profiler, "Render Tick");
     vkWaitForFences(
         _device->logicalDevice,
         1,
-        &this->_fenceInFlight[frame],
+        &sync.fenceInFlight,
         VK_TRUE,
         UINT64_MAX
     );
@@ -1122,7 +1124,7 @@ void VulkanEngine::drawFrame(TickData* tickData, uint8_t frame) {
         this->_device->logicalDevice,
         _swapChain,
         UINT64_MAX,
-        _semaImageAvailable[frame],
+        sync.semaImageAvailable,
         VK_NULL_HANDLE,
         &imageIndex
     );
@@ -1135,7 +1137,7 @@ void VulkanEngine::drawFrame(TickData* tickData, uint8_t frame) {
 
     // lock the fence
     vkResetFences(
-        this->_device->logicalDevice, 1, &this->_fenceInFlight[frame]
+        this->_device->logicalDevice, 1, &sync.fenceInFlight
     );
 
     VkFramebuffer FB = this->_swapChainData.frameBuffer[imageIndex];
@@ -1228,7 +1230,7 @@ void VulkanEngine::drawFrame(TickData* tickData, uint8_t frame) {
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
     VkSemaphore waitSemaphores[]
-        = {_semaImageAvailable[frame]}; // use imageAvailable semaphore
+        = {sync.semaImageAvailable}; // use imageAvailable semaphore
                                         // to make sure that the image
                                         // is available before drawing
     VkPipelineStageFlags waitStages[]
@@ -1243,7 +1245,7 @@ void VulkanEngine::drawFrame(TickData* tickData, uint8_t frame) {
         = static_cast<uint32_t>(submitCommandBuffers.size());
     submitInfo.pCommandBuffers = submitCommandBuffers.data();
 
-    VkSemaphore signalSemaphores[] = {_semaRenderFinished[frame]};
+    VkSemaphore signalSemaphores[] = {sync.semaRenderFinished};
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signalSemaphores;
 
@@ -1254,7 +1256,7 @@ void VulkanEngine::drawFrame(TickData* tickData, uint8_t frame) {
         // and downs the corresponding _semaRenderFinished semapohre once it's
         // done.
         if (vkQueueSubmit(
-                _device->graphicsQueue, 1, &submitInfo, _fenceInFlight[frame]
+                _device->graphicsQueue, 1, &submitInfo, sync.fenceInFlight
             )
             != VK_SUCCESS) {
             FATAL("Failed to submit draw command buffer!");

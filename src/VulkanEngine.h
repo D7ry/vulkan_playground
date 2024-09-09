@@ -171,9 +171,13 @@ class VulkanEngine
     } _swapChainData; // each element corresponds to one image in the swap chain
 
     /* ---------- Synchronization Primivites ---------- */
-    std::vector<VkSemaphore> _semaImageAvailable;
-    std::vector<VkSemaphore> _semaRenderFinished;
-    std::vector<VkFence> _fenceInFlight;
+    struct EngineSynchronizationPrimitives
+    {
+        VkSemaphore semaImageAvailable;
+        VkSemaphore semaRenderFinished;
+        VkFence fenceInFlight;
+    };
+    std::array<EngineSynchronizationPrimitives, NUM_FRAME_IN_FLIGHT> _synchronizationPrimitives;
 
     /* ---------- Depth Buffer ---------- */
     VkImage _depthImage;
