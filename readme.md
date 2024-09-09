@@ -10,6 +10,7 @@ It's like writing an OS
     - [x] a fancy profiler UI
 - [x] global instancing -- instance everything
     - [ ] instance clustered frustum culling
+- [ ] indirect rendering
 
 
 ## TODO
@@ -17,7 +18,7 @@ It's like writing an OS
 
 # Results
 
-### Global Instanced Rendering
+## Global Instanced&Indirect Rendering
 
 Instanced rendering of 5000 cows. Every entity is backed by instanced rendering so the programmer
 doens't need to worry about doing instancing themselves. Instance data such as transform & texture, live in GPU and the engine
@@ -46,7 +47,81 @@ for (int i = 0; i < INSTANCE_NUM; i++) {
 
 ![cows](images/instance_everything.gif)
 
-### Fancy Profiler
+### Global Instanced&Indirect Rendering Overview
+
+Global instanced&indirect rendering offloads what would be handled by the CPU --
+the `bindVertexBuffer()`, `bindIndexBuffer()`, `setUniform()`, and `bindTexture()` calls,
+to the GPU.
+
+Instead of directly binding the buffers, the GPU uses a series of indices to index
+into multiple global arrays to retrieve information relevant to the mesh.
+
+#### Implementation
+
+Mesh instances differ in 3 types of resources they traditionally need to
+bind to / get from uniform:
+- Vertex & Index buffer
+- texture(normals, albedo, phong, pbr, etc...)
+- instance-specific data -- data that is seldomly shared among multiple instances
+    - e.g. model matrix, transparency
+
+Each of the above types, can be generalized as a "data structure",
+that we put into an array. The shaders/GPU APIs are then capable of indexing 
+into them.
+
+Specifically:
+
+1. for each different vertex/index, reserve an array element on GPU to store them.
+
+Giant vertex buffer that contains vertices of all meshes
+```
+Mesh 1(offset=0)                   Mesh 2(offset=4)           Mesh 3(offset=7)
+|                                   |                          |
+|                                   |                          |
+|Vertex 1|Vertex 2|Vertex 3|Vertex 4|Vertex 5|Vertex 6|Vertex 7| ....|Vertex N
+```
+Giant index buffer that contains indices of all meshes
+```
+Mesh 1(offset=0)        Mesh 2(offset=3)                              Mesh 3(offset=9)
+|                       |                                               |
+|                       |                                               | 
+|Index 1|Index 2|Index 3|Index 4|Index 5|Index 6|Index 7|Index 8|Index 9|.... | Index N
+```
+
+2. for each texture, reserve an array element for store.
+```
+|Texture 1|Texture 2|Texture 3| ....
+```
+3. for each instance-specific data of an instance, pack them into
+a struct and store them a giant SSBO. Also pack in offset to textures:
+
+```cpp
+struct Instance
+{
+    mat4 model;
+    float transparency;
+    int albedoOffset;
+    int normalOffset;
+    int roughnessOffset;
+    ...
+}
+```
+```
+|Instance 1|Instance 2|Instance 3| ....
+```
+
+4. For each mesh, create a `vk::DrawIndexedIndirectCommand` that contains:
+- number of instances to draw
+- number of indices to use, starting from the base index
+- base index to start, when reading the `index buffer array`
+- offset to the base vertex, when reading the `vertex buffer array`
+
+```
+|DrawCMD1 |DrawCMD2 |DrawCMD3 |DrawCMD4 ...
+```
+Note that all the above arrays are store on the GPU
+
+## Fancy Profiler
 
 A fancy profiler GUI to show performance metrics, inspired by my own work on an nvidia internal profiler
 
