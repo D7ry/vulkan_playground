@@ -19,7 +19,9 @@ void Init();
     SPDLOG_CRITICAL(__VA_ARGS__);                                              \
     throw std::runtime_error("Fatal error: " + fmt::format(__VA_ARGS__))
 #define NEEDS_IMPLEMENTATION() FATAL("This method needs to be implemented")
-
+#define PANIC(...)                                                             \
+    SPDLOG_CRITICAL(__VA_ARGS__);                                              \
+    throw std::runtime_error("Engine panic: " + fmt::format(__VA_ARGS__))
 #ifndef NDEBUG
 #define ASSERT(...)                                                            \
     if (!(__VA_ARGS__)) {                                                      \

@@ -20,6 +20,12 @@ struct DeletionStack
         _deleters.clear();
     }
 
+    ~DeletionStack() {
+        if (!_deleters.empty()) {
+            PANIC("Deletion stack not emptied. Please use DeletionStack::flush() to empty the stack");
+        }
+    }
+
   private:
     std::vector<std::function<void()>> _deleters;
 };
