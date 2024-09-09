@@ -21,11 +21,12 @@ void Init();
 #define NEEDS_IMPLEMENTATION() FATAL("This method needs to be implemented")
 #define PANIC(...)                                                             \
     SPDLOG_CRITICAL(__VA_ARGS__);                                              \
-    throw std::runtime_error("Engine panic: " + fmt::format(__VA_ARGS__))
+    SPDLOG_CRITICAL("Engine Panic; Exiting");                                  \
+    exit(1);
 #ifndef NDEBUG
 #define ASSERT(...)                                                            \
     if (!(__VA_ARGS__)) {                                                      \
-        FATAL("Assertion failed: {}", #__VA_ARGS__);                           \
+        PANIC("Assertion failed: {}", #__VA_ARGS__);                           \
     }
 #else
 #define ASSERT(...)

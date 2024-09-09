@@ -7,7 +7,7 @@
 
 TextureManager::~TextureManager() {
     if (!_textures.empty()) {
-        FATAL("Textures must be cleaned up before ending texture manager!");
+        PANIC("Textures must be cleaned up before ending texture manager!");
     }
 }
 
