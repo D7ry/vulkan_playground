@@ -1110,6 +1110,7 @@ void VulkanEngine::flushEngineUBOStatic(uint8_t frame) {
         // proj
     };
     getMainProjectionMatrix(ubo.proj);
+    ubo.timeSinceStartSeconds = _timeSinceStartSeconds;
     memcpy(buf.bufferAddress, &ubo, sizeof(ubo));
 }
 

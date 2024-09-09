@@ -8,8 +8,10 @@ class Camera;
 // static ubo that gets updated by the engine every frame
 struct EngineUBOStatic
 {
-    glm::mat4 view; // view matrix
-    glm::mat4 proj; // proj matrix
+    glm::mat4 view;              // view matrix
+    glm::mat4 proj;              // proj matrix
+    float timeSinceStartSeconds; // time (seconds) since engine start; may use
+                                 // it for some interesting interpolation
 };
 
 struct GraphicsTickData
@@ -28,6 +30,7 @@ struct GraphicsTickData
 };
 
 class Profiler;
+
 struct TickData
 {
     const Camera* mainCamera;
@@ -58,5 +61,6 @@ struct InitData
      * InitData initData->engineUBOStatic[i]
      *
      */
-    std::array<VkDescriptorBufferInfo , NUM_FRAME_IN_FLIGHT> engineUBOStaticDescriptorBufferInfo;
+    std::array<VkDescriptorBufferInfo, NUM_FRAME_IN_FLIGHT>
+        engineUBOStaticDescriptorBufferInfo;
 };
