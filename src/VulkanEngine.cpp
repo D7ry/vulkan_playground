@@ -366,42 +366,34 @@ void VulkanEngine::createInstance() {
     createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     createInfo.pApplicationInfo = &appInfo;
 
-    std::set<std::string> instanceExtensions;
+    std::vector<const char*> instanceExtensions;
     // get glfw Extensions
     {
         uint32_t glfwExtensionCount = 0;
         const char** glfwExtensions
             = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
         for (int i = 0; i < glfwExtensionCount; i++) {
-            instanceExtensions.emplace(glfwExtensions[i]);
+            instanceExtensions.push_back(glfwExtensions[i]);
         }
     }
 // https://stackoverflow.com/questions/72789012/why-does-vkcreateinstance-return-vk-error-incompatible-driver-on-macos-despite
 #if __APPLE__
     // enable extensions for apple vulkan translation
-    instanceExtensions.emplace(std::string(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME));
+    instanceExtensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
     createInfo.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
     VkLayerSettingsCreateInfoEXT appleLayerSettings;
     { 
         // metal argument buffer support
-        instanceExtensions.emplace(VK_EXT_LAYER_SETTINGS_EXTENSION_NAME);
+        instanceExtensions.push_back(VK_EXT_LAYER_SETTINGS_EXTENSION_NAME);
         appleLayerSettings = MoltenVKConfig::GetLayerSettingsCreatInfo();
         createInfo.pNext = &appleLayerSettings;
     }
 #endif // __APPLE__
 #ifndef NDEBUG
-    instanceExtensions.emplace(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+    instanceExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 #endif // NDEBUG
-    std::vector<std::string> instanceExtensionsArray;
-    for (const std::string& extensionName : instanceExtensions) {
-        instanceExtensionsArray.push_back(extensionName);
-    }
-    std::vector<const char*> instanceExtensionsArrayChar;
-    for (const std::string& extensionName : instanceExtensionsArray) {
-        instanceExtensionsArrayChar.push_back(extensionName.c_str());
-    }
-    createInfo.enabledExtensionCount = instanceExtensionsArrayChar.size();
-    createInfo.ppEnabledExtensionNames = instanceExtensionsArrayChar.data();
+    createInfo.enabledExtensionCount = instanceExtensions.size();
+    createInfo.ppEnabledExtensionNames = instanceExtensions.data();
 
     VkDebugUtilsMessengerCreateInfoEXT debugMessengerCreateInfo{};
 
