@@ -24,6 +24,7 @@ class Entity
     template <typename T>
     void AddComponent(T* component) {
         _components[std::type_index(typeid(T))] = component;
+        component->parent = this; // back link component to the entity
     }
 
     // get a component of type `T` of the entity.
