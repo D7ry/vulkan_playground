@@ -35,7 +35,6 @@
 #include "components/TextureManager.h"
 
 class TickContext;
-
 class VulkanEngine
 {
   public:
@@ -195,7 +194,6 @@ class VulkanEngine
     bool _lockCursor;
 
     std::shared_ptr<VQDevice> _device;
-    std::function<void()> _imguiRenderCallback;
 
     // static ubo for each frame
     // each buffer stores a `EngineUBOStatic`
