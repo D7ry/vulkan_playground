@@ -1138,20 +1138,13 @@ void VulkanEngine::drawFrame(TickContext* ctx, uint8_t frame) {
     vk::CommandBuffer CB(_device->graphicsCommandBuffers[frame]);
     //  Record a command buffer which draws the scene onto that image
     CB.reset();
-    { // update tickData->graphics field
+    { // update ctx->graphics field
         ctx->graphics.currentFrameInFlight = frame;
         ctx->graphics.currentSwapchainImageIndex = imageIndex;
         ctx->graphics.CB = CB;
         ctx->graphics.currentFB = FB;
         ctx->graphics.currentFBextend = this->_swapChainExtent;
-        ctx->graphics.mainProjectionMatrix = glm::perspective(
-            glm::radians(DEFAULTS::FOV),
-            _swapChainExtent.width / (float)_swapChainExtent.height,
-            0.1f,
-            100.f
-        );
-        ctx->graphics.mainProjectionMatrix[1][1]
-            *= -1; // invert y axis because vulkan
+        getMainProjectionMatrix(ctx->graphics.mainProjectionMatrix);
     }
 
     { // begin command buffer
