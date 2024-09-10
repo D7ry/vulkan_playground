@@ -1,12 +1,9 @@
 #include <algorithm>
-#include <cinttypes>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
-#include <deque>
 #include <functional>
-#include <iostream>
 #include <limits>
 #include <set>
 
@@ -14,6 +11,7 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #include <vulkan/vk_enum_string_helper.h>
+#include <vulkan/vulkan.hpp>
 #include <vulkan/vulkan_core.h>
 
 // imgui
@@ -840,7 +838,8 @@ void VulkanEngine::createSynchronizationObjects() {
         = VK_FENCE_CREATE_SIGNALED_BIT; // create with a signaled bit so that
                                         // the 1st frame can start right away
     for (size_t i = 0; i < NUM_FRAME_IN_FLIGHT; i++) {
-        EngineSynchronizationPrimitives& primitive = _synchronizationPrimitives[i];
+        EngineSynchronizationPrimitives& primitive
+            = _synchronizationPrimitives[i];
         if (vkCreateSemaphore(
                 _device->logicalDevice,
                 &semaphoreInfo,
@@ -851,20 +850,21 @@ void VulkanEngine::createSynchronizationObjects() {
                    _device->logicalDevice,
                    &semaphoreInfo,
                    nullptr,
-                    &primitive.semaRenderFinished
+                   &primitive.semaRenderFinished
                ) != VK_SUCCESS
             || vkCreateFence(
                    _device->logicalDevice,
                    &fenceInfo,
                    nullptr,
-                    &primitive.fenceInFlight
+                   &primitive.fenceInFlight
                ) != VK_SUCCESS) {
             FATAL("Failed to create synchronization objects for a frame!");
         }
     }
     this->_deletionStack.push([this]() {
         for (size_t i = 0; i < NUM_FRAME_IN_FLIGHT; i++) {
-            EngineSynchronizationPrimitives& primitive = _synchronizationPrimitives[i];
+            EngineSynchronizationPrimitives& primitive
+                = _synchronizationPrimitives[i];
             vkDestroySemaphore(
                 this->_device->logicalDevice,
                 primitive.semaRenderFinished,
@@ -1105,17 +1105,13 @@ void VulkanEngine::flushEngineUBOStatic(uint8_t frame) {
     memcpy(buf.bufferAddress, &ubo, sizeof(ubo));
 }
 
-void VulkanEngine::drawFrame(TickContext* tickData, uint8_t frame) {
+void VulkanEngine::drawFrame(TickContext* ctx, uint8_t frame) {
     EngineSynchronizationPrimitives& sync = _synchronizationPrimitives[frame];
 
     //  Wait for the previous frame to finish
     PROFILE_SCOPE(&_profiler, "Render Tick");
     vkWaitForFences(
-        _device->logicalDevice,
-        1,
-        &sync.fenceInFlight,
-        VK_TRUE,
-        UINT64_MAX
+        _device->logicalDevice, 1, &sync.fenceInFlight, VK_TRUE, UINT64_MAX
     );
 
     //  Acquire an image from the swap chain
@@ -1128,37 +1124,33 @@ void VulkanEngine::drawFrame(TickContext* tickData, uint8_t frame) {
         VK_NULL_HANDLE,
         &imageIndex
     );
-    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) { [[unlikely]]
-        this->recreateSwapChain();
+    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+        [[unlikely]] this->recreateSwapChain();
         return;
-    } else if (result != VK_SUCCESS) { [[unlikely]]
-        FATAL("Failed to acquire swap chain image!");
+    } else if (result != VK_SUCCESS) {
+        [[unlikely]] FATAL("Failed to acquire swap chain image!");
     }
 
     // lock the fence
-    vkResetFences(
-        this->_device->logicalDevice, 1, &sync.fenceInFlight
-    );
+    vkResetFences(this->_device->logicalDevice, 1, &sync.fenceInFlight);
 
     VkFramebuffer FB = this->_swapChainData.frameBuffer[imageIndex];
-    VkCommandBuffer CB = this->_device->graphicsCommandBuffers[frame];
+    vk::CommandBuffer CB(_device->graphicsCommandBuffers[frame]);
     //  Record a command buffer which draws the scene onto that image
-    vkResetCommandBuffer(CB, 0);
-
+    CB.reset();
     { // update tickData->graphics field
-        tickData->graphics.currentFrameInFlight = frame;
-        tickData->graphics.currentSwapchainImageIndex = imageIndex;
-        tickData->graphics.currentCB
-            = this->_device->graphicsCommandBuffers[frame];
-        tickData->graphics.currentFB = FB;
-        tickData->graphics.currentFBextend = this->_swapChainExtent;
-        tickData->graphics.mainProjectionMatrix = glm::perspective(
+        ctx->graphics.currentFrameInFlight = frame;
+        ctx->graphics.currentSwapchainImageIndex = imageIndex;
+        ctx->graphics.CB = CB;
+        ctx->graphics.currentFB = FB;
+        ctx->graphics.currentFBextend = this->_swapChainExtent;
+        ctx->graphics.mainProjectionMatrix = glm::perspective(
             glm::radians(DEFAULTS::FOV),
             _swapChainExtent.width / (float)_swapChainExtent.height,
             0.1f,
             100.f
         );
-        tickData->graphics.mainProjectionMatrix[1][1]
+        ctx->graphics.mainProjectionMatrix[1][1]
             *= -1; // invert y axis because vulkan
     }
 
@@ -1167,32 +1159,21 @@ void VulkanEngine::drawFrame(TickContext* tickData, uint8_t frame) {
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         beginInfo.flags = 0;                  // Optional
         beginInfo.pInheritanceInfo = nullptr; // Optional
-
-        if (vkBeginCommandBuffer(CB, &beginInfo) != VK_SUCCESS) { [[unlikely]]
-            FATAL("Failed to begin recording command buffer!");
-        }
+        CB.begin(vk::CommandBufferBeginInfo());
     }
 
     {     // invoke all GraphicsSystem under the main render pass
         { // begin main render pass
-            VkRenderPassBeginInfo renderPassInfo{};
-            renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-            renderPassInfo.renderPass = this->_mainRenderPass;
-            renderPassInfo.framebuffer = FB;
+            vk::Rect2D renderArea(VkOffset2D{0, 0}, _swapChainExtent);
+            std::array<vk::ClearValue, 2> clearValues{};
+            clearValues[0].color = {0.f, 0.f, 0.f, 1.f};
+            clearValues[1].depthStencil = vk::ClearDepthStencilValue(1.f, 0.f);
+            vk::RenderPassBeginInfo renderPassBeginInfo(
+                _mainRenderPass, FB, renderArea, clearValues.size(), clearValues.data(), nullptr
+            );
 
-            renderPassInfo.renderArea.offset = {0, 0};
-            renderPassInfo.renderArea.extent = _swapChainExtent;
-
-            std::array<VkClearValue, 2> clearValues{};
-            clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
-            clearValues[1].depthStencil = {1.0f, 0};
-
-            renderPassInfo.clearValueCount
-                = static_cast<uint32_t>(clearValues.size());
-            renderPassInfo.pClearValues = clearValues.data();
-
-            vkCmdBeginRenderPass(
-                CB, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE
+            CB.beginRenderPass(
+                renderPassBeginInfo, vk::SubpassContents::eInline
             );
         }
         { // set viewport and scissor
@@ -1210,20 +1191,15 @@ void VulkanEngine::drawFrame(TickContext* tickData, uint8_t frame) {
             scissor.extent = _swapChainExtent;
             vkCmdSetScissor(CB, 0, 1, &scissor);
         }
-        this->_phongSystem->Tick(tickData);
-        this->_phongSystemInstanced->Tick(tickData);
-        this->_globalGridSystem->Tick(tickData);
-        { // end main render pass
-            vkCmdEndRenderPass(CB);
-        }
+        this->_phongSystem->Tick(ctx);
+        this->_phongSystemInstanced->Tick(ctx);
+        this->_globalGridSystem->Tick(ctx);
+        CB.endRenderPass();
     }
 
-    _imguiManager.RecordCommandBuffer(tickData);
-    { // end command buffer
-        if (vkEndCommandBuffer(CB) != VK_SUCCESS) { [[unlikely]]
-            FATAL("Failed to record command buffer!");
-        }
-    }
+    _imguiManager.RecordCommandBuffer(ctx);
+    // end command buffer
+    CB.end();
 
     //  Submit the recorded command buffer
     VkSubmitInfo submitInfo{};
@@ -1231,8 +1207,8 @@ void VulkanEngine::drawFrame(TickContext* tickData, uint8_t frame) {
 
     VkSemaphore waitSemaphores[]
         = {sync.semaImageAvailable}; // use imageAvailable semaphore
-                                        // to make sure that the image
-                                        // is available before drawing
+                                     // to make sure that the image
+                                     // is available before drawing
     VkPipelineStageFlags waitStages[]
         = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
     std::array<VkCommandBuffer, 1> submitCommandBuffers
@@ -1283,12 +1259,12 @@ void VulkanEngine::drawFrame(TickContext* tickData, uint8_t frame) {
     // the present doesn't happen until the render is finished, and the
     // semaphore is signaled(result of vkQueueSubimt)
     result = vkQueuePresentKHR(_device->presentationQueue, &presentInfo);
-    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR 
-        || this->_framebufferResized) { [[unlikely]]
-        this->recreateSwapChain();
+    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR
+        || this->_framebufferResized) {
+        [[unlikely]] this->recreateSwapChain();
         this->_framebufferResized = false;
-    } else if (result != VK_SUCCESS) { [[unlikely]]
-        FATAL("Failed to present swap chain image!");
+    } else if (result != VK_SUCCESS) {
+        [[unlikely]] FATAL("Failed to present swap chain image!");
     }
 }
 

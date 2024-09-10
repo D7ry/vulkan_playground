@@ -52,7 +52,7 @@ void PhongRenderSystem::Cleanup() {
 }
 
 void PhongRenderSystem::Tick(const TickContext* tickData) {
-    VkCommandBuffer CB = tickData->graphics.currentCB;
+    VkCommandBuffer CB = tickData->graphics.CB;
     VkFramebuffer FB = tickData->graphics.currentFB;
     VkExtent2D FBExt = tickData->graphics.currentFBextend;
     int frameIdx = tickData->graphics.currentFrameInFlight;

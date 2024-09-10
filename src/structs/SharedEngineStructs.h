@@ -1,6 +1,7 @@
 #pragma once
 #include "glm/glm.hpp"
 #include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan.hpp>
 
 #include "lib/VQBuffer.h"
 class Camera;
@@ -13,8 +14,8 @@ struct GraphicsContext
     VkFramebuffer
         currentFB; // result of using `vkAcquireNextImageKHR` on engine
                    // swapchain, to obtain the currently active fb
-    VkCommandBuffer
-        currentCB; // a active command buffer.
+    vk::CommandBuffer
+        CB; // a active command buffer.
                    // vkBeginCommandBuffer should've been called on it
     VkExtent2D currentFBextend;
     glm::mat4 mainProjectionMatrix;

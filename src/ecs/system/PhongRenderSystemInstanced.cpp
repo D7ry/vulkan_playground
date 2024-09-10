@@ -50,7 +50,7 @@ void PhongRenderSystemInstanced::Cleanup() {
 
 void PhongRenderSystemInstanced::Tick(const TickContext* tickData) {
     PROFILE_SCOPE(tickData->profiler, "Phong Instanced System Tick");
-    VkCommandBuffer CB = tickData->graphics.currentCB;
+    VkCommandBuffer CB = tickData->graphics.CB;
     VkFramebuffer FB = tickData->graphics.currentFB;
     VkExtent2D FBExt = tickData->graphics.currentFBextend;
     int frameIdx = tickData->graphics.currentFrameInFlight;
