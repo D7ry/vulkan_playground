@@ -83,15 +83,19 @@ target_precompile_headers(vulkan_playground PUBLIC src/PCH.h)
 
 # vulkan
 if(APPLE)
+    set(CMAKE_INSTALL_RPATH_USE_LINK_PATH ON)
     set(VULKAN_LIB_PATH $ENV{HOME}/lib/VulkanSDK/1.3.290.1/macOS/lib/libvulkan.1.3.290.dylib)
+    set(MOLTENVK_LIB_PATH $ENV{HOME}/lib/VulkanSDK/1.3.290.1/macOS/lib/libMoltenVK.dylib)
     include_directories(~/lib/VulkanSDK/1.3.290.1/macOS/include)
     target_link_libraries(vulkan_playground 
         ${VULKAN_LIB_PATH}
+        ${MOLTENVK_LIB_PATH}
     )
-else()
+    target_compile_definitions(vulkan_playground PRIVATE VK_USE_PLATFORM_MACOS_MVK)
+else() # ~APPLE
     find_package(Vulkan REQUIRED)
     target_link_libraries(vulkan_playground Vulkan::Vulkan)
-endif()
+endif() # APPLE
 
 target_link_libraries(vulkan_playground 
     spdlog::spdlog 

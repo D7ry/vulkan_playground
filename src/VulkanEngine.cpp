@@ -18,8 +18,12 @@
 #include "imgui.h"
 #include "implot.h"
 
+// Molten VK Config
+#if __APPLE__
+#include "MoltenVKConfig.h"
+#endif // __APPLE__
+
 #include "VulkanEngine.h"
-#include "components/Camera.h"
 
 static Entity* entityInstanced = new Entity("instanced entity");
 static Entity* entityInstanced2 = new Entity("instanced entity2");
@@ -74,6 +78,9 @@ void VulkanEngine::cursorPosCallback(
 }
 
 void VulkanEngine::Init() {
+#if __APPLE__
+    MoltenVKConfig::Setup();
+#endif // __APPLE__
     initGLFW();
     { // Input Handling
         auto keyCallback
@@ -359,27 +366,42 @@ void VulkanEngine::createInstance() {
     createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     createInfo.pApplicationInfo = &appInfo;
 
-    std::vector<const char*> instanceExtensions;
+    std::set<std::string> instanceExtensions;
     // get glfw Extensions
     {
         uint32_t glfwExtensionCount = 0;
         const char** glfwExtensions
             = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
         for (int i = 0; i < glfwExtensionCount; i++) {
-            instanceExtensions.push_back(glfwExtensions[i]);
+            instanceExtensions.emplace(glfwExtensions[i]);
         }
     }
 // https://stackoverflow.com/questions/72789012/why-does-vkcreateinstance-return-vk-error-incompatible-driver-on-macos-despite
 #if __APPLE__
     // enable extensions for apple vulkan translation
-    instanceExtensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+    instanceExtensions.emplace(std::string(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME));
     createInfo.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
+    VkLayerSettingsCreateInfoEXT appleLayerSettings;
+    { 
+        // metal argument buffer support
+        instanceExtensions.emplace(VK_EXT_LAYER_SETTINGS_EXTENSION_NAME);
+        appleLayerSettings = MoltenVKConfig::GetLayerSettingsCreatInfo();
+        createInfo.pNext = &appleLayerSettings;
+    }
 #endif // __APPLE__
 #ifndef NDEBUG
-    instanceExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+    instanceExtensions.emplace(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 #endif // NDEBUG
-    createInfo.enabledExtensionCount = instanceExtensions.size();
-    createInfo.ppEnabledExtensionNames = instanceExtensions.data();
+    std::vector<std::string> instanceExtensionsArray;
+    for (const std::string& extensionName : instanceExtensions) {
+        instanceExtensionsArray.push_back(extensionName);
+    }
+    std::vector<const char*> instanceExtensionsArrayChar;
+    for (const std::string& extensionName : instanceExtensionsArray) {
+        instanceExtensionsArrayChar.push_back(extensionName.c_str());
+    }
+    createInfo.enabledExtensionCount = instanceExtensionsArrayChar.size();
+    createInfo.ppEnabledExtensionNames = instanceExtensionsArrayChar.data();
 
     VkDebugUtilsMessengerCreateInfoEXT debugMessengerCreateInfo{};
 
@@ -391,12 +413,13 @@ void VulkanEngine::createInstance() {
             = DEFAULTS::Engine::VALIDATION_LAYERS.data();
 
         this->populateDebugMessengerCreateInfo(debugMessengerCreateInfo);
+        debugMessengerCreateInfo.pNext = createInfo.pNext;
         createInfo.pNext
             = (VkDebugUtilsMessengerCreateInfoEXT*)(&debugMessengerCreateInfo);
     } else {
         createInfo.enabledLayerCount = 0;
-        createInfo.pNext = nullptr;
     }
+
     VkResult result = vkCreateInstance(&createInfo, nullptr, &this->_instance);
 
     if (result != VK_SUCCESS) {
@@ -1162,7 +1185,12 @@ void VulkanEngine::drawFrame(TickContext* ctx, uint8_t frame) {
             clearValues[0].color = {0.f, 0.f, 0.f, 1.f};
             clearValues[1].depthStencil = vk::ClearDepthStencilValue(1.f, 0.f);
             vk::RenderPassBeginInfo renderPassBeginInfo(
-                _mainRenderPass, FB, renderArea, clearValues.size(), clearValues.data(), nullptr
+                _mainRenderPass,
+                FB,
+                renderArea,
+                clearValues.size(),
+                clearValues.data(),
+                nullptr
             );
 
             CB.beginRenderPass(
