@@ -21,9 +21,8 @@ layout(location = 0) out vec3 fragColor;
 
 void main() {
     mat4 model = mat4(1.0);
-    gl_Position = engineUboStatic.proj * engineUboStatic.view * model * vec4(inPosition, 1.0);
-
-    fragColor = uboStatic.gridColor;
+    vec3 position = inPosition;
+    gl_Position = engineUboStatic.proj * engineUboStatic.view * model * vec4(position, 1.0);
 
     // logitech breathing effect
     fragColor.r = 0.3;
