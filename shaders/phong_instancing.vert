@@ -3,6 +3,8 @@
 layout(binding = 0) uniform UBOStatic {
     mat4 view;
     mat4 proj;
+    float timeSinceStartSeconds;
+    float sinWave;
 } uboStatic;
 
 // vertex attrs
@@ -25,15 +27,21 @@ layout(location = 5) out uint fragTexIndex; // texture index
 vec3 globalLightPos = vec3(-6, -3, 0.0);
 
 void main() {
+    vec3 worldPos = inPosition;
     mat4 model = inInstModelMat;
-    gl_Position = uboStatic.proj * uboStatic.view * model * vec4(inPosition, 1.0);
+    float zOffset = uboStatic.sinWave * gl_InstanceIndex;
+    if (mod(gl_InstanceIndex, 2) == 0) {
+        zOffset *= -1;
+    }
+    worldPos.z += zOffset;
+    gl_Position = uboStatic.proj * uboStatic.view * model * vec4(worldPos, 1.0);
     fragColor = inColor;
     fragTexCoord = inTexCoord;
 
     mat3 normalMatrix = transpose(inverse(mat3(model))); // Calculate the normal matrix
     fragNormal = normalize(normalMatrix * inNormal); // Transform the normal and pass it to the fragment shader
 
-    fragPos = vec3(model * vec4(inPosition, 1.0)); // Transform the vertex position to world space
+    fragPos = vec3(model * vec4(worldPos, 1.0)); // Transform the vertex position to world space
     fragGlobalLightPos = globalLightPos; // Pass the light position in world space to the fragment shader
 
     fragTexIndex = inInstTexIndex; // tell frag shader which texture from the texture array to sample from
