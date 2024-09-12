@@ -23,7 +23,27 @@ class BindlessRenderSystem : public IRenderSystem
         {
             unsigned int albedo; // currently we only have albedo tex
         } textureOffsets;
+
+        // none-render metadata
+        unsigned int drawCmdIndex; // index into draw cmd
     };
+
+    // buffer arrays
+    struct BindlessBuffer
+    {
+        // huge array containing `BindlessInstanceData`
+        VQBuffer instanceDataArray; // <BindlessInstanceData>
+        // SSBO the maps (offseted) instance IDs to actual instance datas
+        VQBuffer instanceLookupArray; // <unsigned int>
+        // list of draw commands
+        VQBuffer drawCommandArray; // <VkDrawIndirectCommand>
+                                   // vertexCount
+                                   // instanceCount
+                                   // firstVertex
+                                   // firstInstance
+    };
+
+    std::array<BindlessBuffer, NUM_FRAME_IN_FLIGHT> _bindlessBuffers;
 
   public:
     BindlessRenderSystemComponent* MakeComponent(
@@ -120,18 +140,6 @@ class BindlessRenderSystem : public IRenderSystem
     void updateTextureDescriptorSet(
     ); // flush the `_textureDescriptorInfo` into device, updating
        // the descriptor set
-
-    // buffer arrays
-    struct BindlessBuffer
-    {
-        // huge array containing all draw data of all instances
-        VQBuffer instanceDataArray;
-        // SSBO the maps (offseted) instance IDs to actual instance datas
-        VQBuffer instanceLookupArray;
-        // list of draw commands
-        VQBuffer drawCommandArray;
-    };
-
     /**
      *
      * Let "DrawGroup" be a draw cmd, associated with 
@@ -153,7 +161,6 @@ class BindlessRenderSystem : public IRenderSystem
     // - a UBO to store parameters of draw commands
     void createBindlessResources();
 
-    std::array<BindlessBuffer, NUM_FRAME_IN_FLIGHT> _bindlessBuffers;
 
     // utility methods
     void updateDrawCmd(
