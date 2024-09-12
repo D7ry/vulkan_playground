@@ -11,28 +11,14 @@
 #include "BindlessRenderSystem.h"
 #include "ecs/component/TransformComponent.h"
 
-void PhongRenderSystemInstanced::Init(const InitContext* initData) {
+void BindlessRenderSystem::Init(const InitContext* initData) {
     _device = initData->device;
     _textureManager = initData->textureManager;
     // create graphics pipeline
     this->createGraphicsPipeline(initData->renderPass.mainPass, initData);
 }
 
-void PhongRenderSystemInstanced::Cleanup() {
-    for (auto& elem : _meshes) {
-        DEBUG("cleanup");
-        PhongMeshInstanced& mesh = elem.second.mesh;
-        mesh.indexBuffer.Cleanup();
-        mesh.vertexBuffer.Cleanup();
-        for (VQBuffer& buf : elem.second.instanceBuffer) {
-            buf.Cleanup();
-        }
-        for (PhongRenderSystemInstancedComponent* component :
-             elem.second.components) {
-            delete component;
-        }
-    }
-
+void BindlessRenderSystem::Cleanup() {
     // clean up pipeline
     vkDestroyPipeline(_device->logicalDevice, _pipeline, nullptr);
     vkDestroyPipelineLayout(_device->logicalDevice, _pipelineLayout, nullptr);
@@ -48,7 +34,7 @@ void PhongRenderSystemInstanced::Cleanup() {
     // note: texture is handled by TextureManager so no need to clean that up
 }
 
-void PhongRenderSystemInstanced::Tick(const TickContext* tickData) {
+void BindlessRenderSystem::Tick(const TickContext* tickData) {
     PROFILE_SCOPE(tickData->profiler, "Phong Instanced System Tick");
     VkCommandBuffer CB = tickData->graphics.CB;
     VkFramebuffer FB = tickData->graphics.currentFB;
@@ -76,8 +62,8 @@ void PhongRenderSystemInstanced::Tick(const TickContext* tickData) {
         Entity* e = _bufferUpdateQueue[frameIdx].back();
         _bufferUpdateQueue[frameIdx].pop_back();
         TransformComponent* transform = e->GetComponent<TransformComponent>();
-        PhongRenderSystemInstancedComponent* instance
-            = e->GetComponent<PhongRenderSystemInstancedComponent>();
+        BindlessRenderSystemComponent* instance
+            = e->GetComponent<BindlessRenderSystemComponent>();
         ASSERT(transform);
         glm::mat4 model = transform->GetModelMatrix();
         size_t offset = sizeof(VertexInstancedData) * instance->instanceID;
@@ -122,7 +108,7 @@ void PhongRenderSystemInstanced::Tick(const TickContext* tickData) {
     }
 }
 
-void PhongRenderSystemInstanced::createGraphicsPipeline(
+void BindlessRenderSystem::createGraphicsPipeline(
     const VkRenderPass renderPass,
     const InitContext* initData
 ) {
@@ -494,14 +480,13 @@ void PhongRenderSystemInstanced::createGraphicsPipeline(
     vkDestroyShaderModule(_device->logicalDevice, vertShaderModule, nullptr);
 }
 
-PhongRenderSystemInstancedComponent* PhongRenderSystemInstanced::
-    MakePhongRenderSystemInstancedComponent(
+BindlessRenderSystemComponent* BindlessRenderSystem::
+     MakeComponent(
         const std::string& meshPath,
         const std::string& texturePath,
         size_t instanceNumber // initial number of instance supported before
                               // resizing
     ) {
-    PhongMeshInstanced* mesh = nullptr;
     size_t instanceID = 0;
     int textureOffset = 0;
     ASSERT(_textureManager);
@@ -509,13 +494,17 @@ PhongRenderSystemInstancedComponent* PhongRenderSystemInstanced::
     { // load or create new texture
         auto it = _textureDescriptorIndices.find(texturePath);
         if (it == _textureDescriptorIndices.end()) {
+            int textureOffset = _textureDescriptorIndices.size();
             // load texture into textures[textureOffset]
-            DEBUG("loading {} into {}", texturePath, _textureDescriptorInfoIdx);
+            DEBUG("loading {} into {}", texturePath, textureOffset);
             _textureManager->GetDescriptorImageInfo(
-                texturePath, _textureDescriptorInfo[_textureDescriptorInfoIdx]
+                texturePath, _textureDescriptorInfo[textureOffset]
             );
-            textureOffset = _textureDescriptorInfoIdx;
-            _textureDescriptorInfoIdx++;
+            textureOffset = textureOffset;
+            // must update the descriptor set to reflect loading newtexture
+            // FIXME: current update is not thread-safe as it writes
+            // too all descriptors(including one that's in flight). use an 
+            // update queue instead.
             updateTextureDescriptorSet();
             _textureDescriptorIndices.insert({texturePath, textureOffset});
         } else {
@@ -528,70 +517,33 @@ PhongRenderSystemInstancedComponent* PhongRenderSystemInstanced::
         auto it = _meshes.find(meshPath);
         if (it == _meshes.end()) { // construct phong mesh and buffer array
             MeshData meshData{};
-            meshData.availableInstanceBufferIdx = 0;
-            // load mesh into vertex & index buffer
-            VQUtils::meshToBuffer(
-                meshPath.c_str(),
-                *_device,
-                meshData.mesh.vertexBuffer,
-                meshData.mesh.indexBuffer
-            );
-            for (int i = 0; i < NUM_FRAME_IN_FLIGHT; i++) {
-                // construct a fixed-sized buffer array
-                _device->CreateBufferInPlace(
-                    instanceNumber * sizeof(VertexInstancedData),
-                    VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
-                        | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, // TODO: can we
-                                                                // use a staging
-                                                                // buffer for
-                                                                // flushing?
-                    meshData.instanceBuffer[i]
-                );
-            }
+            // allocate a draw command on the command array
 
             auto result = _meshes.insert({meshPath, meshData});
-            // allocate an index for the instance
             ASSERT(result.second)
             pMeshData = std::addressof(result.first->second);
-            pMeshData->instanceBufferInstanceCount = instanceNumber;
         } else {
             pMeshData = std::addressof(it->second);
         }
-        instanceID = pMeshData->availableInstanceBufferIdx;
 
-        if (instanceID == pMeshData->instanceBufferInstanceCount) {
-            DEBUG("resizing instance buffer for mesh {}", meshPath);
-            NEEDS_IMPLEMENTATION();
-            // make a new buffer array
+        // allocate an index from the command array for the instance
 
-            // copy over old stuff
-
-            // point instance buffer to new buffer
-
-            // push old buffer to the tick deletion queue
-        }
-        pMeshData->availableInstanceBufferIdx++; // increment buffer idx
     }
     // return new component
-    PhongRenderSystemInstancedComponent* ret
-        = new PhongRenderSystemInstancedComponent();
-    ret->textureID = textureOffset;
-    ret->instanceID = instanceID;
-    ret->parent = this;
-    ret->instanceBuffer = std::addressof(pMeshData->instanceBuffer);
+    BindlessRenderSystemComponent* ret
+        = new BindlessRenderSystemComponent();
 
-    pMeshData->components.insert(ret); // track the component
+    ret->parentSystem = this;
     return ret;
 }
 
-void PhongRenderSystemInstanced::DestroyPhongMeshInstanceComponent(
-    PhongRenderSystemInstancedComponent*& component
+void BindlessRenderSystem::DestroyPhongMeshInstanceComponent(
+    BindlessRenderSystemComponent*& component
 ) {
     NEEDS_IMPLEMENTATION();
 }
 
-void PhongRenderSystemInstanced::updateTextureDescriptorSet() {
+void BindlessRenderSystem::updateTextureDescriptorSet() {
     DEBUG("updating texture descirptor set");
     for (size_t i = 0; i < NUM_FRAME_IN_FLIGHT; i++) {
         std::array<VkWriteDescriptorSet, 1> descriptorWrites{};
@@ -618,9 +570,9 @@ void PhongRenderSystemInstanced::updateTextureDescriptorSet() {
     }
 };
 
-void PhongRenderSystemInstanced::FlagAsDirty(Entity* entity) {
+void BindlessRenderSystem::FlagUpdate(Entity* entity) {
     ASSERT(
-        entity->GetComponent<PhongRenderSystemInstancedComponent>() != nullptr
+        entity->GetComponent<BindlessRenderSystemComponent>() != nullptr
     );
     // internally we push the entity to the update queue for each buffer, so
     // that it can be updated before the buffer are used for drawing
