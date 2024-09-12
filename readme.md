@@ -130,8 +130,7 @@ struct Instance
     int albedoOffset;
     int normalOffset;
     int roughnessOffset;
-    ...
-}
+};
 ```
 ```
 |Instance 1|Instance 2|Instance 3| ....
@@ -155,6 +154,9 @@ that iterates over all the draw commands, in parallel, and executes the draws.
 
 Note that the tight layout of mesh instances in the SSBO also provides opportunities
 for compute shader to modify instance data -- such as transforms, in parallel.
+
+In the shaders, `gl_InstanceIndex` can be used to access into the correct instance 
+lookup array, and therefore instance data array.
 
 #### Handling Complexities -- Perf Analysis
 
@@ -228,6 +230,78 @@ instance data array remains unchanged.
 
 The overhead of this method has been significantly reduced -- as one only needs to shuffle around 
 the index array of 4 byte entries.
+
+The instance lookup array scheme almost sound like vm page table; maybe we can take a page(aha) from
+it?
+
+To summarize, an object instance can have three states:
+1. it wants to be rendered
+2. it does not want to be rendered(culled)
+3. it wants to be deleted
+
+the "Replace and decrement" method handles case 2 by doing a 8-byte memory write per instance:
+4 byte to copy over the instance data at the end of the instance lookup array to the "empty" slot,
+and 4 byte to update the corresponding draw command's instance count.
+
+as for case 3, in addition to the "replace and decrement", we also flag the instance's data in the
+instance data array as free(currently using a free list). So that new instance data creation can
+simply use the slot.
+
+For instance addition, one can simply look at the instance data array and either append or insert to
+the free list, then create a corresponding entry in the instance lookup array.
+
+
+#### GPU-based Culling
+
+__Occulusion culling__ and __frustum culling__ can be parallelized on the GPU as well. To do so, we need 
+an additional array that points to all instances to be culled. 
+
+We also forgo the previous "replace and decrement" design; observing that __most__ of the mesh instances
+of a 3d scene would be culled away by frustum culling. We opt the opposite: "add and increment":
+
+CPP pseudocode:
+
+```cpp
+extern vector<MeshInstance> instances; // actual array of all instances
+extern vector<DrawCmd> drawCmds; // actual array of all drawcmds
+extern vector<int> instanceIndices;
+
+struct DrawCmd
+{
+    int firstInstance;
+    int instanceNumber;
+    //...
+};
+
+struct IndexS
+{
+    int dataIndex;
+    int drawCmdIndex;
+};
+extern vector<IndexS> activeInstances;
+
+extern bool IsVisible(MeshInstance& instance); // culling function
+
+for (const IndexS i: activeInstances) {
+    int dataIndex = i.dataIndex;
+    int drawCmdIndex = i.drawCmdIndex;
+    if (IsVisible(instances[dataIndex)) {
+        // atomic add returns the number before add, which we use as index 
+        int slot = atomicAdd(drawCmds[drawCmdIndex].instanceNumber, 1);
+        int slotOffset = drawCmds[drawCmdIndex].firstInstance + slot; // offset in the global instance array
+        instanceIndices[slotOffset] = dataIndex; // so that drawCmd would reach the data index
+    }
+}
+```
+
+The `for` loop above can be parallelized using compute shaders.
+
+To simplify the number of data structures, we may choose to integrate `IndexS` into `MeshInstance` data structure.
+Each `MeshInstance` therefore contains additional metadata other than that required for rendering.
+
+Note this design invalidates the "free list" mesh instance deletion method. Namely we need to
+perform "copy and decrement" on mesh instance deletion.
+
 
 ## Fancy Profiler
 
