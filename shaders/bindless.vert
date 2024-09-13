@@ -35,10 +35,14 @@ layout(location = 3) out vec3 fragPos; // frag position in view space
 layout(location = 4) out vec3 fragGlobalLightPos; // light position in view space
 layout(location = 5) out int fragTexIndex; // texture index
 
+layout(location=6) flat out int glInstanceIdx;
+
 vec3 globalLightPos = vec3(-6, -3, 0.0);
 
 void main() {
     int instanceIndex = instanceIndexArray.indices[gl_InstanceIndex];
+
+    glInstanceIdx = instanceIndex;
     mat4 model = instanceDataArray.data[instanceIndex].model;
 
     gl_Position = uboStatic.proj * uboStatic.view * model * vec4(inPosition, 1.0);
@@ -51,6 +55,5 @@ void main() {
     fragPos = vec3(model * vec4(inPosition, 1.0)); // Transform the vertex position to world space
     fragGlobalLightPos = globalLightPos; // Pass the light position in world space to the fragment shader
 
-    // TODO: implement tex index
-    fragTexIndex = 0; // tell frag shader which texture from the texture array to sample from
+    fragTexIndex = instanceDataArray.data[instanceIndex].textureId;
 }

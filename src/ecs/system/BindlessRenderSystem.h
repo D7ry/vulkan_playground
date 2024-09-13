@@ -47,7 +47,7 @@ class BindlessRenderSystem : public IRenderSystem
         // huge array containing `BindlessInstanceData`
         VQBuffer instanceDataArray; // <BindlessInstanceData>
         // SSBO the maps (offseted) instance IDs to actual instance datas
-        VQBuffer instanceLookupArray; // <unsigned int>
+        VQBuffer instanceIndexArray; // <unsigned int>
         // list of draw commands
         VQBuffer
             drawCommandArray; // <VkDrawIndexedIndirectCommand>

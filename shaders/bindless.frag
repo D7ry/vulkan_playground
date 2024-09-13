@@ -8,12 +8,17 @@ layout(location = 2) in vec3 fragNormal;
 layout(location = 3) in vec3 fragPos;
 layout(location = 4) in vec3 fragGlobalLightPos;
 layout(location = 5) flat in int fragTexIndex;
+layout(location=6) flat in int glInstanceIdx;
 
 layout(location = 0) out vec4 outColor;
 
 vec3 ambientLighting = vec3(0.6431, 0.6431, 0.6431);
 vec3 lightSourceColor = vec3(0.7, 1.0, 1.0); // White light
 float lightSourceIntensity = 100;
+
+const vec3 instance1Color = vec3(1, 0, 0); // red
+
+const vec3 instance2Color = vec3(0, 1, 0); // green
 
 void main() {
     vec4 textureColor = texture(textureSampler[fragTexIndex], fragTexCoord);
@@ -31,4 +36,6 @@ void main() {
 
 
     outColor = diffuseColor + ambientColor;
+    
+    outColor =  glInstanceIdx== 0 ? vec4(instance1Color, 0.f) : vec4(instance2Color, 0.f);
 }

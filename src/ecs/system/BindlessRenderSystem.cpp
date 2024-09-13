@@ -259,10 +259,10 @@ void BindlessRenderSystem::createGraphicsPipeline(
         // instance index
         VkDescriptorBufferInfo bufferInfoInstanceIndex{};
         bufferInfoInstanceIndex.buffer
-            = _bindlessBuffers[i].instanceLookupArray.buffer;
+            = _bindlessBuffers[i].instanceIndexArray.buffer;
         bufferInfoInstanceIndex.offset = 0;
         bufferInfoInstanceIndex.range
-            = _bindlessBuffers[i].instanceLookupArray.size;
+            = _bindlessBuffers[i].instanceIndexArray.size;
         descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         descriptorWrites[2].dstSet = this->_descriptorSets[i];
         descriptorWrites[2].dstBinding = (int)BindingLocation::INSTANCE_INDEX;
@@ -633,7 +633,7 @@ BindlessRenderSystemComponent* BindlessRenderSystem::MakeComponent(
                     + pBatch->drawCmdOffset
                 );
             unsigned int* pIndex = reinterpret_cast<unsigned int*>(
-                (char*)_bindlessBuffers[i].instanceLookupArray.bufferAddress
+                (char*)_bindlessBuffers[i].instanceIndexArray.bufferAddress
                 + ((pCmd->firstInstance + pCmd->instanceCount)
                    * sizeof(unsigned int))
             );
@@ -778,6 +778,7 @@ BindlessRenderSystem::RenderBatch BindlessRenderSystem::createRenderBatch(
     cmd.vertexOffset = _vertexBuffersWriteOffset / sizeof(Vertex);
     cmd.instanceCount = 0; // draw 0 instance by default
     cmd.firstInstance = _instanceLookupArrayOffset / sizeof(unsigned int);
+    DEBUG("First instance {}", cmd.firstInstance);
 
     for (int i = 0; i < NUM_FRAME_IN_FLIGHT; i++) {
         // copy draw command to this addr
@@ -839,13 +840,13 @@ void BindlessRenderSystem::createBindlessResources() {
             VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
                 | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-            _bindlessBuffers[i].instanceLookupArray
+            _bindlessBuffers[i].instanceIndexArray
         );
     }
 
     _deletionStack.push([this]() {
         for (int i = 0; i < NUM_FRAME_IN_FLIGHT; i++) {
-            _bindlessBuffers[i].instanceLookupArray.Cleanup();
+            _bindlessBuffers[i].instanceIndexArray.Cleanup();
             _bindlessBuffers[i].drawCommandArray.Cleanup();
             _bindlessBuffers[i].instanceDataArray.Cleanup();
         }

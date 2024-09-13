@@ -150,7 +150,8 @@ void VulkanEngine::Init() {
         }
 
         // _phongSystemInstanced->Init(&initData);
-        // _deletionStack.push([this]() { this->_phongSystemInstanced->Cleanup(); }
+        // _deletionStack.push([this]() {
+        // this->_phongSystemInstanced->Cleanup(); }
         // );
 
         // _phongSystem->Init(&initData);
@@ -168,19 +169,34 @@ void VulkanEngine::Init() {
         // make instanced entity
         {
             if (bindless) {
-                Entity* spot = new Entity("Spot");
-                TransformComponent* transformComponent
-                    = new TransformComponent();
-                spot->AddComponent(transformComponent);
-                transformComponent->position.z = 1;
-                _entityViewerSystem->AddEntity(spot);
-                // TODO: does this break the abstraction barrier?
-                auto component = _bindessSystem->MakeComponent(
-                    "../resources/spot.obj", "../resources/spot.png"
-                );
-                spot->AddComponent(component);
-                component->FlagUpdate();
-                // once component is made drawing should start
+                {
+                    Entity* spot = new Entity("Spot");
+                    TransformComponent* transformComponent
+                        = new TransformComponent();
+                    spot->AddComponent(transformComponent);
+                    transformComponent->position.z = 1;
+                    _entityViewerSystem->AddEntity(spot);
+                    // TODO: does this break the abstraction barrier?
+                    auto component = _bindessSystem->MakeComponent(
+                        "../resources/spot.obj", "../resources/spot.png"
+                    );
+                    spot->AddComponent(component);
+                    component->FlagUpdate();
+                }
+                {
+                    Entity* vikingRoom = new Entity("Viking Room");
+                    TransformComponent* transformComponent
+                        = new TransformComponent();
+                    vikingRoom->AddComponent(transformComponent);
+                    transformComponent->position.z = -1;
+                    _entityViewerSystem->AddEntity(vikingRoom);
+                    // TODO: does this break the abstraction barrier?
+                    auto component = _bindessSystem->MakeComponent(
+                        "../resources/viking_room.obj", "../resources/viking_room.png"
+                    );
+                    vikingRoom->AddComponent(component);
+                    component->FlagUpdate();
+                }
             }
 
             if (phongMeshes) {
@@ -582,7 +598,7 @@ bool VulkanEngine::isDeviceSuitable(VkPhysicalDevice device) {
         true;
 #else
         deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU
-        && deviceFeatures.geometryShader;
+        && deviceFeatures.geometryShader && deviceFeatures.multiDrawIndirect;
 #endif // __APPLE__
 
     // check queue families
