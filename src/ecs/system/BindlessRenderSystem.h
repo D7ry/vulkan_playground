@@ -60,7 +60,7 @@ class BindlessRenderSystem : public IRenderSystem
 
     std::array<BindlessBuffer, NUM_FRAME_IN_FLIGHT> _bindlessBuffers;
     unsigned int _instanceLookupArrayOffset = 0;
-    unsigned int _drawCommandArrayOffset = 0;
+    unsigned int _drawCommandArrayOffset = 0; // offset in drawCommandArray, to which we can append a new VkDrawIndexedIndirectCommand
     unsigned int _instanceDataArrayOffset = 0;
 
     // maps model to a vec of batches that renders the model
@@ -69,7 +69,7 @@ class BindlessRenderSystem : public IRenderSystem
     {
         unsigned int maxSize;
         unsigned int instanceCount;
-        unsigned int drawCmdIndex;
+        unsigned int drawCmdOffset;
         // each render batch has its own draw command, that stores
         // additional render batch infos
     };

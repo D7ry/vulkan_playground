@@ -537,7 +537,6 @@ BindlessRenderSystemComponent* BindlessRenderSystem::MakeComponent(
 
     pBatch->instanceCount += 1; // the model now belongs to the batch
 
-
     BindlessRenderSystemComponent* ret = new BindlessRenderSystemComponent();
     ret->parentSystem = this;
     ret->instanceDataOffset = _instanceDataArrayOffset;
@@ -545,16 +544,40 @@ BindlessRenderSystemComponent* BindlessRenderSystem::MakeComponent(
     // create new instance data, push to instance data array
     BindlessInstanceData data{};
     data.textureIndex.albedo = textureIndex; // TODO: add other texture supports
-    data.drawCmdIndex = pBatch->drawCmdIndex;
+    data.drawCmdIndex = pBatch->drawCmdOffset / sizeof(VkDrawIndexedIndirectCommand); // offset divided by size to get index
     data.transparency = 0.f;
+    data.model = glm::mat4(1.f); // identity mat
     // push data to the array
     for (int i = 0; i < NUM_FRAME_IN_FLIGHT; i++) {
         char* addr = reinterpret_cast<char*>(
-            _bindlessBuffers[i].instanceDataArray.bufferAddress
-        ) + _instanceDataArrayOffset;
+                         _bindlessBuffers[i].instanceDataArray.bufferAddress
+                     )
+                     + _instanceDataArrayOffset;
         memcpy(addr, std::addressof(data), sizeof(BindlessInstanceData));
     }
     _instanceDataArrayOffset += sizeof(BindlessInstanceData);
+
+    {
+        // hack in the process of compute shader culling by
+        // 1. inserting the instance index into lookup array manually,
+        // 2. modifying the render command's draw number
+        for (int i = 0; i < NUM_FRAME_IN_FLIGHT; i++) {
+            VkDrawIndexedIndirectCommand cmd;
+            // read command from drawCommandArray
+            VkDrawIndexedIndirectCommand* pCmd
+                = reinterpret_cast<VkDrawIndexedIndirectCommand*>(
+                    (char*)_bindlessBuffers[i].drawCommandArray.bufferAddress
+                    + pBatch->drawCmdOffset
+                );
+            unsigned int* pIndex = reinterpret_cast<unsigned int*>(
+                (char*)_bindlessBuffers[i].instanceLookupArray.bufferAddress
+                + ((pCmd->firstInstance + pCmd->instanceCount) * sizeof(unsigned int))
+            );
+            pCmd->instanceCount++;
+            *pIndex = ret->instanceDataOffset / sizeof(BindlessInstanceData); // offset divided by size to get index
+        }
+    }
+
     return ret;
 }
 
@@ -701,14 +724,12 @@ BindlessRenderSystem::RenderBatch BindlessRenderSystem::createRenderBatch(
     RenderBatch batch{
         .maxSize = batchSize,
         .instanceCount = 0,
-        .drawCmdIndex = static_cast<unsigned int>(
-            _drawCommandArrayOffset / sizeof(VkDrawIndexedIndirectCommand)
-        )
+        .drawCmdOffset = _drawCommandArrayOffset
     };
 
     // bump offsets
 
-    // add a new draw command
+    // added a new draw command
     _drawCommandArrayOffset += sizeof(VkDrawIndexedIndirectCommand);
 
     // reserve `instanceNumber` * sizeof(unsigned int) in
