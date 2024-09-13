@@ -16,6 +16,7 @@ void BindlessRenderSystem::Init(const InitContext* initData) {
     _textureManager = initData->textureManager;
     // create graphics pipeline
     this->createGraphicsPipeline(initData->renderPass.mainPass, initData);
+    createBindlessResources();
 }
 
 void BindlessRenderSystem::Cleanup() {
@@ -34,12 +35,12 @@ void BindlessRenderSystem::Cleanup() {
     // note: texture is handled by TextureManager so no need to clean that up
 }
 
-void BindlessRenderSystem::Tick(const TickContext* tickData) {
-    PROFILE_SCOPE(tickData->profiler, "Phong Instanced System Tick");
-    VkCommandBuffer CB = tickData->graphics.CB;
-    VkFramebuffer FB = tickData->graphics.currentFB;
-    VkExtent2D FBExt = tickData->graphics.currentFBextend;
-    int frameIdx = tickData->graphics.currentFrameInFlight;
+void BindlessRenderSystem::Tick(const TickContext* ctx) {
+    PROFILE_SCOPE(ctx->profiler, "Bindless System Tick");
+    VkCommandBuffer CB = ctx->graphics.CB;
+    VkFramebuffer FB = ctx->graphics.currentFB;
+    VkExtent2D FBExt = ctx->graphics.currentFBextend;
+    int frameIdx = ctx->graphics.currentFrameInFlight;
 
     vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipeline);
 
@@ -57,54 +58,19 @@ void BindlessRenderSystem::Tick(const TickContext* tickData) {
 
     // flush buffer updates, write to the buffer corresponding to the current
     // frame
-    // TODO: can we batch flushing?
-    while (!_bufferUpdateQueue[frameIdx].empty()) {
-        Entity* e = _bufferUpdateQueue[frameIdx].back();
-        _bufferUpdateQueue[frameIdx].pop_back();
-        TransformComponent* transform = e->GetComponent<TransformComponent>();
-        BindlessRenderSystemComponent* instance
-            = e->GetComponent<BindlessRenderSystemComponent>();
-        ASSERT(transform);
-        glm::mat4 model = transform->GetModelMatrix();
-        size_t offset = sizeof(VertexInstancedData) * instance->instanceID;
+    // TODO: actually implement buffer flushing
 
-        void* instanceBufferAddress = reinterpret_cast<void*>(
-            reinterpret_cast<char*>(
-                instance->instanceBuffer->at(frameIdx).bufferAddress
-            )
-            + offset
-        );
-        VertexInstancedData data{model, instance->textureID};
-        memcpy(instanceBufferAddress, &data, sizeof(data));
-    }
-    ASSERT(_bufferUpdateQueue[frameIdx].empty());
-
-    // loop through each mesh and bindlessly render their instances
-    for (auto pair : this->_meshes) {
-        MeshData& meshData = pair.second;
-        PhongMeshInstanced* mesh = &meshData.mesh;
-        VkDeviceSize offsets[] = {0};
-        // bind shared vertex buffer
-        vkCmdBindVertexBuffers(CB, 0, 1, &mesh->vertexBuffer.buffer, offsets);
-        // bind instance-specific vertex buffer
-        vkCmdBindVertexBuffers(
-            CB,
-            1,
-            1,
-            &meshData.instanceBuffer.at(tickData->graphics.currentFrameInFlight)
-                 .buffer,
-            offsets
-        );
-        // bind index buffer
-        vkCmdBindIndexBuffer(
-            CB, mesh->indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32
-        );
-        // draw call
-        const uint32_t instanceCount = meshData.availableInstanceBufferIdx;
-        vkCmdDrawIndexed(
-            CB, mesh->indexBuffer.numIndices, instanceCount, 0, 0, 0
-        );
-    }
+    VkDeviceSize offsets[] = {0};
+    vkCmdBindVertexBuffers(CB, 0, 1, &_vertexBuffers.buffer, offsets);
+    vkCmdBindIndexBuffer(CB, _indexBuffers.buffer, 0, VK_INDEX_TYPE_UINT32);
+    vkCmdDrawIndexedIndirect(
+        CB,
+        _bindlessBuffers[frameIdx].drawCommandArray.buffer,
+        0, // offset
+        _drawCommandArrayOffset
+            / sizeof(VkDrawIndexedIndirectCommand), // drawCount
+        sizeof(VkDrawIndexedIndirectCommand)        // stride
+    );
 }
 
 void BindlessRenderSystem::createGraphicsPipeline(
@@ -544,7 +510,9 @@ BindlessRenderSystemComponent* BindlessRenderSystem::MakeComponent(
     // create new instance data, push to instance data array
     BindlessInstanceData data{};
     data.textureIndex.albedo = textureIndex; // TODO: add other texture supports
-    data.drawCmdIndex = pBatch->drawCmdOffset / sizeof(VkDrawIndexedIndirectCommand); // offset divided by size to get index
+    data.drawCmdIndex = pBatch->drawCmdOffset
+                        / sizeof(VkDrawIndexedIndirectCommand
+                        ); // offset divided by size to get index
     data.transparency = 0.f;
     data.model = glm::mat4(1.f); // identity mat
     // push data to the array
@@ -571,10 +539,13 @@ BindlessRenderSystemComponent* BindlessRenderSystem::MakeComponent(
                 );
             unsigned int* pIndex = reinterpret_cast<unsigned int*>(
                 (char*)_bindlessBuffers[i].instanceLookupArray.bufferAddress
-                + ((pCmd->firstInstance + pCmd->instanceCount) * sizeof(unsigned int))
+                + ((pCmd->firstInstance + pCmd->instanceCount)
+                   * sizeof(unsigned int))
             );
             pCmd->instanceCount++;
-            *pIndex = ret->instanceDataOffset / sizeof(BindlessInstanceData); // offset divided by size to get index
+            *pIndex = ret->instanceDataOffset
+                      / sizeof(BindlessInstanceData
+                      ); // offset divided by size to get index
         }
     }
 
@@ -602,7 +573,7 @@ void BindlessRenderSystem::updateTextureDescriptorSet() {
                                          // the # of valid samplers
         descriptorWrites[0].pImageInfo = _textureDescriptorInfo.data();
 
-        DEBUG("descriptor cont: {}", descriptorWrites[0].descriptorCount);
+        DEBUG("descriptor count: {}", descriptorWrites[0].descriptorCount);
 
         vkUpdateDescriptorSets(
             _device->logicalDevice,
@@ -742,4 +713,37 @@ BindlessRenderSystem::RenderBatch BindlessRenderSystem::createRenderBatch(
     _indexBuffersWriteOffset += indexBufferSize;
 
     return batch;
+}
+
+void BindlessRenderSystem::createBindlessResources() {
+    for (int i = 0; i < NUM_FRAME_IN_FLIGHT; i++) {
+        _device->CreateBufferInPlace(
+            5000,
+            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+                | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+            _bindlessBuffers[i].drawCommandArray
+        );
+        _device->CreateBufferInPlace(
+            5000,
+            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+                | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+            _bindlessBuffers[i].instanceDataArray
+        );
+        _device->CreateBufferInPlace(
+            5000,
+            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+                | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+            _bindlessBuffers[i].instanceLookupArray
+        );
+        _deletionStack.push([this]() {
+            for (int i = 0; i < NUM_FRAME_IN_FLIGHT; i++) {
+                _bindlessBuffers[i].instanceLookupArray.Cleanup();
+                _bindlessBuffers[i].drawCommandArray.Cleanup();
+                _bindlessBuffers[i].instanceDataArray.Cleanup();
+            }
+        });
+    }
 }

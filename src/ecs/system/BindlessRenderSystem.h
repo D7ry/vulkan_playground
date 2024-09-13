@@ -60,7 +60,9 @@ class BindlessRenderSystem : public IRenderSystem
 
     std::array<BindlessBuffer, NUM_FRAME_IN_FLIGHT> _bindlessBuffers;
     unsigned int _instanceLookupArrayOffset = 0;
-    unsigned int _drawCommandArrayOffset = 0; // offset in drawCommandArray, to which we can append a new VkDrawIndexedIndirectCommand
+    unsigned int _drawCommandArrayOffset
+        = 0; // offset in drawCommandArray, to which we can append a new
+             // VkDrawIndexedIndirectCommand
     unsigned int _instanceDataArrayOffset = 0;
 
     // maps model to a vec of batches that renders the model
@@ -137,6 +139,10 @@ class BindlessRenderSystem : public IRenderSystem
     // loaded in
     std::array<VkDescriptorImageInfo, TEXTURE_ARRAY_SIZE>
         _textureDescriptorInfo;
+    size_t _textureDescriptorInfoIdx
+        = 0; // idx to the current texture descriptor that can be written in,
+             // also represents the total # of valid texture descriptors,
+             // starting from the beginning of the _textureDescriptorInfo array
     std::unordered_map<std::string, int>
         _textureDescriptorIndices; // texture name, index into the
                                    // texture descriptor array
@@ -144,34 +150,12 @@ class BindlessRenderSystem : public IRenderSystem
     ); // flush the `_textureDescriptorInfo` into device, updating
        // the descriptor set
 
-    /**
-     *
-     * Let "DrawGroup" be a draw cmd, associated with
-     * 1. a set of vertex and index buffer offset(i.e.a mesh),
-     * 2. a reserved region in the `instanceDataArray`
-     * 3. a reserved region in the `instanceLookupArray`
-     *
-     * Think of a draw group as a vm page.
-     */
-
-    struct DrawGroup
-    {
-    };
-
     // create resrouces required for bindless rendering. Including:
     // - huge SSBO to store all instance data
     // - a less huge SSBO to store pointers to all instance data
     // - a UBO to store parameters of draw commands
     void createBindlessResources();
 
-    // utility methods
-    void updateDrawCmd(
-        const MeshData& meshData,
-        vk::DrawIndirectCommand command
-    ) {
-        // meshData.drawCmdOffset
 
-    };
-
-    void createDrawCmd(int totalInstance) {}
+    DeletionStack _deletionStack;
 };
