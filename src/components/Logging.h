@@ -32,4 +32,6 @@ void Init();
 #define ASSERT(...)
 #endif // NDEBUG
 
+#define VK_CHECK_RESULT(expr) if (expr != VK_SUCCESS) {PANIC("{} returns none VK_SUCCESS result.", #expr);}
+
 #define INIT_LOGS() Logging::Init()
