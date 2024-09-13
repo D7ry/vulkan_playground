@@ -192,7 +192,7 @@ class VulkanEngine
     bool _framebufferResized = false;
     uint8_t _currentFrame = 0;
     // whether we are locking the cursor within the glfw window
-    bool _lockCursor;
+    bool _lockCursor = false;
 
     std::shared_ptr<VQDevice> _device;
 
