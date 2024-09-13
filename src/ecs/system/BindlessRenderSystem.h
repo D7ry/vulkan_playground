@@ -129,8 +129,9 @@ class BindlessRenderSystem : public IRenderSystem
     enum class BindingLocation : unsigned int
     {
         UBO_STATIC_ENGINE = 0,
-        UBO_DYNAMIC = 1,
-        TEXTURE_SAMPLER = 2
+        INSTANCE_DATA = 1,
+        INSTANCE_INDEX = 2,
+        TEXTURE_SAMPLER = 3
     };
 
     TextureManager* _textureManager;

@@ -80,6 +80,8 @@ void BindlessRenderSystem::createGraphicsPipeline(
     /////  ---------- descriptor ---------- /////
     VkDescriptorSetLayoutBinding uboStaticBinding{};
     VkDescriptorSetLayoutBinding samplerLayoutBinding{};
+    VkDescriptorSetLayoutBinding instanceDataArrayBinding{};
+    VkDescriptorSetLayoutBinding instanceIndexArrayBinding{};
     { // UBO static -- vertex
         uboStaticBinding.binding = (int)BindingLocation::UBO_STATIC_ENGINE;
         uboStaticBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -87,6 +89,27 @@ void BindlessRenderSystem::createGraphicsPipeline(
         uboStaticBinding.stageFlags
             = VK_SHADER_STAGE_VERTEX_BIT; // only used in vertex shader
         uboStaticBinding.pImmutableSamplers = nullptr; // Optional
+    }
+    { // instance data array -- vertex
+        instanceDataArrayBinding.binding = (int)BindingLocation::INSTANCE_DATA;
+        instanceDataArrayBinding.descriptorType
+            = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        instanceDataArrayBinding.descriptorCount
+            = 1; // number of values in the array
+        instanceDataArrayBinding.stageFlags
+            = VK_SHADER_STAGE_VERTEX_BIT; // only used in vertex shader
+        instanceDataArrayBinding.pImmutableSamplers = nullptr; // Optional
+    }
+    { // instance index array -- vertex
+        instanceIndexArrayBinding.binding
+            = (int)BindingLocation::INSTANCE_INDEX;
+        instanceIndexArrayBinding.descriptorType
+            = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        instanceIndexArrayBinding.descriptorCount
+            = 1; // number of values in the array
+        instanceIndexArrayBinding.stageFlags
+            = VK_SHADER_STAGE_VERTEX_BIT; // only used in vertex shader
+        instanceIndexArrayBinding.pImmutableSamplers = nullptr; // Optional
     }
     { // combined image sampler array -- fragment
         samplerLayoutBinding.binding = (int)BindingLocation::TEXTURE_SAMPLER;
@@ -100,8 +123,11 @@ void BindlessRenderSystem::createGraphicsPipeline(
         samplerLayoutBinding.pImmutableSamplers = nullptr;
     }
 
-    std::array<VkDescriptorSetLayoutBinding, 2> bindings
-        = {uboStaticBinding, samplerLayoutBinding};
+    std::array<VkDescriptorSetLayoutBinding, 4> bindings
+        = {uboStaticBinding,
+           samplerLayoutBinding,
+           instanceDataArrayBinding,
+           instanceIndexArrayBinding};
 
     { // _descriptorSetLayout
         VkDescriptorSetLayoutCreateInfo layoutInfo{};
@@ -122,14 +148,14 @@ void BindlessRenderSystem::createGraphicsPipeline(
 
     { // _descriptorPool
         uint32_t numDescriptorPerType
-            = 5000; // each render group has its own set of descriptors
+            = 50; // each render group has its own set of descriptors
         VkDescriptorPoolSize poolSizes[]
             = {{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
                 static_cast<uint32_t>(numDescriptorPerType)},
-               {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
+               {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
                 static_cast<uint32_t>(numDescriptorPerType)},
                {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                static_cast<uint32_t>(numDescriptorPerType)}};
+                static_cast<uint32_t>(5000)}}; // to fit all textures
 
         VkDescriptorPoolCreateInfo poolInfo{};
         poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -173,8 +199,9 @@ void BindlessRenderSystem::createGraphicsPipeline(
     }
 
     for (size_t i = 0; i < NUM_FRAME_IN_FLIGHT; i++) {
+        std::array<VkWriteDescriptorSet, 3> descriptorWrites{};
 
-        std::array<VkWriteDescriptorSet, 1> descriptorWrites{};
+        // engine ubo static
         descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         descriptorWrites[0].dstSet = this->_descriptorSets[i];
         descriptorWrites[0].dstBinding
@@ -184,6 +211,36 @@ void BindlessRenderSystem::createGraphicsPipeline(
         descriptorWrites[0].descriptorCount = 1;
         descriptorWrites[0].pBufferInfo
             = &initData->engineUBOStaticDescriptorBufferInfo[i];
+
+        // instance data
+        VkDescriptorBufferInfo bufferInfoInstanceData{};
+        bufferInfoInstanceData.buffer
+            = _bindlessBuffers[i].instanceDataArray.buffer;
+        bufferInfoInstanceData.offset = 0;
+        bufferInfoInstanceData.range
+            = _bindlessBuffers[i].instanceDataArray.size;
+        descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrites[1].dstSet = this->_descriptorSets[i];
+        descriptorWrites[1].dstBinding = (int)BindingLocation::INSTANCE_DATA;
+        descriptorWrites[1].dstArrayElement = 0;
+        descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        descriptorWrites[1].descriptorCount = 1;
+        descriptorWrites[1].pBufferInfo = &bufferInfoInstanceData;
+
+        // instance index
+        VkDescriptorBufferInfo bufferInfoInstanceIndex{};
+        bufferInfoInstanceIndex.buffer
+            = _bindlessBuffers[i].instanceLookupArray.buffer;
+        bufferInfoInstanceIndex.offset = 0;
+        bufferInfoInstanceIndex.range
+            = _bindlessBuffers[i].instanceLookupArray.size;
+        descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrites[2].dstSet = this->_descriptorSets[i];
+        descriptorWrites[2].dstBinding = (int)BindingLocation::INSTANCE_INDEX;
+        descriptorWrites[2].dstArrayElement = 0;
+        descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        descriptorWrites[2].descriptorCount = 1;
+        descriptorWrites[2].pBufferInfo = &bufferInfoInstanceIndex;
 
         vkUpdateDescriptorSets(
             _device->logicalDevice,

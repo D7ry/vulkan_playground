@@ -1,5 +1,6 @@
 #pragma once
 // stl
+#include "ecs/system/BindlessRenderSystem.h"
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -208,6 +209,7 @@ class VulkanEngine
     PhongRenderSystemInstanced* _phongSystemInstanced;
     GlobalGridSystem* _globalGridSystem;
     EntityViewerSystem* _entityViewerSystem;
+    BindlessRenderSystem* _bindessSystem;
 
     /* ---------- Engine Components ---------- */
     DeletionStack _deletionStack;

@@ -133,6 +133,7 @@ void VulkanEngine::Init() {
         this->_phongSystem = new PhongRenderSystem();
         this->_phongSystemInstanced = new PhongRenderSystemInstanced();
         this->_globalGridSystem = new GlobalGridSystem();
+        this->_bindessSystem = new BindlessRenderSystem();
         InitContext initData;
         { // populate initData
             initData.device = this->_device.get();
@@ -158,67 +159,70 @@ void VulkanEngine::Init() {
         _globalGridSystem->Init(&initData);
         _deletionStack.push([this]() { this->_globalGridSystem->Cleanup(); });
 
+        _bindessSystem->Init(&initData);
+        _deletionStack.push([this]() { _bindessSystem->Cleanup(); });
+
+        const bool phongMeshes = false;
+        const bool bindless = true;
+
         // make instanced entity
         {
-            auto phongMeshComponent
-                = _phongSystemInstanced
-                      ->MakePhongRenderSystemInstancedComponent(
-                          "../resources/viking_room.obj",
-                          "../resources/viking_room.png",
-                          10
-                      );
-            TransformComponent* transformComponent = new TransformComponent();
-            *transformComponent = TransformComponent::Identity();
-            entityInstanced->AddComponent(transformComponent);
-            entityInstanced->AddComponent(phongMeshComponent);
-            _phongSystemInstanced->AddEntity(entityInstanced);
-            _entityViewerSystem->AddEntity(entityInstanced);
-            phongMeshComponent->FlagAsDirty(entityInstanced);
+            if (bindless) {
 
-            // auto phongMeshComponent2
-            //     = _phongSystemInstanced
-            //           ->MakePhongRenderSystemInstancedComponent(
-            //               "../resources/spot.obj", "../resources/spot.png",
-            //               10
-            //           );
-            // entityInstanced2->AddComponent(new TransformComponent());
-            // entityInstanced2->AddComponent(phongMeshComponent2);
-            // phongMeshComponent2->FlagAsDirty(entityInstanced2);
-
-            // let's go crazy
-            for (int i = 0; i < 10; i++) {
-                Entity* spot = new Entity("Spot");
-                spot->AddComponent(new TransformComponent());
-                spot->AddComponent(
-                    _phongSystemInstanced
-                        ->MakePhongRenderSystemInstancedComponent(
-                            "../resources/spot.obj",
-                            "../resources/spot.png",
-                            20 // give it a large hint so don't need to
-                               // resize
-                        )
-                );
-                // Generate spherical coordinates
-                float radius = 5.0f;
-                float theta = static_cast<float>(rand()) / RAND_MAX * 2 * M_PI;
-                float phi = acos(2 * static_cast<float>(rand()) / RAND_MAX - 1);
-
-                // Convert spherical coordinates to Cartesian
-                float x = radius * sin(phi) * cos(theta);
-                float y = radius * sin(phi) * sin(theta);
-                float z = radius * cos(phi);
-
-                // Set the position
-                spot->GetComponent<TransformComponent>()->position.x = x;
-                spot->GetComponent<TransformComponent>()->position.y = y;
-                spot->GetComponent<TransformComponent>()->position.z = z;
-                spot->GetComponent<PhongRenderSystemInstancedComponent>()
-                    ->FlagAsDirty(spot);
-                _phongSystemInstanced->AddEntity(spot);
             }
 
-            _phongSystemInstanced->AddEntity(entityInstanced2);
-            _entityViewerSystem->AddEntity(entityInstanced2);
+            if (phongMeshes) {
+                auto phongMeshComponent
+                    = _phongSystemInstanced
+                          ->MakePhongRenderSystemInstancedComponent(
+                              "../resources/viking_room.obj",
+                              "../resources/viking_room.png",
+                              10
+                          );
+                TransformComponent* transformComponent
+                    = new TransformComponent();
+                *transformComponent = TransformComponent::Identity();
+                entityInstanced->AddComponent(transformComponent);
+                entityInstanced->AddComponent(phongMeshComponent);
+                _phongSystemInstanced->AddEntity(entityInstanced);
+                _entityViewerSystem->AddEntity(entityInstanced);
+                phongMeshComponent->FlagAsDirty(entityInstanced);
+                _phongSystemInstanced->AddEntity(entityInstanced2);
+                _entityViewerSystem->AddEntity(entityInstanced2);
+                // let's go crazy
+                for (int i = 0; i < 10; i++) {
+                    Entity* spot = new Entity("Spot");
+                    spot->AddComponent(new TransformComponent());
+                    spot->AddComponent(
+                        _phongSystemInstanced
+                            ->MakePhongRenderSystemInstancedComponent(
+                                "../resources/spot.obj",
+                                "../resources/spot.png",
+                                20 // give it a large hint so don't need to
+                                   // resize
+                            )
+                    );
+                    // Generate spherical coordinates
+                    float radius = 5.0f;
+                    float theta
+                        = static_cast<float>(rand()) / RAND_MAX * 2 * M_PI;
+                    float phi
+                        = acos(2 * static_cast<float>(rand()) / RAND_MAX - 1);
+
+                    // Convert spherical coordinates to Cartesian
+                    float x = radius * sin(phi) * cos(theta);
+                    float y = radius * sin(phi) * sin(theta);
+                    float z = radius * cos(phi);
+
+                    // Set the position
+                    spot->GetComponent<TransformComponent>()->position.x = x;
+                    spot->GetComponent<TransformComponent>()->position.y = y;
+                    spot->GetComponent<TransformComponent>()->position.z = z;
+                    spot->GetComponent<PhongRenderSystemInstancedComponent>()
+                        ->FlagAsDirty(spot);
+                    _phongSystemInstanced->AddEntity(spot);
+                }
+            }
         }
     }
 }
@@ -382,7 +386,7 @@ void VulkanEngine::createInstance() {
     instanceExtensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
     createInfo.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
     VkLayerSettingsCreateInfoEXT appleLayerSettings;
-    { 
+    {
         // metal argument buffer support
         instanceExtensions.push_back(VK_EXT_LAYER_SETTINGS_EXTENSION_NAME);
         appleLayerSettings = MoltenVKConfig::GetLayerSettingsCreatInfo();
