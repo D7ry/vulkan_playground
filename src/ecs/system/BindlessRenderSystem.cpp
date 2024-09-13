@@ -514,6 +514,7 @@ BindlessRenderSystemComponent* BindlessRenderSystem::MakeComponent(
                 texturePath, _textureDescriptorInfo[textureOffset]
             );
             textureOffset = textureOffset;
+            _textureDescriptorInfoIdx++;
             // must update the descriptor set to reflect loading newtexture
             // FIXME: current update is not thread-safe as it writes
             // too all descriptors(including one that's in flight). use an
@@ -651,8 +652,12 @@ BindlessRenderSystem::RenderBatch BindlessRenderSystem::createRenderBatch(
     const std::string& meshPath,
     unsigned int batchSize
 ) {
+    // FIXME: only the first render batch of a model needs to re-load model,
+    // the rest should be reusing the first batch's vertex & index buffers
     DEBUG("creating render batch for {}", meshPath);
     DeletionStack del;
+
+    DEBUG("Load vertex & index buffers");
     // load mesh into vertex and index buffer
     std::vector<Vertex> vertices;
     std::vector<uint32_t> indices;
@@ -686,6 +691,9 @@ BindlessRenderSystem::RenderBatch BindlessRenderSystem::createRenderBatch(
         0,
         &vertexBufferDst
     );
+    memcpy(vertexBufferDst, vertices.data(), (size_t)vertexBufferSize);
+    vkUnmapMemory(_device->logicalDevice, stagingBufferMemory);
+
     vkMapMemory(
         _device->logicalDevice,
         stagingBufferMemory,
@@ -694,9 +702,7 @@ BindlessRenderSystem::RenderBatch BindlessRenderSystem::createRenderBatch(
         0,
         &indexBufferDst
     );
-    memcpy(vertexBufferDst, vertices.data(), (size_t)vertexBufferSize);
     memcpy(indexBufferDst, indices.data(), (size_t)indexBufferSize);
-
     vkUnmapMemory(_device->logicalDevice, stagingBufferMemory);
 
     // copy from staging buffer to vertex/index buffer array
@@ -764,6 +770,8 @@ BindlessRenderSystem::RenderBatch BindlessRenderSystem::createRenderBatch(
     _vertexBuffersWriteOffset += vertexBufferSize;
     _indexBuffersWriteOffset += indexBufferSize;
 
+    del.flush();
+
     return batch;
 }
 
@@ -802,19 +810,23 @@ void BindlessRenderSystem::createBindlessResources() {
     // FIXME: the memory should have DEVICE_LOCAL_BIT
     // allocate large vertex and index buffer
     _device->CreateBufferInPlace(
-        50000,
+        500000,
         VK_BUFFER_USAGE_TRANSFER_DST_BIT // can be used as destination in a
                                          // memory transfer operation
             | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, // local to the GPU for faster
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+            | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, // local to the GPU for
+                                                    // faster
         _vertexBuffers
     );
     _device->CreateBufferInPlace(
-        50000,
+        500000,
         VK_BUFFER_USAGE_TRANSFER_DST_BIT // can be used as destination in a
                                          // memory transfer operation
             | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, // local to the GPU for faster
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+            | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, // local to the GPU for
+                                                    // faster
         _indexBuffers
     );
 }

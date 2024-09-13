@@ -168,14 +168,18 @@ void VulkanEngine::Init() {
         // make instanced entity
         {
             if (bindless) {
+                auto component = _bindessSystem->MakeComponent(
+                    "../resources/spot.obj", "../resources/spot.png"
+                );
+                // once component is made drawing should start
             }
 
             if (phongMeshes) {
                 auto phongMeshComponent
                     = _phongSystemInstanced
                           ->MakePhongRenderSystemInstancedComponent(
-                              "../resources/viking_room.obj",
-                              "../resources/viking_room.png",
+                              "../resources/spot.obj",
+                              "../resources/spot.png",
                               10
                           );
                 TransformComponent* transformComponent
@@ -1142,8 +1146,7 @@ void VulkanEngine::drawFrame(TickContext* ctx, uint8_t frame) {
         VK_NULL_HANDLE,
         &imageIndex
     );
-    [[unlikely]] if (result == VK_ERROR_OUT_OF_DATE_KHR
-                     || result == VK_SUBOPTIMAL_KHR) {
+    [[unlikely]] if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
         this->recreateSwapChain();
         return;
     } else [[unlikely]] if (result != VK_SUCCESS) {
