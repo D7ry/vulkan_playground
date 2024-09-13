@@ -104,6 +104,7 @@ class VulkanEngine
     // required device extensions
     static inline const std::vector<const char*> DEVICE_EXTENSIONS = {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+        VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME,
 #if __APPLE__ // molten vk support
         VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME,
     // VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME
