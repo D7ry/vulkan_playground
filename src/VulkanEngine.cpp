@@ -149,12 +149,12 @@ void VulkanEngine::Init() {
             }
         }
 
-        _phongSystemInstanced->Init(&initData);
-        _deletionStack.push([this]() { this->_phongSystemInstanced->Cleanup(); }
-        );
+        // _phongSystemInstanced->Init(&initData);
+        // _deletionStack.push([this]() { this->_phongSystemInstanced->Cleanup(); }
+        // );
 
-        _phongSystem->Init(&initData);
-        _deletionStack.push([this]() { this->_phongSystem->Cleanup(); });
+        // _phongSystem->Init(&initData);
+        // _deletionStack.push([this]() { this->_phongSystem->Cleanup(); });
 
         _globalGridSystem->Init(&initData);
         _deletionStack.push([this]() { this->_globalGridSystem->Cleanup(); });
@@ -168,9 +168,18 @@ void VulkanEngine::Init() {
         // make instanced entity
         {
             if (bindless) {
+                Entity* spot = new Entity("Spot");
+                TransformComponent* transformComponent
+                    = new TransformComponent();
+                spot->AddComponent(transformComponent);
+                transformComponent->position.z = 1;
+                _entityViewerSystem->AddEntity(spot);
+                // TODO: does this break the abstraction barrier?
                 auto component = _bindessSystem->MakeComponent(
                     "../resources/spot.obj", "../resources/spot.png"
                 );
+                spot->AddComponent(component);
+                component->FlagUpdate();
                 // once component is made drawing should start
             }
 

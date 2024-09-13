@@ -23,11 +23,11 @@ class BindlessRenderSystem : public IRenderSystem
 
         struct
         {
-            unsigned int albedo; // currently we only have albedo tex
+            int albedo; // currently we only have albedo tex
         } textureIndex;
 
         // none-render metadata
-        unsigned int drawCmdIndex; // index into draw cmd
+        const unsigned int drawCmdIndex; // index into draw cmd
     };
 
     // note that we don't create NUM_FRAME_IN_FLIGHT vertex/index
@@ -99,6 +99,7 @@ class BindlessRenderSystem : public IRenderSystem
     void FlagUpdate(Entity* entity);
 
   private:
+    void updateMeshInstanceData(int frame);
     // spir-v source to vertex and fragment shader, relative to compiled binary
     const char* VERTEX_SHADER_SRC = "../shaders/bindless.vert.spv";
     const char* FRAGMENT_SHADER_SRC = "../shaders/bindless.frag.spv";
@@ -156,7 +157,6 @@ class BindlessRenderSystem : public IRenderSystem
     // - a less huge SSBO to store pointers to all instance data
     // - a UBO to store parameters of draw commands
     void createBindlessResources();
-
 
     DeletionStack _deletionStack;
 };

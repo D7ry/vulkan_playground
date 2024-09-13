@@ -25,12 +25,43 @@ void BindlessRenderSystem::Cleanup() {
     DEBUG("Done cleaning up");
 }
 
+// flush buffer updates, write to the buffer corresponding to the current frame
+void BindlessRenderSystem::updateMeshInstanceData(int frame) {
+    for (Entity* entity : _bufferUpdateQueue[frame]) {
+        // this is not really cache friendly -- should we pre-cache the
+        // transforms into a vector/switch up the update job into the compute
+        // tick?
+        BindlessRenderSystemComponent* systemComponent
+            = entity->GetComponent<BindlessRenderSystemComponent>();
+        ASSERT(systemComponent);
+
+        // get pointer to the instance's data
+        BindlessInstanceData* instanceData
+            = reinterpret_cast<BindlessInstanceData*>(
+                reinterpret_cast<char*>(
+                    _bindlessBuffers[frame].instanceDataArray.bufferAddress
+                )
+                + systemComponent->instanceDataOffset
+            );
+
+        // transform
+        TransformComponent* transform
+            = entity->GetComponent<TransformComponent>();
+        if (transform) {
+            transform->GetModelMatrix(instanceData->model);
+        }
+    }
+    _bufferUpdateQueue[frame].clear();
+}
+
 void BindlessRenderSystem::Tick(const TickContext* ctx) {
     PROFILE_SCOPE(ctx->profiler, "Bindless System Tick");
     VkCommandBuffer CB = ctx->graphics.CB;
     VkFramebuffer FB = ctx->graphics.currentFB;
     VkExtent2D FBExt = ctx->graphics.currentFBextend;
-    int frameIdx = ctx->graphics.currentFrameInFlight;
+    int currFrame = ctx->graphics.currentFrameInFlight;
+
+    updateMeshInstanceData(currFrame);
 
     vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipeline);
 
@@ -41,21 +72,17 @@ void BindlessRenderSystem::Tick(const TickContext* ctx) {
         _pipelineLayout,
         0,
         1,
-        &_descriptorSets[frameIdx],
+        &_descriptorSets[currFrame],
         0,
         0
     );
-
-    // flush buffer updates, write to the buffer corresponding to the current
-    // frame
-    // TODO: actually implement buffer flushing
 
     VkDeviceSize offsets[] = {0};
     vkCmdBindVertexBuffers(CB, 0, 1, &_vertexBuffers.buffer, offsets);
     vkCmdBindIndexBuffer(CB, _indexBuffers.buffer, 0, VK_INDEX_TYPE_UINT32);
     vkCmdDrawIndexedIndirect(
         CB,
-        _bindlessBuffers[frameIdx].drawCommandArray.buffer,
+        _bindlessBuffers[currFrame].drawCommandArray.buffer,
         0, // offset
         _drawCommandArrayOffset
             / sizeof(VkDrawIndexedIndirectCommand), // drawCount
@@ -574,13 +601,14 @@ BindlessRenderSystemComponent* BindlessRenderSystem::MakeComponent(
     ret->instanceDataOffset = _instanceDataArrayOffset;
 
     // create new instance data, push to instance data array
-    BindlessInstanceData data{};
-    data.textureIndex.albedo = textureIndex; // TODO: add other texture supports
-    data.drawCmdIndex = pBatch->drawCmdOffset
-                        / sizeof(VkDrawIndexedIndirectCommand
-                        ); // offset divided by size to get index
-    data.transparency = 0.f;
-    data.model = glm::mat4(1.f); // identity mat
+    BindlessInstanceData data{
+        .model = glm::mat4(1.f),
+        .transparency = 0.f,
+        .textureIndex = {.albedo = textureIndex},
+        .drawCmdIndex
+        = pBatch->drawCmdOffset
+          / static_cast<unsigned int>(sizeof(VkDrawIndexedIndirectCommand)),
+    };
     // push data to the array
     for (int i = 0; i < NUM_FRAME_IN_FLIGHT; i++) {
         char* addr = reinterpret_cast<char*>(
