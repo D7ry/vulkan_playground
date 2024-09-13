@@ -20,19 +20,9 @@ void BindlessRenderSystem::Init(const InitContext* initData) {
 }
 
 void BindlessRenderSystem::Cleanup() {
-    // clean up pipeline
-    vkDestroyPipeline(_device->logicalDevice, _pipeline, nullptr);
-    vkDestroyPipelineLayout(_device->logicalDevice, _pipelineLayout, nullptr);
-
-    // clean up descriptors
-    vkDestroyDescriptorSetLayout(
-        _device->logicalDevice, _descriptorSetLayout, nullptr
-    );
-    // descriptor sets automatically cleaned up
-    vkDestroyDescriptorPool(_device->logicalDevice, _descriptorPool, nullptr);
-
-    DEBUG("phong rendering system cleaned up.");
-    // note: texture is handled by TextureManager so no need to clean that up
+    DEBUG("Cleaning up...");
+    _deletionStack.flush();
+    DEBUG("Done cleaning up");
 }
 
 void BindlessRenderSystem::Tick(const TickContext* ctx) {
@@ -77,6 +67,8 @@ void BindlessRenderSystem::createGraphicsPipeline(
     const VkRenderPass renderPass,
     const InitContext* initData
 ) {
+    DEBUG("Creating graphics pipeline...");
+    DEBUG("Creating descriptor...");
     /////  ---------- descriptor ---------- /////
     VkDescriptorSetLayoutBinding uboStaticBinding{};
     VkDescriptorSetLayoutBinding samplerLayoutBinding{};
@@ -144,6 +136,11 @@ void BindlessRenderSystem::createGraphicsPipeline(
             != VK_SUCCESS) {
             FATAL("Failed to create descriptor set layout!");
         }
+        _deletionStack.push([this]() {
+            vkDestroyDescriptorSetLayout(
+                _device->logicalDevice, _descriptorSetLayout, nullptr
+            );
+        });
     }
 
     { // _descriptorPool
@@ -172,6 +169,11 @@ void BindlessRenderSystem::createGraphicsPipeline(
             != VK_SUCCESS) {
             FATAL("Failed to create descriptor pool!");
         }
+        _deletionStack.push([this]() {
+            vkDestroyDescriptorPool(
+                _device->logicalDevice, _descriptorPool, nullptr
+            );
+        });
     }
 
     { // _descriptorSets
@@ -250,6 +252,8 @@ void BindlessRenderSystem::createGraphicsPipeline(
             nullptr
         );
     }
+
+    DEBUG("Setting up shaders...");
 
     /////  ---------- shader ---------- /////
 
@@ -458,6 +462,12 @@ void BindlessRenderSystem::createGraphicsPipeline(
         FATAL("Failed to create pipeline layout!");
     }
 
+    _deletionStack.push([this]() {
+        vkDestroyPipelineLayout(
+            _device->logicalDevice, _pipelineLayout, nullptr
+        );
+    });
+
     // put things together
     VkGraphicsPipelineCreateInfo pipelineInfo{};
     pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -491,6 +501,10 @@ void BindlessRenderSystem::createGraphicsPipeline(
         != VK_SUCCESS) {
         FATAL("Failed to create graphics pipeline!");
     }
+
+    _deletionStack.push([this]() {
+        vkDestroyPipeline(_device->logicalDevice, _pipeline, nullptr);
+    });
 
     vkDestroyShaderModule(_device->logicalDevice, fragShaderModule, nullptr);
     vkDestroyShaderModule(_device->logicalDevice, vertShaderModule, nullptr);
@@ -580,7 +594,8 @@ BindlessRenderSystemComponent* BindlessRenderSystem::MakeComponent(
     {
         // hack in the process of compute shader culling by
         // 1. inserting the instance index into lookup array manually,
-        // 2. modifying the render command's draw number
+        // 2. modifying the render command's draw number to draw an additional
+        // index therefore the command draws all added components in its batch
         for (int i = 0; i < NUM_FRAME_IN_FLIGHT; i++) {
             VkDrawIndexedIndirectCommand cmd;
             // read command from drawCommandArray
@@ -798,25 +813,23 @@ void BindlessRenderSystem::createBindlessResources() {
                 | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
             _bindlessBuffers[i].instanceLookupArray
         );
-        _deletionStack.push([this]() {
-            for (int i = 0; i < NUM_FRAME_IN_FLIGHT; i++) {
-                _bindlessBuffers[i].instanceLookupArray.Cleanup();
-                _bindlessBuffers[i].drawCommandArray.Cleanup();
-                _bindlessBuffers[i].instanceDataArray.Cleanup();
-            }
-        });
     }
 
-    // FIXME: the memory should have DEVICE_LOCAL_BIT
+    _deletionStack.push([this]() {
+        for (int i = 0; i < NUM_FRAME_IN_FLIGHT; i++) {
+            _bindlessBuffers[i].instanceLookupArray.Cleanup();
+            _bindlessBuffers[i].drawCommandArray.Cleanup();
+            _bindlessBuffers[i].instanceDataArray.Cleanup();
+        }
+    });
+
     // allocate large vertex and index buffer
     _device->CreateBufferInPlace(
         500000,
         VK_BUFFER_USAGE_TRANSFER_DST_BIT // can be used as destination in a
                                          // memory transfer operation
             | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
-            | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, // local to the GPU for
-                                                    // faster
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         _vertexBuffers
     );
     _device->CreateBufferInPlace(
@@ -824,9 +837,13 @@ void BindlessRenderSystem::createBindlessResources() {
         VK_BUFFER_USAGE_TRANSFER_DST_BIT // can be used as destination in a
                                          // memory transfer operation
             | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
-            | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, // local to the GPU for
-                                                    // faster
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         _indexBuffers
     );
+
+    _deletionStack.push([this]() {
+        DEBUG("Cleaning up vertex & index buffers");
+        _vertexBuffers.Cleanup();
+        _indexBuffers.Cleanup();
+    });
 }
