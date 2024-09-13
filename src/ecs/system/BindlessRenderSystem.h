@@ -2,7 +2,9 @@
 #include <unordered_set>
 #include <vulkan/vulkan_core.h>
 
+#include "components/DeletionStack.h"
 #include "lib/VQBuffer.h"
+#include "lib/VQUtils.h"
 
 #include "ecs/System.h"
 #include "ecs/component/BindlessRenderSystemComponent.h"
@@ -28,6 +30,17 @@ class BindlessRenderSystem : public IRenderSystem
         unsigned int drawCmdIndex; // index into draw cmd
     };
 
+    // note that we don't create NUM_FRAME_IN_FLIGHT vertex/index
+    // buffers assuming synchronization is trivial
+    // TODO: add synchronization protection to them.
+
+    // all index buffers
+    VQBuffer _indexBuffers;
+    unsigned int _indexBuffersWriteOffset = 0;
+    // all vertex buffers
+    VQBuffer _vertexBuffers;
+    unsigned int _vertexBuffersWriteOffset = 0;
+
     // buffer arrays
     struct BindlessBuffer
     {
@@ -36,16 +49,111 @@ class BindlessRenderSystem : public IRenderSystem
         // SSBO the maps (offseted) instance IDs to actual instance datas
         VQBuffer instanceLookupArray; // <unsigned int>
         // list of draw commands
-        VQBuffer drawCommandArray; // <VkDrawIndirectCommand>
-                                   // vertexCount
-                                   // instanceCount
-                                   // firstVertex
-                                   // firstInstance
+        VQBuffer
+            drawCommandArray; // <VkDrawIndexedIndirectCommand>
+                              // indexCount -- how many index to draw
+                              // instanceCount
+                              // firstIndex -- which index to start from in
+                              // `indexBuffers` firstInstance -- which index to
+                              // start from in `instanceLookupArray`
     };
 
     std::array<BindlessBuffer, NUM_FRAME_IN_FLIGHT> _bindlessBuffers;
+    unsigned int _instanceLookupArrayOffset = 0;
 
   public:
+    // as a POC we don't support dynamic resizing yet
+    // TODO: support dynamic resizing
+    void InitMesh(const std::string& meshPath, unsigned int instanceNumber) {
+        DeletionStack del;
+        // load mesh into vertex and index buffer
+        std::vector<Vertex> vertices;
+        std::vector<uint32_t> indices;
+        CoreUtils::loadModel(meshPath.c_str(), vertices, indices);
+
+        VkDeviceSize vertexBufferSize = sizeof(Vertex) * vertices.size();
+        VkDeviceSize indexBufferSize = sizeof(uint32_t) * indices.size();
+
+        // make staging buffer for both vertex and index buffer
+        std::pair<VkBuffer, VkDeviceMemory> res
+            = CoreUtils::createVulkanStagingBuffer(
+                _device->physicalDevice,
+                _device->logicalDevice,
+                vertexBufferSize + indexBufferSize
+            );
+        VkBuffer stagingBuffer = res.first;
+        VkDeviceMemory stagingBufferMemory = res.second;
+        del.push([this, stagingBuffer, stagingBufferMemory]() {
+            vkDestroyBuffer(_device->logicalDevice, stagingBuffer, nullptr);
+            vkFreeMemory(_device->logicalDevice, stagingBufferMemory, nullptr);
+        });
+
+        // copy vertex and index buffer to staging buffer
+        void* vertexBufferDst;
+        void* indexBufferDst;
+        vkMapMemory(
+            _device->logicalDevice,
+            stagingBufferMemory,
+            0,
+            vertexBufferSize,
+            0,
+            &vertexBufferDst
+        );
+        vkMapMemory(
+            _device->logicalDevice,
+            stagingBufferMemory,
+            vertexBufferSize,
+            indexBufferSize,
+            0,
+            &indexBufferDst
+        );
+        memcpy(vertexBufferDst, vertices.data(), (size_t)vertexBufferSize);
+        memcpy(indexBufferDst, indices.data(), (size_t)indexBufferSize);
+
+        vkUnmapMemory(_device->logicalDevice, stagingBufferMemory);
+
+        // copy from staging buffer to vertex/index buffer array
+        CoreUtils::copyVulkanBuffer(
+            _device->logicalDevice,
+            _device->graphicsCommandPool,
+            _device->graphicsQueue,
+            stagingBuffer,
+            _vertexBuffers.buffer,
+            vertexBufferSize,
+            0,
+            _vertexBuffersWriteOffset
+        );
+
+        CoreUtils::copyVulkanBuffer(
+            _device->logicalDevice,
+            _device->graphicsCommandPool,
+            _device->graphicsQueue,
+            stagingBuffer,
+            _indexBuffers.buffer,
+            indexBufferSize,
+            vertexBufferSize, // skip the vertex buffer region in staging buffer
+            _indexBuffersWriteOffset
+        );
+
+
+        // create a draw command and store into `drawCommandArray`
+        VkDrawIndexedIndirectCommand cmd{};
+        cmd.firstIndex = _indexBuffersWriteOffset / sizeof(unsigned int);
+        cmd.indexCount = indices.size();
+        cmd.vertexOffset = _vertexBuffersWriteOffset / sizeof(Vertex);
+        cmd.instanceCount = 0; // draw 0 instance by default
+        cmd.firstInstance = _instanceLookupArrayOffset / sizeof(unsigned int);
+
+        // reserve `instanceNumber` * sizeof(unsigned int) in
+        // instanceLookupArray
+        // for now, simply bump the offset
+        _instanceLookupArrayOffset += instanceNumber * sizeof(unsigned int);
+        
+        // bump offset for next writes
+        _vertexBuffersWriteOffset += vertexBufferSize;
+        _indexBuffersWriteOffset += indexBufferSize;
+    }
+
     BindlessRenderSystemComponent* MakeComponent(
         const std::string& meshPath,
         const std::string& texturePath,
@@ -140,9 +248,10 @@ class BindlessRenderSystem : public IRenderSystem
     void updateTextureDescriptorSet(
     ); // flush the `_textureDescriptorInfo` into device, updating
        // the descriptor set
+
     /**
      *
-     * Let "DrawGroup" be a draw cmd, associated with 
+     * Let "DrawGroup" be a draw cmd, associated with
      * 1. a set of vertex and index buffer offset(i.e.a mesh),
      * 2. a reserved region in the `instanceDataArray`
      * 3. a reserved region in the `instanceLookupArray`
@@ -152,7 +261,6 @@ class BindlessRenderSystem : public IRenderSystem
 
     struct DrawGroup
     {
-
     };
 
     // create resrouces required for bindless rendering. Including:
@@ -160,7 +268,6 @@ class BindlessRenderSystem : public IRenderSystem
     // - a less huge SSBO to store pointers to all instance data
     // - a UBO to store parameters of draw commands
     void createBindlessResources();
-
 
     // utility methods
     void updateDrawCmd(
@@ -171,7 +278,5 @@ class BindlessRenderSystem : public IRenderSystem
 
     };
 
-
-
-    void createDrawCmd(int totalInstance ) {}
+    void createDrawCmd(int totalInstance) {}
 };

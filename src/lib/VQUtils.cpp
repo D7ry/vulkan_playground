@@ -6,12 +6,18 @@
 // utilities not exposed
 namespace CoreUtils
 {
-uint32_t findVulkanMemoryType(VkPhysicalDevice physicalDevice, uint32_t typeFilter, VkMemoryPropertyFlags properties) {
+uint32_t findVulkanMemoryType(
+    VkPhysicalDevice physicalDevice,
+    uint32_t typeFilter,
+    VkMemoryPropertyFlags properties
+) {
     VkPhysicalDeviceMemoryProperties memProperties;
     vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
 
     for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
-        if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+        if ((typeFilter & (1 << i))
+            && (memProperties.memoryTypes[i].propertyFlags & properties)
+                   == properties) {
             return i;
         }
     }
@@ -44,9 +50,12 @@ void createVulkanBuffer(
     VkMemoryAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = findVulkanMemoryType(physicalDevice, memRequirements.memoryTypeBits, properties);
+    allocInfo.memoryTypeIndex = findVulkanMemoryType(
+        physicalDevice, memRequirements.memoryTypeBits, properties
+    );
 
-    if (vkAllocateMemory(device, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
+    if (vkAllocateMemory(device, &allocInfo, nullptr, &bufferMemory)
+        != VK_SUCCESS) {
         FATAL("Failed to allocate device memory for buffer creation!");
     }
 
@@ -65,14 +74,18 @@ std::pair<VkBuffer, VkDeviceMemory> createVulkanStagingBuffer(
         device,
         bufferSize,
         VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+            | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
         stagingBuffer,
         stagingBufferMemory
     );
     return {stagingBuffer, stagingBufferMemory};
 }
 
-VkCommandBuffer beginSingleTimeCommands(VkDevice device, VkCommandPool commandPool) {
+VkCommandBuffer beginSingleTimeCommands(
+    VkDevice device,
+    VkCommandPool commandPool
+) {
     VkCommandBufferAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
@@ -116,18 +129,27 @@ void copyVulkanBuffer(
     VkQueue queue,
     VkBuffer srcBuffer,
     VkBuffer dstBuffer,
-    VkDeviceSize size
+    VkDeviceSize size,
+    unsigned int srcOffset,
+    unsigned int dstOffset
 ) {
-    VkCommandBuffer commandBuffer = beginSingleTimeCommands(device, commandPool);
+    VkCommandBuffer commandBuffer
+        = beginSingleTimeCommands(device, commandPool);
 
     VkBufferCopy copyRegion{};
     copyRegion.size = size;
+    copyRegion.srcOffset = srcOffset;
+    copyRegion.dstOffset = dstOffset;
     vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
 
     endSingleTimeCommands(commandBuffer, device, queue, commandPool);
 }
 
-void loadModel(const char* meshFilePath, std::vector<Vertex>& vertices, std::vector<uint32_t>& indices) {
+void loadModel(
+    const char* meshFilePath,
+    std::vector<Vertex>& vertices,
+    std::vector<uint32_t>& indices
+) {
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
     std::vector<tinyobj::material_t> materials;
@@ -135,22 +157,27 @@ void loadModel(const char* meshFilePath, std::vector<Vertex>& vertices, std::vec
     vertices.clear();
     indices.clear();
 
-    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, meshFilePath)) {
+    if (!tinyobj::LoadObj(
+            &attrib, &shapes, &materials, &warn, &err, meshFilePath
+        )) {
         throw std::runtime_error(warn + err);
     }
 
     // deduplication
-    std::unordered_map<Vertex, uint32_t> uniqueVertices{}; // unique vertex -> index
+    std::unordered_map<Vertex, uint32_t> uniqueVertices{
+    }; // unique vertex -> index
 
     for (const auto& shape : shapes) {
         for (const auto& index : shape.mesh.indices) {
-            Vertex vertex{glm::vec3{attrib.vertices[3 * index.vertex_index + 0],
-                   attrib.vertices[3 * index.vertex_index + 1],
-                   attrib.vertices[3 * index.vertex_index + 2]}};
+            Vertex vertex{glm::vec3{
+                attrib.vertices[3 * index.vertex_index + 0],
+                attrib.vertices[3 * index.vertex_index + 1],
+                attrib.vertices[3 * index.vertex_index + 2]
+            }};
 
             vertex.texCoord
-                = {attrib.texcoords[2 * index.texcoord_index + 0], 1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
-                };
+                = {attrib.texcoords[2 * index.texcoord_index + 0],
+                   1.0f - attrib.texcoords[2 * index.texcoord_index + 1]};
 
             vertex.color = {1.0f, 1.0f, 1.0f};
 
@@ -165,7 +192,8 @@ void loadModel(const char* meshFilePath, std::vector<Vertex>& vertices, std::vec
 
     // calculate vertex normals
     for (int i = 0; i < indices.size();
-         i += 3) { // note that we traverse indices here instead of vertices; each iteration is a triangle
+         i += 3) { // note that we traverse indices here instead of vertices;
+                   // each iteration is a triangle
         Vertex& v0 = vertices[indices[i + 0]];
         Vertex& v1 = vertices[indices[i + 1]];
         Vertex& v2 = vertices[indices[i + 2]];
@@ -185,16 +213,29 @@ void loadModel(const char* meshFilePath, std::vector<Vertex>& vertices, std::vec
 }
 } // namespace CoreUtils
 
-void VQUtils::createVertexBuffer(const std::vector<Vertex>& vertices, VQBuffer& vqBuffer, VQDevice& vqDevice) {
+void VQUtils::createVertexBuffer(
+    const std::vector<Vertex>& vertices,
+    VQBuffer& vqBuffer,
+    VQDevice& vqDevice
+) {
     VkDeviceSize vertexBufferSize = sizeof(Vertex) * vertices.size();
 
     std::pair<VkBuffer, VkDeviceMemory> res
-        = CoreUtils::createVulkanStagingBuffer(vqDevice.physicalDevice, vqDevice.logicalDevice, vertexBufferSize);
+        = CoreUtils::createVulkanStagingBuffer(
+            vqDevice.physicalDevice, vqDevice.logicalDevice, vertexBufferSize
+        );
     VkBuffer stagingBuffer = res.first;
     VkDeviceMemory stagingBufferMemory = res.second;
     // copy over data from cpu memory to gpu memory(staging buffer)
     void* data;
-    vkMapMemory(vqDevice.logicalDevice, stagingBufferMemory, 0, vertexBufferSize, 0, &data);
+    vkMapMemory(
+        vqDevice.logicalDevice,
+        stagingBufferMemory,
+        0,
+        vertexBufferSize,
+        0,
+        &data
+    );
     memcpy(data, vertices.data(), (size_t)vertexBufferSize); // copy the data
     vkUnmapMemory(vqDevice.logicalDevice, stagingBufferMemory);
 
@@ -203,9 +244,11 @@ void VQUtils::createVertexBuffer(const std::vector<Vertex>& vertices, VQBuffer& 
         vqDevice.physicalDevice,
         vqDevice.logicalDevice,
         vertexBufferSize,
-        VK_BUFFER_USAGE_TRANSFER_DST_BIT // can be used as destination in a memory transfer operation
+        VK_BUFFER_USAGE_TRANSFER_DST_BIT // can be used as destination in a
+                                         // memory transfer operation
             | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, // local to the GPU for faster access
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, // local to the GPU for faster
+                                             // access
         vqBuffer.buffer,
         vqBuffer.bufferMemory
     );
@@ -236,7 +279,12 @@ void VQUtils::meshToBuffer(
     std::vector<Vertex> vertices;
     std::vector<uint32_t> indices;
     CoreUtils::loadModel(meshFilePath, vertices, indices);
-    DEBUG("loaded mode {}, {} vertices, {} indices", meshFilePath, vertices.size(), indices.size());
+    DEBUG(
+        "loaded mode {}, {} vertices, {} indices",
+        meshFilePath,
+        vertices.size(),
+        indices.size()
+    );
     createVertexBuffer(vertices, vertexBuffer, vqDevice);
     createIndexBuffer(indices, indexBuffer, vqDevice);
     INFO("Mesh loaded");
@@ -247,5 +295,7 @@ uint32_t VQUtils::findMemoryType(
     uint32_t typeFilter,
     VkMemoryPropertyFlags properties
 ) {
-    return CoreUtils::findVulkanMemoryType(physicalDevice, typeFilter, properties);
+    return CoreUtils::findVulkanMemoryType(
+        physicalDevice, typeFilter, properties
+    );
 }
