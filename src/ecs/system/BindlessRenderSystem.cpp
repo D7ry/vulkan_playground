@@ -797,4 +797,22 @@ void BindlessRenderSystem::createBindlessResources() {
             }
         });
     }
+
+    // allocate large vertex and index buffer
+    _device->CreateBufferInPlace(
+        50000,
+        VK_BUFFER_USAGE_TRANSFER_DST_BIT // can be used as destination in a
+                                         // memory transfer operation
+            | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, // local to the GPU for faster
+        _vertexBuffers
+    );
+    _device->CreateBufferInPlace(
+        50000,
+        VK_BUFFER_USAGE_TRANSFER_DST_BIT // can be used as destination in a
+                                         // memory transfer operation
+            | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, // local to the GPU for faster
+        _indexBuffers
+    );
 }
