@@ -168,7 +168,6 @@ void VulkanEngine::Init() {
         // make instanced entity
         {
             if (bindless) {
-
             }
 
             if (phongMeshes) {
@@ -1143,11 +1142,13 @@ void VulkanEngine::drawFrame(TickContext* ctx, uint8_t frame) {
         VK_NULL_HANDLE,
         &imageIndex
     );
-    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
-        [[unlikely]] this->recreateSwapChain();
+    [[unlikely]] if (result == VK_ERROR_OUT_OF_DATE_KHR
+                     || result == VK_SUBOPTIMAL_KHR) {
+        this->recreateSwapChain();
         return;
-    } else if (result != VK_SUCCESS) {
-        [[unlikely]] FATAL("Failed to acquire swap chain image!");
+    } else [[unlikely]] if (result != VK_SUCCESS) {
+        const char* res = string_VkResult(result);
+        PANIC("Failed to acquire swap chain image: {}", res);
     }
 
     // lock the fence
@@ -1208,8 +1209,9 @@ void VulkanEngine::drawFrame(TickContext* ctx, uint8_t frame) {
             scissor.extent = _swapChainExtent;
             vkCmdSetScissor(CB, 0, 1, &scissor);
         }
-        this->_phongSystem->Tick(ctx);
-        this->_phongSystemInstanced->Tick(ctx);
+        // this->_phongSystem->Tick(ctx);
+        // this->_phongSystemInstanced->Tick(ctx);
+        this->_bindessSystem->Tick(ctx);
         this->_globalGridSystem->Tick(ctx);
         CB.endRenderPass();
     }

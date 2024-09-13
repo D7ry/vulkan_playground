@@ -56,6 +56,7 @@ void BindlessRenderSystem::Tick(const TickContext* ctx) {
         0
     );
 
+    return;
     // flush buffer updates, write to the buffer corresponding to the current
     // frame
     // TODO: actually implement buffer flushing
@@ -651,6 +652,7 @@ BindlessRenderSystem::RenderBatch BindlessRenderSystem::createRenderBatch(
     const std::string& meshPath,
     unsigned int batchSize
 ) {
+    DEBUG("creating render batch for {}", meshPath);
     DeletionStack del;
     // load mesh into vertex and index buffer
     std::vector<Vertex> vertices;
@@ -770,7 +772,7 @@ void BindlessRenderSystem::createBindlessResources() {
     for (int i = 0; i < NUM_FRAME_IN_FLIGHT; i++) {
         _device->CreateBufferInPlace(
             5000,
-            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+            VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
                 | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
             _bindlessBuffers[i].drawCommandArray
@@ -798,13 +800,14 @@ void BindlessRenderSystem::createBindlessResources() {
         });
     }
 
+    // FIXME: the memory should have DEVICE_LOCAL_BIT
     // allocate large vertex and index buffer
     _device->CreateBufferInPlace(
         50000,
         VK_BUFFER_USAGE_TRANSFER_DST_BIT // can be used as destination in a
                                          // memory transfer operation
             | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, // local to the GPU for faster
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, // local to the GPU for faster
         _vertexBuffers
     );
     _device->CreateBufferInPlace(
@@ -812,7 +815,7 @@ void BindlessRenderSystem::createBindlessResources() {
         VK_BUFFER_USAGE_TRANSFER_DST_BIT // can be used as destination in a
                                          // memory transfer operation
             | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, // local to the GPU for faster
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, // local to the GPU for faster
         _indexBuffers
     );
 }
