@@ -16,7 +16,8 @@ void VQDevice::CreateLogicalDeviceAndQueue(const std::vector<const char*>& exten
 
     DEBUG("Found {} unique queue families.", uniqueQueueFamilyIndices.size());
 
-    VkPhysicalDeviceFeatures deviceFeatures{}; // no features for no
+    VkPhysicalDeviceFeatures deviceFeatures{};
+    deviceFeatures.multiDrawIndirect = true; // we enable multi-draw on everything -- 99% of desktop GPUs supports it
     VkDeviceCreateInfo createInfo{};
     float queuePriority = 1.f;
     for (uint32_t queueFamily : uniqueQueueFamilyIndices) {
