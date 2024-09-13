@@ -69,13 +69,12 @@ void BindlessRenderSystem::Tick(const TickContext* tickData) {
         size_t offset = sizeof(VertexInstancedData) * instance->instanceID;
 
         void* instanceBufferAddress = reinterpret_cast<void*>(
-            reinterpret_cast<char*>(instance->instanceBuffer->at(frameIdx).bufferAddress) + offset
+            reinterpret_cast<char*>(
+                instance->instanceBuffer->at(frameIdx).bufferAddress
+            )
+            + offset
         );
-        VertexInstancedData data
-        {
-            model,
-            instance->textureID
-        };
+        VertexInstancedData data{model, instance->textureID};
         memcpy(instanceBufferAddress, &data, sizeof(data));
     }
     ASSERT(_bufferUpdateQueue[frameIdx].empty());
@@ -480,13 +479,10 @@ void BindlessRenderSystem::createGraphicsPipeline(
     vkDestroyShaderModule(_device->logicalDevice, vertShaderModule, nullptr);
 }
 
-BindlessRenderSystemComponent* BindlessRenderSystem::
-     MakeComponent(
-        const std::string& meshPath,
-        const std::string& texturePath,
-        size_t instanceNumber // initial number of instance supported before
-                              // resizing
-    ) {
+BindlessRenderSystemComponent* BindlessRenderSystem::MakeComponent(
+    const std::string& meshPath,
+    const std::string& texturePath
+) {
     size_t instanceID = 0;
     int textureOffset = 0;
     ASSERT(_textureManager);
@@ -503,7 +499,7 @@ BindlessRenderSystemComponent* BindlessRenderSystem::
             textureOffset = textureOffset;
             // must update the descriptor set to reflect loading newtexture
             // FIXME: current update is not thread-safe as it writes
-            // too all descriptors(including one that's in flight). use an 
+            // too all descriptors(including one that's in flight). use an
             // update queue instead.
             updateTextureDescriptorSet();
             _textureDescriptorIndices.insert({texturePath, textureOffset});
@@ -527,11 +523,9 @@ BindlessRenderSystemComponent* BindlessRenderSystem::
         }
 
         // allocate an index from the command array for the instance
-
     }
     // return new component
-    BindlessRenderSystemComponent* ret
-        = new BindlessRenderSystemComponent();
+    BindlessRenderSystemComponent* ret = new BindlessRenderSystemComponent();
 
     ret->parentSystem = this;
     return ret;
@@ -571,9 +565,7 @@ void BindlessRenderSystem::updateTextureDescriptorSet() {
 };
 
 void BindlessRenderSystem::FlagUpdate(Entity* entity) {
-    ASSERT(
-        entity->GetComponent<BindlessRenderSystemComponent>() != nullptr
-    );
+    ASSERT(entity->GetComponent<BindlessRenderSystemComponent>() != nullptr);
     // internally we push the entity to the update queue for each buffer, so
     // that it can be updated before the buffer are used for drawing
     // TODO: can have another staging buffer layer for better flushing
@@ -581,4 +573,124 @@ void BindlessRenderSystem::FlagUpdate(Entity* entity) {
     for (int i = 0; i < _bufferUpdateQueue.size(); i++) {
         _bufferUpdateQueue[i].push_back(entity);
     }
+}
+
+BindlessRenderSystem::RenderBatch BindlessRenderSystem::createRenderBatch(
+    const std::string& meshPath,
+    unsigned int batchSize
+) {
+    DeletionStack del;
+    // load mesh into vertex and index buffer
+    std::vector<Vertex> vertices;
+    std::vector<uint32_t> indices;
+    CoreUtils::loadModel(meshPath.c_str(), vertices, indices);
+
+    VkDeviceSize vertexBufferSize = sizeof(Vertex) * vertices.size();
+    VkDeviceSize indexBufferSize = sizeof(uint32_t) * indices.size();
+
+    // make staging buffer for both vertex and index buffer
+    std::pair<VkBuffer, VkDeviceMemory> res
+        = CoreUtils::createVulkanStagingBuffer(
+            _device->physicalDevice,
+            _device->logicalDevice,
+            vertexBufferSize + indexBufferSize
+        );
+    VkBuffer stagingBuffer = res.first;
+    VkDeviceMemory stagingBufferMemory = res.second;
+    del.push([this, stagingBuffer, stagingBufferMemory]() {
+        vkDestroyBuffer(_device->logicalDevice, stagingBuffer, nullptr);
+        vkFreeMemory(_device->logicalDevice, stagingBufferMemory, nullptr);
+    });
+
+    // copy vertex and index buffer to staging buffer
+    void* vertexBufferDst;
+    void* indexBufferDst;
+    vkMapMemory(
+        _device->logicalDevice,
+        stagingBufferMemory,
+        0,
+        vertexBufferSize,
+        0,
+        &vertexBufferDst
+    );
+    vkMapMemory(
+        _device->logicalDevice,
+        stagingBufferMemory,
+        vertexBufferSize,
+        indexBufferSize,
+        0,
+        &indexBufferDst
+    );
+    memcpy(vertexBufferDst, vertices.data(), (size_t)vertexBufferSize);
+    memcpy(indexBufferDst, indices.data(), (size_t)indexBufferSize);
+
+    vkUnmapMemory(_device->logicalDevice, stagingBufferMemory);
+
+    // copy from staging buffer to vertex/index buffer array
+    CoreUtils::copyVulkanBuffer(
+        _device->logicalDevice,
+        _device->graphicsCommandPool,
+        _device->graphicsQueue,
+        stagingBuffer,
+        _vertexBuffers.buffer,
+        vertexBufferSize,
+        0,
+        _vertexBuffersWriteOffset
+    );
+
+    CoreUtils::copyVulkanBuffer(
+        _device->logicalDevice,
+        _device->graphicsCommandPool,
+        _device->graphicsQueue,
+        stagingBuffer,
+        _indexBuffers.buffer,
+        indexBufferSize,
+        vertexBufferSize, // skip the vertex buffer region in staging buffer
+        _indexBuffersWriteOffset
+    );
+
+    // create a draw command and store into `drawCommandArray`
+    VkDrawIndexedIndirectCommand cmd{};
+    cmd.firstIndex = _indexBuffersWriteOffset / sizeof(unsigned int);
+    cmd.indexCount = indices.size();
+    cmd.vertexOffset = _vertexBuffersWriteOffset / sizeof(Vertex);
+    cmd.instanceCount = 0; // draw 0 instance by default
+    cmd.firstInstance = _instanceLookupArrayOffset / sizeof(unsigned int);
+
+    for (int i = 0; i < NUM_FRAME_IN_FLIGHT; i++) {
+        // copy draw command to this addr
+        // NOTE: here we assume blindless buffer is CPU coherent and
+        // accessible.
+        // TODO: use staging for draw command creation; after creation draw
+        // command is almost never read/written by the CPU
+        void* addr = (char*)_bindlessBuffers[i].drawCommandArray.bufferAddress
+                     + _drawCommandArrayOffset;
+
+        memcpy(addr, std::addressof(cmd), sizeof(cmd));
+        // NOTE: we only handle creation of drawCommand, but not deletion so
+        // far
+    }
+
+    RenderBatch batch{
+        .maxSize = batchSize,
+        .drawCmdIndex = static_cast<unsigned int>(
+            _drawCommandArrayOffset / sizeof(VkDrawIndexedIndirectCommand)
+        )
+    };
+
+    // bump offsets
+
+    // add a new draw command
+    _drawCommandArrayOffset += sizeof(VkDrawIndexedIndirectCommand);
+
+    // reserve `instanceNumber` * sizeof(unsigned int) in
+    // instanceLookupArray
+    // bumping the offset will do so
+    _instanceLookupArrayOffset += batchSize * sizeof(unsigned int);
+
+    // bump offset for next writes
+    _vertexBuffersWriteOffset += vertexBufferSize;
+    _indexBuffersWriteOffset += indexBufferSize;
+
+    return batch;
 }

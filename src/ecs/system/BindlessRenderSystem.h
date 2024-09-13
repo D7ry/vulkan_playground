@@ -60,111 +60,28 @@ class BindlessRenderSystem : public IRenderSystem
 
     std::array<BindlessBuffer, NUM_FRAME_IN_FLIGHT> _bindlessBuffers;
     unsigned int _instanceLookupArrayOffset = 0;
+    unsigned int _drawCommandArrayOffset = 0;
+
+    // maps model to a vec of batches that renders the model
+
+    struct RenderBatch
+    {
+        unsigned int maxSize;
+        unsigned int drawCmdIndex;
+        // each render batch has its own draw command, that stores
+        // additional render batch infos
+    };
+
+    std::unordered_map<std::string, std::vector<RenderBatch>> _modelBatches;
 
   public:
-    // as a POC we don't support dynamic resizing yet
-    // TODO: support dynamic resizing
-    void InitMesh(const std::string& meshPath, unsigned int instanceNumber) {
-        DeletionStack del;
-        // load mesh into vertex and index buffer
-        std::vector<Vertex> vertices;
-        std::vector<uint32_t> indices;
-        CoreUtils::loadModel(meshPath.c_str(), vertices, indices);
-
-        VkDeviceSize vertexBufferSize = sizeof(Vertex) * vertices.size();
-        VkDeviceSize indexBufferSize = sizeof(uint32_t) * indices.size();
-
-        // make staging buffer for both vertex and index buffer
-        std::pair<VkBuffer, VkDeviceMemory> res
-            = CoreUtils::createVulkanStagingBuffer(
-                _device->physicalDevice,
-                _device->logicalDevice,
-                vertexBufferSize + indexBufferSize
-            );
-        VkBuffer stagingBuffer = res.first;
-        VkDeviceMemory stagingBufferMemory = res.second;
-        del.push([this, stagingBuffer, stagingBufferMemory]() {
-            vkDestroyBuffer(_device->logicalDevice, stagingBuffer, nullptr);
-            vkFreeMemory(_device->logicalDevice, stagingBufferMemory, nullptr);
-        });
-
-        // copy vertex and index buffer to staging buffer
-        void* vertexBufferDst;
-        void* indexBufferDst;
-        vkMapMemory(
-            _device->logicalDevice,
-            stagingBufferMemory,
-            0,
-            vertexBufferSize,
-            0,
-            &vertexBufferDst
-        );
-        vkMapMemory(
-            _device->logicalDevice,
-            stagingBufferMemory,
-            vertexBufferSize,
-            indexBufferSize,
-            0,
-            &indexBufferDst
-        );
-        memcpy(vertexBufferDst, vertices.data(), (size_t)vertexBufferSize);
-        memcpy(indexBufferDst, indices.data(), (size_t)indexBufferSize);
-
-        vkUnmapMemory(_device->logicalDevice, stagingBufferMemory);
-
-        // copy from staging buffer to vertex/index buffer array
-        CoreUtils::copyVulkanBuffer(
-            _device->logicalDevice,
-            _device->graphicsCommandPool,
-            _device->graphicsQueue,
-            stagingBuffer,
-            _vertexBuffers.buffer,
-            vertexBufferSize,
-            0,
-            _vertexBuffersWriteOffset
-        );
-
-        CoreUtils::copyVulkanBuffer(
-            _device->logicalDevice,
-            _device->graphicsCommandPool,
-            _device->graphicsQueue,
-            stagingBuffer,
-            _indexBuffers.buffer,
-            indexBufferSize,
-            vertexBufferSize, // skip the vertex buffer region in staging buffer
-            _indexBuffersWriteOffset
-        );
-
-
-        // create a draw command and store into `drawCommandArray`
-        VkDrawIndexedIndirectCommand cmd{};
-        cmd.firstIndex = _indexBuffersWriteOffset / sizeof(unsigned int);
-        cmd.indexCount = indices.size();
-        cmd.vertexOffset = _vertexBuffersWriteOffset / sizeof(Vertex);
-        cmd.instanceCount = 0; // draw 0 instance by default
-        cmd.firstInstance = _instanceLookupArrayOffset / sizeof(unsigned int);
-
-        // reserve `instanceNumber` * sizeof(unsigned int) in
-        // instanceLookupArray
-        // for now, simply bump the offset
-        _instanceLookupArrayOffset += instanceNumber * sizeof(unsigned int);
-        
-        // bump offset for next writes
-        _vertexBuffersWriteOffset += vertexBufferSize;
-        _indexBuffersWriteOffset += indexBufferSize;
-    }
-
+    RenderBatch createRenderBatch(
+        const std::string& meshPath,
+        unsigned int batchSize
+    );
     BindlessRenderSystemComponent* MakeComponent(
         const std::string& meshPath,
-        const std::string& texturePath,
-        size_t instanceNumber // initial # of instance allocated on the GPU.
-                              // make this number big if intend to draw a grass
-                              // field or sth. NOTE: currently dynamic
-                              // upsizing&shrinking hasn't been implemented.
-                              // make this number the number the # of instances
-                              // you wish to draw
-                              //
-                              // TODO: implement dynamic resizing
+        const std::string& texturePath
     );
 
     virtual void Init(const InitContext* initData) override;
