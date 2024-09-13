@@ -6,4 +6,5 @@ struct BindlessRenderSystemComponent : IComponent
 {
     void FlagUpdate();
     BindlessRenderSystem* parentSystem;
+    int instanceDataOffset;
 };

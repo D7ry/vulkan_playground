@@ -484,7 +484,7 @@ BindlessRenderSystemComponent* BindlessRenderSystem::MakeComponent(
     const std::string& texturePath
 ) {
     size_t instanceID = 0;
-    int textureOffset = 0;
+    int textureIndex = 0;
     ASSERT(_textureManager);
 
     { // load or create new texture
@@ -504,34 +504,61 @@ BindlessRenderSystemComponent* BindlessRenderSystem::MakeComponent(
             updateTextureDescriptorSet();
             _textureDescriptorIndices.insert({texturePath, textureOffset});
         } else {
-            textureOffset = it->second;
+            textureIndex = it->second;
         }
     }
 
-    MeshData* pMeshData = nullptr;
-    { // load or create new mesh
-        auto it = _meshes.find(meshPath);
-        if (it == _meshes.end()) { // construct phong mesh and buffer array
-            MeshData meshData{};
-            // allocate a draw command on the command array
-
-            auto result = _meshes.insert({meshPath, meshData});
-            ASSERT(result.second)
-            pMeshData = std::addressof(result.first->second);
-        } else {
-            pMeshData = std::addressof(it->second);
-        }
-
-        // allocate an index from the command array for the instance
+    // look for a batch to put the instance into.
+    // if no batch is available, create a new batch with 1.5x the
+    // old batch's size
+    auto it = _modelBatches.find(meshPath);
+    if (it == _modelBatches.end()) {
+        auto res = _modelBatches.insert({meshPath, {}});
+        ASSERT(res.second);
+        it = res.first;
     }
-    // return new component
+    RenderBatch* pBatch = nullptr;
+    for (RenderBatch& batch : it->second) {
+        if (batch.instanceCount < batch.maxSize) {
+            pBatch = std::addressof(batch);
+            break;
+        }
+    }
+
+    // didn't find a suitable batch, create a new batch
+    if (pBatch == nullptr) {
+        // currently use geometric scaling
+        int batchSize = 10;
+        // each batch is 10x the size of the last
+        batchSize *= (it->second.empty() ? 1 : it->second.back().maxSize);
+        it->second.push_back(createRenderBatch(meshPath, batchSize));
+        pBatch = std::addressof(it->second.back());
+    }
+
+    pBatch->instanceCount += 1; // the model now belongs to the batch
+
+
     BindlessRenderSystemComponent* ret = new BindlessRenderSystemComponent();
-
     ret->parentSystem = this;
+    ret->instanceDataOffset = _instanceDataArrayOffset;
+
+    // create new instance data, push to instance data array
+    BindlessInstanceData data{};
+    data.textureIndex.albedo = textureIndex; // TODO: add other texture supports
+    data.drawCmdIndex = pBatch->drawCmdIndex;
+    data.transparency = 0.f;
+    // push data to the array
+    for (int i = 0; i < NUM_FRAME_IN_FLIGHT; i++) {
+        char* addr = reinterpret_cast<char*>(
+            _bindlessBuffers[i].instanceDataArray.bufferAddress
+        ) + _instanceDataArrayOffset;
+        memcpy(addr, std::addressof(data), sizeof(BindlessInstanceData));
+    }
+    _instanceDataArrayOffset += sizeof(BindlessInstanceData);
     return ret;
 }
 
-void BindlessRenderSystem::DestroyPhongMeshInstanceComponent(
+void BindlessRenderSystem::DestroyComponent(
     BindlessRenderSystemComponent*& component
 ) {
     NEEDS_IMPLEMENTATION();
@@ -673,6 +700,7 @@ BindlessRenderSystem::RenderBatch BindlessRenderSystem::createRenderBatch(
 
     RenderBatch batch{
         .maxSize = batchSize,
+        .instanceCount = 0,
         .drawCmdIndex = static_cast<unsigned int>(
             _drawCommandArrayOffset / sizeof(VkDrawIndexedIndirectCommand)
         )

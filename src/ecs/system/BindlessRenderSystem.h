@@ -24,7 +24,7 @@ class BindlessRenderSystem : public IRenderSystem
         struct
         {
             unsigned int albedo; // currently we only have albedo tex
-        } textureOffsets;
+        } textureIndex;
 
         // none-render metadata
         unsigned int drawCmdIndex; // index into draw cmd
@@ -61,12 +61,14 @@ class BindlessRenderSystem : public IRenderSystem
     std::array<BindlessBuffer, NUM_FRAME_IN_FLIGHT> _bindlessBuffers;
     unsigned int _instanceLookupArrayOffset = 0;
     unsigned int _drawCommandArrayOffset = 0;
+    unsigned int _instanceDataArrayOffset = 0;
 
     // maps model to a vec of batches that renders the model
 
     struct RenderBatch
     {
         unsigned int maxSize;
+        unsigned int instanceCount;
         unsigned int drawCmdIndex;
         // each render batch has its own draw command, that stores
         // additional render batch infos
@@ -83,6 +85,8 @@ class BindlessRenderSystem : public IRenderSystem
         const std::string& meshPath,
         const std::string& texturePath
     );
+
+    void DestroyComponent(BindlessRenderSystemComponent*& component);
 
     virtual void Init(const InitContext* initData) override;
     virtual void Tick(const TickContext* tickData) override;
@@ -126,32 +130,6 @@ class BindlessRenderSystem : public IRenderSystem
         UBO_DYNAMIC = 1,
         TEXTURE_SAMPLER = 2
     };
-
-    // NOTE: In the future we may be able to break up the instance lookup array
-    // into smaller chunks, each indexed by a draw cmd. This gives more freedom
-    // to reallocate the instance lookup array.
-    // this additional layer of indirection may be useful for object GC
-    struct MeshData
-    {
-        // used to index into draw cmd/modify draw cmd
-        unsigned int drawCmdOffset;
-        unsigned int
-            drawCmdFirstInstance; // for quick lookup of
-                                  // the first instance.
-                                  // note this must be manually synced
-                                  // with the first instance in the draw command
-        // the draw cmd has the following fields that can be updated:
-        // total instance number
-        // starting instance number -- useful
-        // for offsetting into the instance table when drawing
-        // -- the following we usually don't modify
-        // vertex buffer offset into the vertex buffer array
-        // index buffer offset into the index buffer array
-        // # of indices to use from the index buffer
-    };
-
-    // all phong meshes created
-    std::unordered_map<std::string, MeshData> _meshes;
 
     TextureManager* _textureManager;
 
