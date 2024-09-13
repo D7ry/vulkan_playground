@@ -14,9 +14,9 @@
 void BindlessRenderSystem::Init(const InitContext* initData) {
     _device = initData->device;
     _textureManager = initData->textureManager;
-    // create graphics pipeline
-    this->createGraphicsPipeline(initData->renderPass.mainPass, initData);
     createBindlessResources();
+    // create graphics pipeline
+    createGraphicsPipeline(initData->renderPass.mainPass, initData);
 }
 
 void BindlessRenderSystem::Cleanup() {
@@ -56,7 +56,6 @@ void BindlessRenderSystem::Tick(const TickContext* ctx) {
         0
     );
 
-    return;
     // flush buffer updates, write to the buffer corresponding to the current
     // frame
     // TODO: actually implement buffer flushing
