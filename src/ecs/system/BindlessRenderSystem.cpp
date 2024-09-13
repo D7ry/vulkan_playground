@@ -225,23 +225,17 @@ void BindlessRenderSystem::createGraphicsPipeline(
     VkPipelineVertexInputStateCreateInfo vertexInputInfo
         = {}; // describes the format of the vertex data.
 
-    // set up vertex descriptions
-    const std::array<VkVertexInputBindingDescription, 2>* bindingDescription
-        = Vertex::GetBindingDescriptionsInstanced();
-
-    const std::array<VkVertexInputAttributeDescription, 9>*
-        attributeDescriptions
-        = Vertex::GetAttributeDescriptionsInstanced();
-
+    VkVertexInputBindingDescription bindingDescription
+        = Vertex::GetBindingDescription();
+    auto attributeDescriptions = Vertex::GetAttributeDescriptions();
     {
         vertexInputInfo.sType
             = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 
-        vertexInputInfo.vertexBindingDescriptionCount
-            = bindingDescription->size();
-        vertexInputInfo.pVertexBindingDescriptions = bindingDescription->data();
+        vertexInputInfo.vertexBindingDescriptionCount = 1;
+        vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
         vertexInputInfo.vertexAttributeDescriptionCount
-            = attributeDescriptions->size();
+            = static_cast<uint32_t>(attributeDescriptions->size());
         vertexInputInfo.pVertexAttributeDescriptions
             = attributeDescriptions->data();
     }
