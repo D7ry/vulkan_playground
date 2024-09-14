@@ -16,11 +16,11 @@ void DeltaTimer::Tick() {
 
 DeltaTimer::DeltaTimer() { _prev = std::chrono::high_resolution_clock::now(); }
 
-double DeltaTimer::GetDeltaTime() { return _delta; }
+double DeltaTimer::GetDeltaTime() const { return _delta; }
 
-double DeltaTimer::GetDeltaTimeMiliseconds() {
+double DeltaTimer::GetDeltaTimeMiliseconds() const {
     const double SECOND_TO_MILISECOND = 0.001;
     return _delta * SECOND_TO_MILISECOND;
 }
 
-double DeltaTimer::GetDeltaTimeSeconds() { return _delta; }
+double DeltaTimer::GetDeltaTimeSeconds() const { return _delta; }
