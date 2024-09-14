@@ -578,7 +578,7 @@ PhongRenderSystemInstancedComponent* PhongRenderSystemInstanced::
         = new PhongRenderSystemInstancedComponent();
     ret->textureID = textureOffset;
     ret->instanceID = instanceID;
-    ret->parent = this;
+    ret->parentSystem = this;
     ret->instanceBuffer = std::addressof(pMeshData->instanceBuffer);
 
     pMeshData->components.insert(ret); // track the component

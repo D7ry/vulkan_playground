@@ -11,7 +11,7 @@ struct PhongRenderSystemInstancedComponent : IComponent
     int textureID;  // offset used to index into global texture array
     unsigned int instanceID; // use this to index into instance buffer array
     std::array<VQBuffer, NUM_FRAME_IN_FLIGHT>* instanceBuffer; // instance buffer for each frame
-    PhongRenderSystemInstanced* parent = nullptr;
+    PhongRenderSystemInstanced* parentSystem = nullptr;
     void FlagAsDirty(Entity* owner);
 
 };

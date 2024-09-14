@@ -1,5 +1,6 @@
 #pragma once
 // stl
+#include "ecs/system/BindlessRenderSystem.h"
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -103,6 +104,7 @@ class VulkanEngine
     // required device extensions
     static inline const std::vector<const char*> DEVICE_EXTENSIONS = {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+        VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME,
 #if __APPLE__ // molten vk support
         VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME,
     // VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME
@@ -191,7 +193,7 @@ class VulkanEngine
     bool _framebufferResized = false;
     uint8_t _currentFrame = 0;
     // whether we are locking the cursor within the glfw window
-    bool _lockCursor;
+    bool _lockCursor = false;
 
     std::shared_ptr<VQDevice> _device;
 
@@ -208,6 +210,7 @@ class VulkanEngine
     PhongRenderSystemInstanced* _phongSystemInstanced;
     GlobalGridSystem* _globalGridSystem;
     EntityViewerSystem* _entityViewerSystem;
+    BindlessRenderSystem* _bindessSystem;
 
     /* ---------- Engine Components ---------- */
     DeletionStack _deletionStack;

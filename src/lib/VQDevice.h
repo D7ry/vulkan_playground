@@ -2,6 +2,7 @@
 #include "vulkan/vulkan.h"
 #include <optional>
 #include <vulkan/vulkan_core.h>
+#include "VQBuffer.h"
 
 struct QueueFamilyIndices
 {

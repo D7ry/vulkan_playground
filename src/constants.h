@@ -18,7 +18,7 @@ const size_t WINDOW_HEIGHT = 900;
 #endif // __APPLE__
 const float FOV = 90.f;
 const float ZNEAR = 0.1f;
-const float ZFAR = 100.f;
+const float ZFAR = 500.f;
 
 const float PROFILER_PERF_PLOT_RANGE_SECONDS
     = 10; // how large the plot window is

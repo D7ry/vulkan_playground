@@ -426,11 +426,27 @@ void GlobalGridSystem::Init(const InitContext* initData) {
 
     // create vertex + index buffer for the global grid
     std::vector<Vertex> vertices;
-    const float gridSize = 100.0f; // Total size of the grid (-100 to +100)
-    const float gridStep = 1.0f;   // Distance between grid lines
-    const float z = -1.0f;         // Set z-coordinate to -1
+    const float gridSize = 500.0f; // Total size of the grid (-100 to +100)
+    const float gridStep = 2.0f;   // Distance between grid lines
+    float z = -1.0f;         // Set z-coordinate to -1
 
     // Create vertices for horizontal lines
+    for (float y = -gridSize; y <= gridSize; y += gridStep) {
+        vertices.push_back(Vertex(glm::vec3(-gridSize, y, z)));
+        vertices.push_back(Vertex(glm::vec3(gridSize, y, z)));
+        _numLines++;
+    }
+
+    // Create vertices for vertical lines
+    for (float x = -gridSize; x <= gridSize; x += gridStep) {
+        vertices.push_back(Vertex(glm::vec3{x, -gridSize, z}));
+        vertices.push_back(Vertex(glm::vec3{x, gridSize, z}));
+        _numLines++;
+    }
+
+    // Create vertices for the ceiling
+    // Create vertices for horizontal lines
+    z = 50.f;
     for (float y = -gridSize; y <= gridSize; y += gridStep) {
         vertices.push_back(Vertex(glm::vec3(-gridSize, y, z)));
         vertices.push_back(Vertex(glm::vec3(gridSize, y, z)));

@@ -1,4 +1,5 @@
 #include "EntityViewerSystem.h"
+#include "ecs/component/BindlessRenderSystemComponent.h"
 #include "ecs/component/PhongRenderSystemInstancedComponent.h"
 #include "ecs/component/TransformComponent.h"
 #include "imgui.h"
@@ -62,6 +63,9 @@ void EntityViewerSystem::drawEntity(Entity* entity) {
         if (changed) {
             if (PhongRenderSystemInstancedComponent* renderInstance = entity->GetComponent<PhongRenderSystemInstancedComponent>()){
                 renderInstance->FlagAsDirty(entity);
+            }
+            if (BindlessRenderSystemComponent* comp = entity->GetComponent<BindlessRenderSystemComponent>()){
+                comp->FlagUpdate();
             }
         }
 

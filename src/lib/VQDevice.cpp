@@ -16,7 +16,8 @@ void VQDevice::CreateLogicalDeviceAndQueue(const std::vector<const char*>& exten
 
     DEBUG("Found {} unique queue families.", uniqueQueueFamilyIndices.size());
 
-    VkPhysicalDeviceFeatures deviceFeatures{}; // no features for no
+    VkPhysicalDeviceFeatures deviceFeatures{};
+    deviceFeatures.multiDrawIndirect = true; // we enable multi-draw on everything -- 99% of desktop GPUs supports it
     VkDeviceCreateInfo createInfo{};
     float queuePriority = 1.f;
     for (uint32_t queueFamily : uniqueQueueFamilyIndices) {
@@ -165,7 +166,11 @@ void VQDevice::CreateBufferInPlace(
 
     vkBindBufferMemory(this->logicalDevice, vqBuffer.buffer, vqBuffer.bufferMemory, 0);
 
-    vkMapMemory(this->logicalDevice, vqBuffer.bufferMemory, 0, vqBuffer.size, 0, &vqBuffer.bufferAddress);
+    // only map to the memory pointer if the creation has HOST_VISIBLE_BIT,
+    // otherwise mapping wouldn't work anyways.
+    if (properties & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) {
+        VK_CHECK_RESULT(vkMapMemory(this->logicalDevice, vqBuffer.bufferMemory, 0, vqBuffer.size, 0, &vqBuffer.bufferAddress));
+    }
 }
 
 VQBuffer VQDevice::CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties) {

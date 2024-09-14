@@ -3,5 +3,5 @@
 
 void PhongRenderSystemInstancedComponent::FlagAsDirty(Entity* owner) {
     ASSERT(owner->GetComponent<PhongRenderSystemInstancedComponent>() == this)
-    parent->FlagAsDirty(owner);
+    parentSystem->FlagAsDirty(owner);
 }

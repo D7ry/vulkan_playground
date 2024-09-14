@@ -133,6 +133,7 @@ void VulkanEngine::Init() {
         this->_phongSystem = new PhongRenderSystem();
         this->_phongSystemInstanced = new PhongRenderSystemInstanced();
         this->_globalGridSystem = new GlobalGridSystem();
+        this->_bindessSystem = new BindlessRenderSystem();
         InitContext initData;
         { // populate initData
             initData.device = this->_device.get();
@@ -148,77 +149,139 @@ void VulkanEngine::Init() {
             }
         }
 
-        _phongSystemInstanced->Init(&initData);
-        _deletionStack.push([this]() { this->_phongSystemInstanced->Cleanup(); }
-        );
+        // _phongSystemInstanced->Init(&initData);
+        // _deletionStack.push([this]() {
+        // this->_phongSystemInstanced->Cleanup(); }
+        // );
 
-        _phongSystem->Init(&initData);
-        _deletionStack.push([this]() { this->_phongSystem->Cleanup(); });
+        // _phongSystem->Init(&initData);
+        // _deletionStack.push([this]() { this->_phongSystem->Cleanup(); });
 
         _globalGridSystem->Init(&initData);
         _deletionStack.push([this]() { this->_globalGridSystem->Cleanup(); });
 
+        _bindessSystem->Init(&initData);
+        _deletionStack.push([this]() { _bindessSystem->Cleanup(); });
+
+        const bool phongMeshes = false;
+        const bool bindless = true;
+
         // make instanced entity
         {
-            auto phongMeshComponent
-                = _phongSystemInstanced
-                      ->MakePhongRenderSystemInstancedComponent(
-                          "../resources/viking_room.obj",
-                          "../resources/viking_room.png",
-                          10
-                      );
-            TransformComponent* transformComponent = new TransformComponent();
-            *transformComponent = TransformComponent::Identity();
-            entityInstanced->AddComponent(transformComponent);
-            entityInstanced->AddComponent(phongMeshComponent);
-            _phongSystemInstanced->AddEntity(entityInstanced);
-            _entityViewerSystem->AddEntity(entityInstanced);
-            phongMeshComponent->FlagAsDirty(entityInstanced);
-
-            // auto phongMeshComponent2
-            //     = _phongSystemInstanced
-            //           ->MakePhongRenderSystemInstancedComponent(
-            //               "../resources/spot.obj", "../resources/spot.png",
-            //               10
-            //           );
-            // entityInstanced2->AddComponent(new TransformComponent());
-            // entityInstanced2->AddComponent(phongMeshComponent2);
-            // phongMeshComponent2->FlagAsDirty(entityInstanced2);
-
-            // let's go crazy
-            for (int i = 0; i < 10; i++) {
+            if (bindless) {
                 Entity* spot = new Entity("Spot");
-                spot->AddComponent(new TransformComponent());
-                spot->AddComponent(
-                    _phongSystemInstanced
-                        ->MakePhongRenderSystemInstancedComponent(
-                            "../resources/spot.obj",
-                            "../resources/spot.png",
-                            20 // give it a large hint so don't need to
-                               // resize
-                        )
+                TransformComponent* transformComponent
+                    = new TransformComponent();
+                spot->AddComponent(transformComponent);
+                transformComponent->position.z = 1;
+                _entityViewerSystem->AddEntity(spot);
+                // TODO: does this break the abstraction barrier?
+                auto component = _bindessSystem->MakeComponent(
+                    "../resources/spot.obj", "../resources/spot.png"
                 );
-                // Generate spherical coordinates
-                float radius = 5.0f;
-                float theta = static_cast<float>(rand()) / RAND_MAX * 2 * M_PI;
-                float phi = acos(2 * static_cast<float>(rand()) / RAND_MAX - 1);
+                spot->AddComponent(component);
+                component->FlagUpdate();
 
-                // Convert spherical coordinates to Cartesian
-                float x = radius * sin(phi) * cos(theta);
-                float y = radius * sin(phi) * sin(theta);
-                float z = radius * cos(phi);
+                // cow stress test
+                for (int i = 0; i < 10; i++) {
+                    Entity* spot = new Entity("Spot " + std::to_string(i));
+                    spot->AddComponent(new TransformComponent());
+                    spot->AddComponent(_bindessSystem->MakeComponent(
+                        "../resources/spot.obj", "../resources/spot.png"
+                    ));
 
-                // Set the position
-                spot->GetComponent<TransformComponent>()->position.x = x;
-                spot->GetComponent<TransformComponent>()->position.y = y;
-                spot->GetComponent<TransformComponent>()->position.z = z;
-                spot->GetComponent<PhongRenderSystemInstancedComponent>()
-                    ->FlagAsDirty(spot);
-                _phongSystemInstanced->AddEntity(spot);
+                    // Generate spherical coordinates
+                    float radius = 5.0f;
+                    float theta
+                        = static_cast<float>(rand()) / RAND_MAX * 2 * M_PI;
+                    float phi
+                        = acos(2 * static_cast<float>(rand()) / RAND_MAX - 1);
+
+                    // Convert spherical coordinates to Cartesian
+                    float x = radius * sin(phi) * cos(theta);
+                    float y = radius * sin(phi) * sin(theta);
+                    float z = radius * cos(phi);
+
+                    // Set the position
+                    spot->GetComponent<TransformComponent>()->position.x = x;
+                    spot->GetComponent<TransformComponent>()->position.y = y;
+                    spot->GetComponent<TransformComponent>()->position.z = z;
+                    spot->GetComponent<BindlessRenderSystemComponent>()
+                        ->FlagUpdate();
+                    _bindessSystem->AddEntity(spot
+                    ); // not really needed, which means we have a shitty
+                       // abstraction
+                    _entityViewerSystem->AddEntity(spot);
+                }
+                {
+                    Entity* vikingRoom = new Entity("Viking Room");
+                    TransformComponent* transformComponent
+                        = new TransformComponent();
+                    vikingRoom->AddComponent(transformComponent);
+                    transformComponent->position.z = -1;
+                    _entityViewerSystem->AddEntity(vikingRoom);
+                    // TODO: does this break the abstraction barrier?
+                    auto component = _bindessSystem->MakeComponent(
+                        "../resources/viking_room.obj",
+                        "../resources/viking_room.png"
+                    );
+                    vikingRoom->AddComponent(component);
+                    component->FlagUpdate();
+                }
             }
 
-            _phongSystemInstanced->AddEntity(entityInstanced2);
-            _entityViewerSystem->AddEntity(entityInstanced2);
+            if (phongMeshes) {
+                auto phongMeshComponent
+                    = _phongSystemInstanced
+                          ->MakePhongRenderSystemInstancedComponent(
+                              "../resources/spot.obj",
+                              "../resources/spot.png",
+                              10
+                          );
+                TransformComponent* transformComponent
+                    = new TransformComponent();
+                *transformComponent = TransformComponent::Identity();
+                entityInstanced->AddComponent(transformComponent);
+                entityInstanced->AddComponent(phongMeshComponent);
+                _phongSystemInstanced->AddEntity(entityInstanced);
+                _entityViewerSystem->AddEntity(entityInstanced);
+                phongMeshComponent->FlagAsDirty(entityInstanced);
+                _phongSystemInstanced->AddEntity(entityInstanced2);
+                _entityViewerSystem->AddEntity(entityInstanced2);
+                // let's go crazy
+                for (int i = 0; i < 10; i++) {
+                    Entity* spot = new Entity("Spot");
+                    spot->AddComponent(new TransformComponent());
+                    spot->AddComponent(
+                        _phongSystemInstanced
+                            ->MakePhongRenderSystemInstancedComponent(
+                                "../resources/spot.obj",
+                                "../resources/spot.png",
+                                20 // give it a large hint so don't need to
+                                   // resize
+                            )
+                    );
+                    // Generate spherical coordinates
+                    float radius = 5.0f;
+                    float theta
+                        = static_cast<float>(rand()) / RAND_MAX * 2 * M_PI;
+                    float phi
+                        = acos(2 * static_cast<float>(rand()) / RAND_MAX - 1);
+
+                    // Convert spherical coordinates to Cartesian
+                    float x = radius * sin(phi) * cos(theta);
+                    float y = radius * sin(phi) * sin(theta);
+                    float z = radius * cos(phi);
+
+                    // Set the position
+                    spot->GetComponent<TransformComponent>()->position.x = x;
+                    spot->GetComponent<TransformComponent>()->position.y = y;
+                    spot->GetComponent<TransformComponent>()->position.z = z;
+                    spot->GetComponent<PhongRenderSystemInstancedComponent>()
+                        ->FlagAsDirty(spot);
+                    _phongSystemInstanced->AddEntity(spot);
+                }
+            }
         }
     }
 }
@@ -361,7 +424,8 @@ void VulkanEngine::createInstance() {
     appInfo.apiVersion = VK_API_VERSION_1_0;
 
     INFO("Populating Vulkan instance create info...");
-    // initialize and populate createInfo, which contains the application info
+    // initialize and populate createInfo, which contains the application
+    // info
     VkInstanceCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     createInfo.pApplicationInfo = &appInfo;
@@ -382,7 +446,7 @@ void VulkanEngine::createInstance() {
     instanceExtensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
     createInfo.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
     VkLayerSettingsCreateInfoEXT appleLayerSettings;
-    { 
+    {
         // metal argument buffer support
         instanceExtensions.push_back(VK_EXT_LAYER_SETTINGS_EXTENSION_NAME);
         appleLayerSettings = MoltenVKConfig::GetLayerSettingsCreatInfo();
@@ -411,6 +475,20 @@ void VulkanEngine::createInstance() {
     } else {
         createInfo.enabledLayerCount = 0;
     }
+
+#ifndef NDEBUG
+    // enable debug printing
+    VkValidationFeatureEnableEXT enabled[]
+        = {VK_VALIDATION_FEATURE_ENABLE_DEBUG_PRINTF_EXT};
+    VkValidationFeaturesEXT features{VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT};
+    features.disabledValidationFeatureCount = 0;
+    features.enabledValidationFeatureCount = 1;
+    features.pDisabledValidationFeatures = nullptr;
+    features.pEnabledValidationFeatures = enabled;
+
+    features.pNext = createInfo.pNext;
+    createInfo.pNext = &features;
+#endif // NDEBUG
 
     VkResult result = vkCreateInstance(&createInfo, nullptr, &this->_instance);
 
@@ -566,7 +644,7 @@ bool VulkanEngine::isDeviceSuitable(VkPhysicalDevice device) {
         true;
 #else
         deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU
-        && deviceFeatures.geometryShader;
+        && deviceFeatures.geometryShader && deviceFeatures.multiDrawIndirect;
 #endif // __APPLE__
 
     // check queue families
@@ -700,8 +778,8 @@ void VulkanEngine::cleanupSwapChain() {
 }
 
 void VulkanEngine::recreateSwapChain() {
-    // need to recreate render pass for HDR changing, we're not doing that for
-    // now
+    // need to recreate render pass for HDR changing, we're not doing that
+    // for now
     INFO("Recreating swap chain...");
     // handle window minimization
     int width = 0, height = 0;
@@ -849,9 +927,9 @@ void VulkanEngine::createSynchronizationObjects() {
     semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
     VkFenceCreateInfo fenceInfo{};
     fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    fenceInfo.flags
-        = VK_FENCE_CREATE_SIGNALED_BIT; // create with a signaled bit so that
-                                        // the 1st frame can start right away
+    fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT; // create with a signaled
+                                                    // bit so that the 1st frame
+                                                    // can start right away
     for (size_t i = 0; i < NUM_FRAME_IN_FLIGHT; i++) {
         EngineSynchronizationPrimitives& primitive
             = _synchronizationPrimitives[i];
@@ -949,8 +1027,8 @@ void VulkanEngine::createRenderPass() {
     subpass.pColorAttachments = &colorAttachmentRef;
     subpass.pDepthStencilAttachment = &depthAttachmentRef;
 
-    // dependency to make sure that the render pass waits for the image to be
-    // available before drawing
+    // dependency to make sure that the render pass waits for the image to
+    // be available before drawing
     VkSubpassDependency dependency{};
     dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
     dependency.dstSubpass = 0;
@@ -1002,9 +1080,10 @@ void VulkanEngine::createFramebuffers() {
         VkFramebufferCreateInfo framebufferInfo{};
         framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
         framebufferInfo.renderPass
-            = _mainRenderPass; // each framebuffer is associated with a render
-                               // pass; they need to be compatible i.e. having
-                               // same number of attachments and same formats
+            = _mainRenderPass; // each framebuffer is associated with a
+                               // render pass; they need to be compatible
+                               // i.e. having same number of attachments and
+                               // same formats
         framebufferInfo.attachmentCount
             = sizeof(attachments) / sizeof(VkImageView);
         framebufferInfo.pAttachments = attachments;
@@ -1139,11 +1218,12 @@ void VulkanEngine::drawFrame(TickContext* ctx, uint8_t frame) {
         VK_NULL_HANDLE,
         &imageIndex
     );
-    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
-        [[unlikely]] this->recreateSwapChain();
+    [[unlikely]] if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+        this->recreateSwapChain();
         return;
-    } else if (result != VK_SUCCESS) {
-        [[unlikely]] FATAL("Failed to acquire swap chain image!");
+    } else [[unlikely]] if (result != VK_SUCCESS) {
+        const char* res = string_VkResult(result);
+        PANIC("Failed to acquire swap chain image: {}", res);
     }
 
     // lock the fence
@@ -1204,8 +1284,9 @@ void VulkanEngine::drawFrame(TickContext* ctx, uint8_t frame) {
             scissor.extent = _swapChainExtent;
             vkCmdSetScissor(CB, 0, 1, &scissor);
         }
-        this->_phongSystem->Tick(ctx);
-        this->_phongSystemInstanced->Tick(ctx);
+        // this->_phongSystem->Tick(ctx);
+        // this->_phongSystemInstanced->Tick(ctx);
+        this->_bindessSystem->Tick(ctx);
         this->_globalGridSystem->Tick(ctx);
         CB.endRenderPass();
     }
@@ -1241,9 +1322,9 @@ void VulkanEngine::drawFrame(TickContext* ctx, uint8_t frame) {
     {
         // wait time tend to be long if framerate is hardware-capped.
         PROFILE_SCOPE(&_profiler, "wait: vkAcquireNextImageKHR");
-        // the submission does not start until vkAcquireNextImageKHR returns,
-        // and downs the corresponding _semaRenderFinished semapohre once it's
-        // done.
+        // the submission does not start until vkAcquireNextImageKHR
+        // returns, and downs the corresponding _semaRenderFinished
+        // semapohre once it's done.
         if (vkQueueSubmit(
                 _device->graphicsQueue, 1, &submitInfo, sync.fenceInFlight
             )
@@ -1256,7 +1337,7 @@ void VulkanEngine::drawFrame(TickContext* ctx, uint8_t frame) {
     VkPresentInfoKHR presentInfo{};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 
-    // set up semaphore, so that  after submitting to the queue, we wait  for
+    // set up semaphore, so that  after submitting to the queue, we wait for
     // the
     presentInfo.waitSemaphoreCount = 1;
     presentInfo.pWaitSemaphores
@@ -1323,7 +1404,8 @@ struct ScrollingBuffer
 // https://github.com/epezent/implot/blob/f156599faefe316f7dd20fe6c783bf87c8bb6fd9/implot_demo.cpp#L801
 void VulkanEngine::drawImGuiPerfPlots() {
     // <profile name -> scrolling buffer>
-    // this design assumes all profile names are bijective to the actual profile
+    // this design assumes all profile names are bijective to the actual
+    // profile
     static std::map<const char*, ScrollingBuffer> scrollingBuffers;
     { // Profiler
         ImGui::SeparatorText("Profiler");
