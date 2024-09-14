@@ -69,3 +69,5 @@ const struct
 } // namespace Engine
 
 } // namespace DEFAULTS
+
+using INDEX_BUFFER_INDEX_TYPE = unsigned int;

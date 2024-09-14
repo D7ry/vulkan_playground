@@ -158,7 +158,26 @@ class BindlessRenderSystem : public IRenderSystem
     std::array<std::vector<std::function<void()>>, NUM_FRAME_IN_FLIGHT>
         _updateQueue;
 
+    // representation of a mesh loaded into `_vertexBuffers` and `_indexBuffers`
+    // different draw commands may hold the same mesh buffer as instances are 
+    // dynamically loaded in.
+    struct MeshBufferOffsets
+    {
+        unsigned long vertexBeginOffset;
+        unsigned long vertexEndOffset;
+        unsigned long indexBeginOffset;
+        unsigned long indexEndOffset;
+        unsigned long numIndices;
+    };
+
+    // <mesh name, loaded mesh buffer>
+    std::unordered_map<std::string, MeshBufferOffsets> _meshBufferData;
+
     /* ---------- Private Methods ----------- */
+    // load up a mesh from meshPath into vertex and index buffer array.
+    // incrementing the buffer array indices
+    MeshBufferOffsets loadMeshBuffer(const std::string& meshPath);
+
     RenderBatch createRenderBatch(
         const std::string& meshPath,
         unsigned int batchSize

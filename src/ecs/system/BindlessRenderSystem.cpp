@@ -11,7 +11,7 @@
 #include "BindlessRenderSystem.h"
 #include "ecs/component/TransformComponent.h"
 
-// TODO: this is too much repetitive code. IRenderSystem should share some 
+// TODO: this is too much repetitive code. IRenderSystem should share some
 // common pipeline creator
 void BindlessRenderSystem::createGraphicsPipeline(
     const VkRenderPass renderPass,
@@ -703,16 +703,8 @@ void BindlessRenderSystem::FlagUpdate(Entity* entity) {
     }
 }
 
-BindlessRenderSystem::RenderBatch BindlessRenderSystem::createRenderBatch(
-    const std::string& meshPath,
-    unsigned int batchSize
-) {
-    // FIXME: only the first render batch of a model needs to re-load model,
-    // the rest should be reusing the first batch's vertex & index buffers
-    DEBUG("creating render batch for {}", meshPath);
-    DeletionStack del;
-
-    DEBUG("Load vertex & index buffers");
+BindlessRenderSystem::MeshBufferOffsets BindlessRenderSystem::loadMeshBuffer(const std::string& meshPath) {
+    DEBUG("Loading mesh into buffer array from {}", meshPath);
     // load mesh into vertex and index buffer
     std::vector<Vertex> vertices;
     std::vector<uint32_t> indices;
@@ -730,10 +722,6 @@ BindlessRenderSystem::RenderBatch BindlessRenderSystem::createRenderBatch(
         );
     VkBuffer stagingBuffer = res.first;
     VkDeviceMemory stagingBufferMemory = res.second;
-    del.push([this, stagingBuffer, stagingBufferMemory]() {
-        vkDestroyBuffer(_device->logicalDevice, stagingBuffer, nullptr);
-        vkFreeMemory(_device->logicalDevice, stagingBufferMemory, nullptr);
-    });
 
     // copy vertex and index buffer to staging buffer
     void* vertexBufferDst;
@@ -783,11 +771,43 @@ BindlessRenderSystem::RenderBatch BindlessRenderSystem::createRenderBatch(
         _indexBuffersWriteOffset
     );
 
+    // clean up staging buffer
+    vkDestroyBuffer(_device->logicalDevice, stagingBuffer, nullptr);
+    vkFreeMemory(_device->logicalDevice, stagingBufferMemory, nullptr);
+
+    MeshBufferOffsets result {
+        .vertexBeginOffset = _vertexBuffersWriteOffset,
+        .vertexEndOffset = _vertexBuffersWriteOffset + vertexBufferSize,
+        .indexBeginOffset = _indexBuffersWriteOffset,
+        .indexEndOffset = _indexBuffersWriteOffset + indexBufferSize,
+        .numIndices = indices.size()
+    };
+    // bump write offset
+    _vertexBuffersWriteOffset = result.vertexEndOffset;
+    _indexBuffersWriteOffset = result.indexEndOffset;
+
+    return result;
+}
+
+BindlessRenderSystem::RenderBatch BindlessRenderSystem::createRenderBatch(
+    const std::string& meshPath,
+    unsigned int batchSize
+) {
+    DEBUG("creating render batch for {}", meshPath);
+    // look up mesh buffer, if not found, load up the mesh
+    auto it = _meshBufferData.find(meshPath);
+    if (it == _meshBufferData.end()) {
+        auto res = _meshBufferData.insert({meshPath, loadMeshBuffer(meshPath)});
+        ASSERT(res.second);
+        it = res.first;
+    }
+    const MeshBufferOffsets& meshBuffer = it->second;
+
     // create a draw command and store into `drawCommandArray`
     VkDrawIndexedIndirectCommand cmd{};
-    cmd.firstIndex = _indexBuffersWriteOffset / sizeof(unsigned int);
-    cmd.indexCount = indices.size();
-    cmd.vertexOffset = _vertexBuffersWriteOffset / sizeof(Vertex);
+    cmd.firstIndex = meshBuffer.indexBeginOffset / sizeof(INDEX_BUFFER_INDEX_TYPE);
+    cmd.indexCount = meshBuffer.numIndices;
+    cmd.vertexOffset = meshBuffer.vertexBeginOffset / sizeof(Vertex);
     cmd.instanceCount = 0; // draw 0 instance by default
     cmd.firstInstance = _instanceIndexArrayOffset / sizeof(SSBOInstanceIndex);
     DEBUG("First instance {}", cmd.firstInstance);
@@ -821,12 +841,6 @@ BindlessRenderSystem::RenderBatch BindlessRenderSystem::createRenderBatch(
     // instanceLookupArray
     // bumping the offset will do so
     _instanceIndexArrayOffset += batchSize * sizeof(SSBOInstanceIndex);
-
-    // bump offset for next writes
-    _vertexBuffersWriteOffset += vertexBufferSize;
-    _indexBuffersWriteOffset += indexBufferSize;
-
-    del.flush();
 
     return batch;
 }
