@@ -169,19 +169,49 @@ void VulkanEngine::Init() {
         // make instanced entity
         {
             if (bindless) {
-                {
-                    Entity* spot = new Entity("Spot");
-                    TransformComponent* transformComponent
-                        = new TransformComponent();
-                    spot->AddComponent(transformComponent);
-                    transformComponent->position.z = 1;
-                    _entityViewerSystem->AddEntity(spot);
-                    // TODO: does this break the abstraction barrier?
-                    auto component = _bindessSystem->MakeComponent(
+                Entity* spot = new Entity("Spot");
+                TransformComponent* transformComponent
+                    = new TransformComponent();
+                spot->AddComponent(transformComponent);
+                transformComponent->position.z = 1;
+                _entityViewerSystem->AddEntity(spot);
+                // TODO: does this break the abstraction barrier?
+                auto component = _bindessSystem->MakeComponent(
+                    "../resources/spot.obj", "../resources/spot.png"
+                );
+                spot->AddComponent(component);
+                component->FlagUpdate();
+
+                // cow stress test
+                for (int i = 0; i < 10; i++) {
+                    Entity* spot = new Entity("Spot " + std::to_string(i));
+                    spot->AddComponent(new TransformComponent());
+                    spot->AddComponent(_bindessSystem->MakeComponent(
                         "../resources/spot.obj", "../resources/spot.png"
-                    );
-                    spot->AddComponent(component);
-                    component->FlagUpdate();
+                    ));
+
+                    // Generate spherical coordinates
+                    float radius = 5.0f;
+                    float theta
+                        = static_cast<float>(rand()) / RAND_MAX * 2 * M_PI;
+                    float phi
+                        = acos(2 * static_cast<float>(rand()) / RAND_MAX - 1);
+
+                    // Convert spherical coordinates to Cartesian
+                    float x = radius * sin(phi) * cos(theta);
+                    float y = radius * sin(phi) * sin(theta);
+                    float z = radius * cos(phi);
+
+                    // Set the position
+                    spot->GetComponent<TransformComponent>()->position.x = x;
+                    spot->GetComponent<TransformComponent>()->position.y = y;
+                    spot->GetComponent<TransformComponent>()->position.z = z;
+                    spot->GetComponent<BindlessRenderSystemComponent>()
+                        ->FlagUpdate();
+                    _bindessSystem->AddEntity(spot
+                    ); // not really needed, which means we have a shitty
+                       // abstraction
+                    _entityViewerSystem->AddEntity(spot);
                 }
                 {
                     Entity* vikingRoom = new Entity("Viking Room");
@@ -394,7 +424,8 @@ void VulkanEngine::createInstance() {
     appInfo.apiVersion = VK_API_VERSION_1_0;
 
     INFO("Populating Vulkan instance create info...");
-    // initialize and populate createInfo, which contains the application info
+    // initialize and populate createInfo, which contains the application
+    // info
     VkInstanceCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     createInfo.pApplicationInfo = &appInfo;
@@ -747,8 +778,8 @@ void VulkanEngine::cleanupSwapChain() {
 }
 
 void VulkanEngine::recreateSwapChain() {
-    // need to recreate render pass for HDR changing, we're not doing that for
-    // now
+    // need to recreate render pass for HDR changing, we're not doing that
+    // for now
     INFO("Recreating swap chain...");
     // handle window minimization
     int width = 0, height = 0;
@@ -896,9 +927,9 @@ void VulkanEngine::createSynchronizationObjects() {
     semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
     VkFenceCreateInfo fenceInfo{};
     fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    fenceInfo.flags
-        = VK_FENCE_CREATE_SIGNALED_BIT; // create with a signaled bit so that
-                                        // the 1st frame can start right away
+    fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT; // create with a signaled
+                                                    // bit so that the 1st frame
+                                                    // can start right away
     for (size_t i = 0; i < NUM_FRAME_IN_FLIGHT; i++) {
         EngineSynchronizationPrimitives& primitive
             = _synchronizationPrimitives[i];
@@ -996,8 +1027,8 @@ void VulkanEngine::createRenderPass() {
     subpass.pColorAttachments = &colorAttachmentRef;
     subpass.pDepthStencilAttachment = &depthAttachmentRef;
 
-    // dependency to make sure that the render pass waits for the image to be
-    // available before drawing
+    // dependency to make sure that the render pass waits for the image to
+    // be available before drawing
     VkSubpassDependency dependency{};
     dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
     dependency.dstSubpass = 0;
@@ -1049,9 +1080,10 @@ void VulkanEngine::createFramebuffers() {
         VkFramebufferCreateInfo framebufferInfo{};
         framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
         framebufferInfo.renderPass
-            = _mainRenderPass; // each framebuffer is associated with a render
-                               // pass; they need to be compatible i.e. having
-                               // same number of attachments and same formats
+            = _mainRenderPass; // each framebuffer is associated with a
+                               // render pass; they need to be compatible
+                               // i.e. having same number of attachments and
+                               // same formats
         framebufferInfo.attachmentCount
             = sizeof(attachments) / sizeof(VkImageView);
         framebufferInfo.pAttachments = attachments;
@@ -1290,9 +1322,9 @@ void VulkanEngine::drawFrame(TickContext* ctx, uint8_t frame) {
     {
         // wait time tend to be long if framerate is hardware-capped.
         PROFILE_SCOPE(&_profiler, "wait: vkAcquireNextImageKHR");
-        // the submission does not start until vkAcquireNextImageKHR returns,
-        // and downs the corresponding _semaRenderFinished semapohre once it's
-        // done.
+        // the submission does not start until vkAcquireNextImageKHR
+        // returns, and downs the corresponding _semaRenderFinished
+        // semapohre once it's done.
         if (vkQueueSubmit(
                 _device->graphicsQueue, 1, &submitInfo, sync.fenceInFlight
             )
@@ -1305,7 +1337,7 @@ void VulkanEngine::drawFrame(TickContext* ctx, uint8_t frame) {
     VkPresentInfoKHR presentInfo{};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 
-    // set up semaphore, so that  after submitting to the queue, we wait  for
+    // set up semaphore, so that  after submitting to the queue, we wait for
     // the
     presentInfo.waitSemaphoreCount = 1;
     presentInfo.pWaitSemaphores
@@ -1372,7 +1404,8 @@ struct ScrollingBuffer
 // https://github.com/epezent/implot/blob/f156599faefe316f7dd20fe6c783bf87c8bb6fd9/implot_demo.cpp#L801
 void VulkanEngine::drawImGuiPerfPlots() {
     // <profile name -> scrolling buffer>
-    // this design assumes all profile names are bijective to the actual profile
+    // this design assumes all profile names are bijective to the actual
+    // profile
     static std::map<const char*, ScrollingBuffer> scrollingBuffers;
     { // Profiler
         ImGui::SeparatorText("Profiler");
