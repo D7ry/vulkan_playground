@@ -1,7 +1,9 @@
 #pragma once
-#include "Profiler.h"
-#include "imgui.h"
 #include <map>
+
+#include "imgui.h"
+
+#include "Profiler.h"
 
 class DeltaTimer;
 
@@ -11,7 +13,7 @@ class ImGuiPerfPlot
     void Draw(
         const std::unique_ptr<std::vector<Profiler::Entry>>& lastProfileData,
         const double deltaTimeSeconds,
-        float _timeSinceStartSeconds
+        float timeSinceStartSeconds
     );
 
   private:
@@ -48,5 +50,10 @@ class ImGuiPerfPlot
         }
     };
 
-    std::map<const char*, ScrollingBuffer> scrollingBuffers;
+    std::map<const char*, ScrollingBuffer> _scrollingBuffers;
+
+    // shows the profiler plot; note on 
+    // lower-end systems the profiler plot itself consumes
+    // CPU cycles (~2ms on a M3 mac)
+    bool _wantShowPerfPlot = true;
 };
