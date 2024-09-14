@@ -2,9 +2,9 @@
 // stl
 #include "ecs/system/BindlessRenderSystem.h"
 #include <cstdint>
+#include <filesystem>
 #include <memory>
 #include <optional>
-#include <filesystem>
 
 // vulkan
 #include <vulkan/vulkan.h>
@@ -31,11 +31,13 @@
 #include "components/DeletionStack.h"
 #include "components/DeltaTimer.h"
 #include "components/ImGuiManager.h"
+#include "components/ImGuiPerfPlot.h"
 #include "components/InputManager.h"
 #include "components/Profiler.h"
 #include "components/TextureManager.h"
 
 class TickContext;
+
 class VulkanEngine
 {
   public:
@@ -141,7 +143,6 @@ class VulkanEngine
     /* ---------- Render-Time Functions ---------- */
     void getMainProjectionMatrix(glm::mat4& projectionMatrix);
     void flushEngineUBOStatic(uint8_t frame);
-    void drawImGuiPerfPlots();
     void drawImGui();
     void drawFrame(TickContext* tickData, uint8_t frame);
 
@@ -178,7 +179,9 @@ class VulkanEngine
         VkSemaphore semaRenderFinished;
         VkFence fenceInFlight;
     };
-    std::array<EngineSynchronizationPrimitives, NUM_FRAME_IN_FLIGHT> _synchronizationPrimitives;
+
+    std::array<EngineSynchronizationPrimitives, NUM_FRAME_IN_FLIGHT>
+        _synchronizationPrimitives;
 
     /* ---------- Depth Buffer ---------- */
     VkImage _depthImage;
@@ -220,4 +223,5 @@ class VulkanEngine
     Camera _mainCamera;
     InputManager _inputManager;
     Profiler _profiler;
+    ImGuiPerfPlot _perfPlot;
 };

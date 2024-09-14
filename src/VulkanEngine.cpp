@@ -16,7 +16,6 @@
 
 // imgui
 #include "imgui.h"
-#include "implot.h"
 
 // Molten VK Config
 #if __APPLE__
@@ -183,7 +182,7 @@ void VulkanEngine::Init() {
                 component->FlagUpdate();
 
                 // cow stress test
-                for (int i = 0; i < 10; i++) {
+                for (int i = 0; i < 40; i++) {
                     Entity* spot = new Entity("Spot " + std::to_string(i));
                     spot->AddComponent(new TransformComponent());
                     spot->AddComponent(_bindessSystem->MakeComponent(
@@ -191,7 +190,7 @@ void VulkanEngine::Init() {
                     ));
 
                     // Generate spherical coordinates
-                    float radius = 5.0f;
+                    float radius = 10.0f;
                     float theta
                         = static_cast<float>(rand()) / RAND_MAX * 2 * M_PI;
                     float phi
@@ -202,10 +201,13 @@ void VulkanEngine::Init() {
                     float y = radius * sin(phi) * sin(theta);
                     float z = radius * cos(phi);
 
+                    auto transform = spot->GetComponent<TransformComponent>();
                     // Set the position
-                    spot->GetComponent<TransformComponent>()->position.x = x;
-                    spot->GetComponent<TransformComponent>()->position.y = y;
-                    spot->GetComponent<TransformComponent>()->position.z = z;
+                    transform->position.x = x;
+                    transform->position.y = y;
+                    transform->position.z = z;
+                    transform->rotation.x = theta * 100;
+                    transform->rotation.y = phi * 1000;
                     spot->GetComponent<BindlessRenderSystemComponent>()
                         ->FlagUpdate();
                     _bindessSystem->AddEntity(spot
@@ -1218,7 +1220,8 @@ void VulkanEngine::drawFrame(TickContext* ctx, uint8_t frame) {
         VK_NULL_HANDLE,
         &imageIndex
     );
-    [[unlikely]] if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+    [[unlikely]] if (result == VK_ERROR_OUT_OF_DATE_KHR
+                     || result == VK_SUBOPTIMAL_KHR) {
         this->recreateSwapChain();
         return;
     } else [[unlikely]] if (result != VK_SUCCESS) {
@@ -1367,123 +1370,6 @@ void VulkanEngine::initSwapChain() {
     this->_deletionStack.push([this]() { this->cleanupSwapChain(); });
 }
 
-struct ScrollingBuffer
-{
-    int MaxSize;
-    int Offset;
-    ImVector<ImVec2> Data;
-
-    // need as many frame to hold the points
-    ScrollingBuffer(
-        int max_size
-        = DEFAULTS::PROFILER_PERF_PLOT_RANGE_SECONDS * DEFAULTS::MAX_FPS
-    ) {
-        MaxSize = max_size;
-        Offset = 0;
-        Data.reserve(MaxSize);
-    }
-
-    void AddPoint(float x, float y) {
-        if (Data.size() < MaxSize)
-            Data.push_back(ImVec2(x, y));
-        else {
-            Data[Offset] = ImVec2(x, y);
-            Offset = (Offset + 1) % MaxSize;
-        }
-    }
-
-    void Erase() {
-        if (Data.size() > 0) {
-            Data.shrink(0);
-            Offset = 0;
-        }
-    }
-};
-
-// TODO: an imgui helper class?
-// https://github.com/epezent/implot/blob/f156599faefe316f7dd20fe6c783bf87c8bb6fd9/implot_demo.cpp#L801
-void VulkanEngine::drawImGuiPerfPlots() {
-    // <profile name -> scrolling buffer>
-    // this design assumes all profile names are bijective to the actual
-    // profile
-    static std::map<const char*, ScrollingBuffer> scrollingBuffers;
-    { // Profiler
-        ImGui::SeparatorText("Profiler");
-        ImGui::Text("Framerate: %f", 1 / _deltaTimer.GetDeltaTime());
-        std::unique_ptr<std::vector<Profiler::Entry>> lastProfileData
-            = _profiler.GetLastProfile();
-
-        if (ImPlot::BeginPlot("Profiler")) {
-            { // set up x and y boundary
-                ImPlot::SetupAxis(ImAxis_X1, "Time(Sec)");
-                ImPlot::SetupAxisLimits(
-                    ImAxis_X1,
-                    _timeSinceStartSeconds
-                        - DEFAULTS::PROFILER_PERF_PLOT_RANGE_SECONDS,
-                    _timeSinceStartSeconds,
-                    ImPlotCond_Always
-                );
-
-                ImPlot::SetupAxis(ImAxis_Y1, "Cost(Ms)");
-                // adaptively set y range
-                const int deltaTimeMiliseconds
-                    = _deltaTimer.GetDeltaTimeMiliseconds();
-                ImPlot::SetupAxisLimits(
-                    ImAxis_Y1,
-                    0,
-                    deltaTimeMiliseconds < 15 ? 15 : 30,
-                    ImPlotCond_Always
-                );
-            }
-
-            // iterate over entries, update scrolling buffers and plot
-            // also shows text for the raw numbers under the plot
-            for (Profiler::Entry& entry : *lastProfileData) {
-                auto it = scrollingBuffers.find(entry.name);
-                if (it == scrollingBuffers.end()) {
-                    auto res = scrollingBuffers.emplace(
-                        entry.name, ScrollingBuffer()
-                    );
-                    ASSERT(res.second); // insertion success
-                    it = res.first;
-                }
-                ScrollingBuffer& buf = it->second;
-
-                // ms time
-                double ms
-                    = std::chrono::
-                          duration<double, std::chrono::milliseconds::period>(
-                              entry.end - entry.begin
-                          )
-                              .count();
-                buf.AddPoint(_timeSinceStartSeconds, ms);
-                ImPlot::PlotLine(
-                    entry.name,
-                    &buf.Data[0].x,
-                    &buf.Data[0].y,
-                    buf.Data.size(),
-                    0,
-                    buf.Offset,
-                    2 * sizeof(float)
-                );
-                { // text section
-                    int indentWidth = entry.level * 10;
-                    if (indentWidth != 0) {
-                        ImGui::Indent(indentWidth);
-                    }
-                    // entry name
-                    ImGui::Text("%s", entry.name);
-                    ImGui::Text("%f MS", ms);
-                    if (indentWidth != 0) {
-                        ImGui::Unindent(indentWidth);
-                    }
-                }
-            }
-            ImPlot::EndPlot();
-        }
-    }
-}
-
 void VulkanEngine::drawImGui() {
     PROFILE_SCOPE(&_profiler, "ImGui Draw");
     _imguiManager.BeginImGuiContext();
@@ -1511,7 +1397,12 @@ void VulkanEngine::drawImGui() {
                 ImGui::Text("View Mode: Deactive");
             }
         }
-        drawImGuiPerfPlots();
+        // draw profiler
+        std::unique_ptr<std::vector<Profiler::Entry>> lastProfile
+            = _profiler.GetLastProfile();
+        _perfPlot.Draw(
+            lastProfile, _deltaTimer.GetDeltaTimeSeconds(), _timeSinceStartSeconds
+        );
     }
     ImGui::End(); // VulkanEngine
     _entityViewerSystem->DrawImGui();
