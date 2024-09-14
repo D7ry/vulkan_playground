@@ -25,35 +25,6 @@ void BindlessRenderSystem::Cleanup() {
     DEBUG("Done cleaning up");
 }
 
-// flush buffer updates, write to the buffer corresponding to the current frame
-void BindlessRenderSystem::updateMeshInstanceData(int frame) {
-    for (Entity* entity : _bufferUpdateQueue[frame]) {
-        // this is not really cache friendly -- should we pre-cache the
-        // transforms into a vector/switch up the update job into the compute
-        // tick?
-        BindlessRenderSystemComponent* systemComponent
-            = entity->GetComponent<BindlessRenderSystemComponent>();
-        ASSERT(systemComponent);
-
-        // get pointer to the instance's data
-        SSBOInstanceData* instanceData
-            = reinterpret_cast<SSBOInstanceData*>(
-                reinterpret_cast<char*>(
-                    _bindlessBuffers[frame].instanceDataArray.bufferAddress
-                )
-                + systemComponent->instanceDataOffset
-            );
-
-        // transform
-        TransformComponent* transform
-            = entity->GetComponent<TransformComponent>();
-        if (transform) {
-            transform->GetModelMatrix(instanceData->model);
-        }
-    }
-    _bufferUpdateQueue[frame].clear();
-}
-
 void BindlessRenderSystem::Tick(const TickContext* ctx) {
     PROFILE_SCOPE(ctx->profiler, "Bindless System Tick");
     VkCommandBuffer CB = ctx->graphics.CB;
@@ -61,7 +32,11 @@ void BindlessRenderSystem::Tick(const TickContext* ctx) {
     VkExtent2D FBExt = ctx->graphics.currentFBextend;
     int currFrame = ctx->graphics.currentFrameInFlight;
 
-    updateMeshInstanceData(currFrame);
+    // flush the update queue of the current frame
+    for (auto closure : _updateQueue[currFrame]) {
+        closure();
+    }
+    _updateQueue[currFrame].clear();
 
     vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipeline);
 
@@ -560,8 +535,14 @@ BindlessRenderSystemComponent* BindlessRenderSystem::MakeComponent(
             // FIXME: current update is not thread-safe as it writes
             // too all descriptors(including one that's in flight). use an
             // update queue instead.
-            updateTextureDescriptorSet();
-            auto res = _textureDescriptorIndices.insert({texturePath, textureOffset});
+            for (int i = 0; i < NUM_FRAME_IN_FLIGHT; i++) {
+                _updateQueue[i].push_back([this, i]() {
+                    updateTextureDescriptorSet(i);
+                });
+            }
+            auto res
+                = _textureDescriptorIndices.insert({texturePath, textureOffset}
+                );
             ASSERT(res.second);
             textureIndex = res.first->second;
         } else {
@@ -636,7 +617,11 @@ BindlessRenderSystemComponent* BindlessRenderSystem::MakeComponent(
                     (char*)_bindlessBuffers[i].drawCommandArray.bufferAddress
                     + pBatch->drawCmdOffset
                 );
-            DEBUG("render command instance count = {} first instance = {}", pCmd->instanceCount, pCmd->firstInstance);
+            DEBUG(
+                "render command instance count = {} first instance = {}",
+                pCmd->instanceCount,
+                pCmd->firstInstance
+            );
             unsigned int* pIndex = reinterpret_cast<unsigned int*>(
                 (char*)_bindlessBuffers[i].instanceIndexArray.bufferAddress
                 + ((pCmd->firstInstance + pCmd->instanceCount)
@@ -660,31 +645,29 @@ void BindlessRenderSystem::DestroyComponent(
     NEEDS_IMPLEMENTATION();
 }
 
-void BindlessRenderSystem::updateTextureDescriptorSet() {
-    DEBUG("updating texture descirptor set");
-    for (size_t i = 0; i < NUM_FRAME_IN_FLIGHT; i++) {
-        std::array<VkWriteDescriptorSet, 1> descriptorWrites{};
-        descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrites[0].dstSet = this->_descriptorSets[i];
-        descriptorWrites[0].dstBinding = (int)BindingLocation::TEXTURE_SAMPLER;
-        descriptorWrites[0].dstArrayElement = 0;
-        descriptorWrites[0].descriptorType
-            = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        descriptorWrites[0].descriptorCount
-            = _textureDescriptorInfoIdx; // descriptors are 0-indexed, +1 for
-                                         // the # of valid samplers
-        descriptorWrites[0].pImageInfo = _textureDescriptorInfo.data();
+void BindlessRenderSystem::updateTextureDescriptorSet(int frame) {
+    DEBUG("updating texture descirptor set for frame {}", frame);
+    std::array<VkWriteDescriptorSet, 1> descriptorWrites{};
+    descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    descriptorWrites[0].dstSet = this->_descriptorSets[frame];
+    descriptorWrites[0].dstBinding = (int)BindingLocation::TEXTURE_SAMPLER;
+    descriptorWrites[0].dstArrayElement = 0;
+    descriptorWrites[0].descriptorType
+        = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    descriptorWrites[0].descriptorCount
+        = _textureDescriptorInfoIdx; // descriptors are 0-indexed, +1 for
+                                     // the # of valid samplers
+    descriptorWrites[0].pImageInfo = _textureDescriptorInfo.data();
 
-        DEBUG("descriptor count: {}", descriptorWrites[0].descriptorCount);
+    DEBUG("descriptor count: {}", descriptorWrites[0].descriptorCount);
 
-        vkUpdateDescriptorSets(
-            _device->logicalDevice,
-            descriptorWrites.size(),
-            descriptorWrites.data(),
-            0,
-            nullptr
-        );
-    }
+    vkUpdateDescriptorSets(
+        _device->logicalDevice,
+        descriptorWrites.size(),
+        descriptorWrites.data(),
+        0,
+        nullptr
+    );
 };
 
 void BindlessRenderSystem::FlagUpdate(Entity* entity) {
@@ -693,8 +676,31 @@ void BindlessRenderSystem::FlagUpdate(Entity* entity) {
     // that it can be updated before the buffer are used for drawing
     // TODO: can have another staging buffer layer for better flushing
     // performance
-    for (int i = 0; i < _bufferUpdateQueue.size(); i++) {
-        _bufferUpdateQueue[i].push_back(entity);
+    for (int i = 0; i < NUM_FRAME_IN_FLIGHT; i++) {
+        _updateQueue[i].push_back([this, i, entity]() {
+            // this is not really cache friendly -- should we pre-cache the
+            // transforms into a vector/switch up the update job into the
+            // compute tick?
+            BindlessRenderSystemComponent* systemComponent
+                = entity->GetComponent<BindlessRenderSystemComponent>();
+            ASSERT(systemComponent);
+
+            // get pointer to the instance's data
+            SSBOInstanceData* instanceData
+                = reinterpret_cast<SSBOInstanceData*>(
+                    reinterpret_cast<char*>(
+                        _bindlessBuffers[i].instanceDataArray.bufferAddress
+                    )
+                    + systemComponent->instanceDataOffset
+                );
+
+            // transform
+            TransformComponent* transform
+                = entity->GetComponent<TransformComponent>();
+            if (transform) {
+                transform->GetModelMatrix(instanceData->model);
+            }
+        });
     }
 }
 

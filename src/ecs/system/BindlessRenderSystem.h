@@ -115,7 +115,8 @@ class BindlessRenderSystem : public IRenderSystem
     const char* VERTEX_SHADER_SRC = "../shaders/bindless.vert.spv";
     const char* FRAGMENT_SHADER_SRC = "../shaders/bindless.frag.spv";
 
-    std::array<std::vector<Entity*>, NUM_FRAME_IN_FLIGHT> _bufferUpdateQueue;
+    // list of functions that updates each frame in flight
+    std::array<std::vector<std::function<void()>>, NUM_FRAME_IN_FLIGHT> _updateQueue;
 
     // pipeline
     VkPipeline _pipeline = VK_NULL_HANDLE;
@@ -159,9 +160,9 @@ class BindlessRenderSystem : public IRenderSystem
     std::unordered_map<std::string, int>
         _textureDescriptorIndices; // texture name, index into the
                                    // texture descriptor array
-    void updateTextureDescriptorSet(
-    ); // flush the `_textureDescriptorInfo` into device, updating
-       // the descriptor set
+    
+    // flush the `_textureDescriptorInfo` into device, updating the descriptor set
+    void updateTextureDescriptorSet(int frame);
 
     // create resrouces required for bindless rendering. Including:
     // - huge SSBO to store all instance data
