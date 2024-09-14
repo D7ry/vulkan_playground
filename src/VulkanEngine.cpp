@@ -192,7 +192,8 @@ void VulkanEngine::Init() {
                     _entityViewerSystem->AddEntity(vikingRoom);
                     // TODO: does this break the abstraction barrier?
                     auto component = _bindessSystem->MakeComponent(
-                        "../resources/viking_room.obj", "../resources/viking_room.png"
+                        "../resources/viking_room.obj",
+                        "../resources/viking_room.png"
                     );
                     vikingRoom->AddComponent(component);
                     component->FlagUpdate();
@@ -443,6 +444,20 @@ void VulkanEngine::createInstance() {
     } else {
         createInfo.enabledLayerCount = 0;
     }
+
+#ifndef NDEBUG
+    // enable debug printing
+    VkValidationFeatureEnableEXT enabled[]
+        = {VK_VALIDATION_FEATURE_ENABLE_DEBUG_PRINTF_EXT};
+    VkValidationFeaturesEXT features{VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT};
+    features.disabledValidationFeatureCount = 0;
+    features.enabledValidationFeatureCount = 1;
+    features.pDisabledValidationFeatures = nullptr;
+    features.pEnabledValidationFeatures = enabled;
+
+    features.pNext = createInfo.pNext;
+    createInfo.pNext = &features;
+#endif // NDEBUG
 
     VkResult result = vkCreateInstance(&createInfo, nullptr, &this->_instance);
 

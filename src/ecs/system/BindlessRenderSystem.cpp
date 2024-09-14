@@ -11,60 +11,8 @@
 #include "BindlessRenderSystem.h"
 #include "ecs/component/TransformComponent.h"
 
-void BindlessRenderSystem::Init(const InitContext* initData) {
-    _device = initData->device;
-    _textureManager = initData->textureManager;
-    createBindlessResources();
-    // create graphics pipeline
-    createGraphicsPipeline(initData->renderPass.mainPass, initData);
-}
-
-void BindlessRenderSystem::Cleanup() {
-    DEBUG("Cleaning up...");
-    _deletionStack.flush();
-    DEBUG("Done cleaning up");
-}
-
-void BindlessRenderSystem::Tick(const TickContext* ctx) {
-    PROFILE_SCOPE(ctx->profiler, "Bindless System Tick");
-    VkCommandBuffer CB = ctx->graphics.CB;
-    VkFramebuffer FB = ctx->graphics.currentFB;
-    VkExtent2D FBExt = ctx->graphics.currentFBextend;
-    int currFrame = ctx->graphics.currentFrameInFlight;
-
-    // flush the update queue of the current frame
-    for (auto closure : _updateQueue[currFrame]) {
-        closure();
-    }
-    _updateQueue[currFrame].clear();
-
-    vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipeline);
-
-    // only use the global engine UBO, so need to bind once only
-    vkCmdBindDescriptorSets(
-        CB,
-        VK_PIPELINE_BIND_POINT_GRAPHICS,
-        _pipelineLayout,
-        0,
-        1,
-        &_descriptorSets[currFrame],
-        0,
-        0
-    );
-
-    VkDeviceSize offsets[] = {0};
-    vkCmdBindVertexBuffers(CB, 0, 1, &_vertexBuffers.buffer, offsets);
-    vkCmdBindIndexBuffer(CB, _indexBuffers.buffer, 0, VK_INDEX_TYPE_UINT32);
-    vkCmdDrawIndexedIndirect(
-        CB,
-        _bindlessBuffers[currFrame].drawCommandArray.buffer,
-        0, // offset
-        _drawCommandArrayOffset
-            / sizeof(VkDrawIndexedIndirectCommand), // drawCount
-        sizeof(VkDrawIndexedIndirectCommand)        // stride
-    );
-}
-
+// TODO: this is too much repetitive code. IRenderSystem should share some 
+// common pipeline creator
 void BindlessRenderSystem::createGraphicsPipeline(
     const VkRenderPass renderPass,
     const InitContext* initData
@@ -512,6 +460,60 @@ void BindlessRenderSystem::createGraphicsPipeline(
     vkDestroyShaderModule(_device->logicalDevice, vertShaderModule, nullptr);
 }
 
+void BindlessRenderSystem::Init(const InitContext* initData) {
+    _device = initData->device;
+    _textureManager = initData->textureManager;
+    createBindlessResources();
+    // create graphics pipeline
+    createGraphicsPipeline(initData->renderPass.mainPass, initData);
+}
+
+void BindlessRenderSystem::Cleanup() {
+    DEBUG("Cleaning up...");
+    _deletionStack.flush();
+    DEBUG("Done cleaning up");
+}
+
+void BindlessRenderSystem::Tick(const TickContext* ctx) {
+    PROFILE_SCOPE(ctx->profiler, "Bindless System Tick");
+    VkCommandBuffer CB = ctx->graphics.CB;
+    VkFramebuffer FB = ctx->graphics.currentFB;
+    VkExtent2D FBExt = ctx->graphics.currentFBextend;
+    int currFrame = ctx->graphics.currentFrameInFlight;
+
+    // flush the update queue of the current frame
+    for (auto closure : _updateQueue[currFrame]) {
+        closure();
+    }
+    _updateQueue[currFrame].clear();
+
+    vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipeline);
+
+    // only use the global engine UBO, so need to bind once only
+    vkCmdBindDescriptorSets(
+        CB,
+        VK_PIPELINE_BIND_POINT_GRAPHICS,
+        _pipelineLayout,
+        0,
+        1,
+        &_descriptorSets[currFrame],
+        0,
+        0
+    );
+
+    VkDeviceSize offsets[] = {0};
+    vkCmdBindVertexBuffers(CB, 0, 1, &_vertexBuffers.buffer, offsets);
+    vkCmdBindIndexBuffer(CB, _indexBuffers.buffer, 0, VK_INDEX_TYPE_UINT32);
+    vkCmdDrawIndexedIndirect(
+        CB,
+        _bindlessBuffers[currFrame].drawCommandArray.buffer,
+        0, // offset
+        _drawCommandArrayOffset
+            / sizeof(VkDrawIndexedIndirectCommand), // drawCount
+        sizeof(VkDrawIndexedIndirectCommand)        // stride
+    );
+}
+
 BindlessRenderSystemComponent* BindlessRenderSystem::MakeComponent(
     const std::string& meshPath,
     const std::string& texturePath
@@ -532,9 +534,6 @@ BindlessRenderSystemComponent* BindlessRenderSystem::MakeComponent(
             textureOffset = textureOffset;
             _textureDescriptorInfoIdx++;
             // must update the descriptor set to reflect loading newtexture
-            // FIXME: current update is not thread-safe as it writes
-            // too all descriptors(including one that's in flight). use an
-            // update queue instead.
             for (int i = 0; i < NUM_FRAME_IN_FLIGHT; i++) {
                 _updateQueue[i].push_back([this, i]() {
                     updateTextureDescriptorSet(i);
