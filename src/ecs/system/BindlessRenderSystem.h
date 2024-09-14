@@ -14,6 +14,10 @@
 // as opposed to O(# of unique mesh instance), or O(# of unique mesh model)
 class BindlessRenderSystem : public IRenderSystem
 {
+    static const unsigned int SSBO_ALIGNMENT_BYTE = 8;
+
+    using InstanceIndexArrayIndexType = unsigned long;
+    static_assert(sizeof(InstanceIndexArrayIndexType) % SSBO_ALIGNMENT_BYTE == 0);
     // data structure per bindless system instance
     // lives on the `instanceDataArray` buffer
     struct BindlessInstanceData
@@ -28,7 +32,10 @@ class BindlessRenderSystem : public IRenderSystem
 
         // none-render metadata
         const unsigned int drawCmdIndex; // index into draw cmd
+
+        const uint32_t padding[1];
     };
+    static_assert(sizeof(BindlessInstanceData) % SSBO_ALIGNMENT_BYTE == 0);
 
     // note that we don't create NUM_FRAME_IN_FLIGHT vertex/index
     // buffers assuming synchronization is trivial
@@ -47,7 +54,7 @@ class BindlessRenderSystem : public IRenderSystem
         // huge array containing `BindlessInstanceData`
         VQBuffer instanceDataArray; // <BindlessInstanceData>
         // SSBO the maps (offseted) instance IDs to actual instance datas
-        VQBuffer instanceIndexArray; // <unsigned int>
+        VQBuffer instanceIndexArray; // <InstanceIndexArrayIndexType>
         // list of draw commands
         VQBuffer
             drawCommandArray; // <VkDrawIndexedIndirectCommand>
@@ -59,7 +66,7 @@ class BindlessRenderSystem : public IRenderSystem
     };
 
     std::array<BindlessBuffer, NUM_FRAME_IN_FLIGHT> _bindlessBuffers;
-    unsigned int _instanceLookupArrayOffset = 0;
+    unsigned int _instanceIndexArrayOffset = 0;
     unsigned int _drawCommandArrayOffset
         = 0; // offset in drawCommandArray, to which we can append a new
              // VkDrawIndexedIndirectCommand

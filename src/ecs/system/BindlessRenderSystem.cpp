@@ -599,6 +599,7 @@ BindlessRenderSystemComponent* BindlessRenderSystem::MakeComponent(
     BindlessRenderSystemComponent* ret = new BindlessRenderSystemComponent();
     ret->parentSystem = this;
     ret->instanceDataOffset = _instanceDataArrayOffset;
+    DEBUG("_instanceDataArrayOffset = {}", _instanceDataArrayOffset);
 
     // create new instance data, push to instance data array
     BindlessInstanceData data{
@@ -620,6 +621,7 @@ BindlessRenderSystemComponent* BindlessRenderSystem::MakeComponent(
     _instanceDataArrayOffset += sizeof(BindlessInstanceData);
 
     {
+        DEBUG("Culling hack begin for {}", meshPath);
         // hack in the process of compute shader culling by
         // 1. inserting the instance index into lookup array manually,
         // 2. modifying the render command's draw number to draw an additional
@@ -632,15 +634,18 @@ BindlessRenderSystemComponent* BindlessRenderSystem::MakeComponent(
                     (char*)_bindlessBuffers[i].drawCommandArray.bufferAddress
                     + pBatch->drawCmdOffset
                 );
+            DEBUG("render command instance count = {} first instance = {}", pCmd->instanceCount, pCmd->firstInstance);
             unsigned int* pIndex = reinterpret_cast<unsigned int*>(
                 (char*)_bindlessBuffers[i].instanceIndexArray.bufferAddress
                 + ((pCmd->firstInstance + pCmd->instanceCount)
-                   * sizeof(unsigned int))
+                   * sizeof(InstanceIndexArrayIndexType))
             );
             pCmd->instanceCount++;
+            DEBUG("cmd now has instance count of {}", pCmd->instanceCount);
             *pIndex = ret->instanceDataOffset
                       / sizeof(BindlessInstanceData
                       ); // offset divided by size to get index
+            DEBUG("pindex: {}", *pIndex);
         }
     }
 
@@ -777,7 +782,7 @@ BindlessRenderSystem::RenderBatch BindlessRenderSystem::createRenderBatch(
     cmd.indexCount = indices.size();
     cmd.vertexOffset = _vertexBuffersWriteOffset / sizeof(Vertex);
     cmd.instanceCount = 0; // draw 0 instance by default
-    cmd.firstInstance = _instanceLookupArrayOffset / sizeof(unsigned int);
+    cmd.firstInstance = _instanceIndexArrayOffset / sizeof(InstanceIndexArrayIndexType);
     DEBUG("First instance {}", cmd.firstInstance);
 
     for (int i = 0; i < NUM_FRAME_IN_FLIGHT; i++) {
@@ -808,7 +813,7 @@ BindlessRenderSystem::RenderBatch BindlessRenderSystem::createRenderBatch(
     // reserve `instanceNumber` * sizeof(unsigned int) in
     // instanceLookupArray
     // bumping the offset will do so
-    _instanceLookupArrayOffset += batchSize * sizeof(unsigned int);
+    _instanceIndexArrayOffset += batchSize * sizeof(InstanceIndexArrayIndexType);
 
     // bump offset for next writes
     _vertexBuffersWriteOffset += vertexBufferSize;
