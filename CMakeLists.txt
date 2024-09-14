@@ -26,6 +26,10 @@ set(STB_IMG_SRC extern/stb/stb_image_impl.cpp)
 add_subdirectory(extern/spdlog)
 set(SPDLOG_INCLUDE extern/spdlog/include)
 
+# assimp
+add_subdirectory(extern/assimp)
+set(ASSIMP_INCLUDE extern/assimp/include)
+
 # glfw
 add_subdirectory(extern/glfw)
 set(GLFW_INCLUDE extern/glfw/include)
@@ -77,6 +81,7 @@ target_include_directories(vulkan_playground
     PRIVATE ${GLFW_INCLUDE}
     PRIVATE ${GLM_INCLUDE}
     PRIVATE ${TINY_OBJ_LOADER_INCLUDE}
+    PRIVATE ${ASSIMP_INCLUDE}
     PRIVATE src
 )
 
@@ -102,6 +107,7 @@ endif() # APPLE
 target_link_libraries(vulkan_playground 
     spdlog::spdlog 
     glfw
+    assimp
 )
 
 # debug flag for unix
