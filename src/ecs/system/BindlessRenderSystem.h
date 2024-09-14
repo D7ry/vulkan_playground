@@ -14,13 +14,16 @@
 // as opposed to O(# of unique mesh instance), or O(# of unique mesh model)
 class BindlessRenderSystem : public IRenderSystem
 {
-    static const unsigned int SSBO_ALIGNMENT_BYTE = 8;
+    /* ---------- SSBO Data Types ---------- */
 
-    using InstanceIndexArrayIndexType = unsigned long;
-    static_assert(sizeof(InstanceIndexArrayIndexType) % SSBO_ALIGNMENT_BYTE == 0);
+    // https://docs.vulkan.org/guide/latest/shader_memory_layout.html
+    static const unsigned int SSBO_INSTANCE_DATA_ALIGNMENT = 16; // OpDecorate %array140 ArrayStride 16
+    static const unsigned int SSBO_INSTANCE_INDEX_ALIGNMENT = 4; // OpDecorate %array430 ArrayStride 4
+    using SSBOInstanceIndex = unsigned int;
+    static_assert(sizeof(SSBOInstanceIndex) % SSBO_INSTANCE_INDEX_ALIGNMENT == 0);
     // data structure per bindless system instance
     // lives on the `instanceDataArray` buffer
-    struct BindlessInstanceData
+    struct SSBOInstanceData
     {
         glm::mat4 model;
         float transparency;
@@ -35,7 +38,8 @@ class BindlessRenderSystem : public IRenderSystem
 
         const uint32_t padding[1];
     };
-    static_assert(sizeof(BindlessInstanceData) % SSBO_ALIGNMENT_BYTE == 0);
+    static_assert(sizeof(SSBOInstanceData) % SSBO_INSTANCE_DATA_ALIGNMENT == 0);
+
 
     // note that we don't create NUM_FRAME_IN_FLIGHT vertex/index
     // buffers assuming synchronization is trivial

@@ -10,15 +10,17 @@ struct InstanceData
 {
     mat4 model;
     float transparency;
-    int textureId;
+    int textureAlbedo;
     int drawCmdId; // not used
 };
 
+// alignment: 16 byte
 layout(std140, binding = 1) readonly buffer InstanceDataArray {
     InstanceData data[];
 } instanceDataArray;
 
-layout(std140, binding = 2) readonly buffer InstanceIndexArray {
+// use 430 layout for 4-byte packed int array
+layout(std430, binding = 2) readonly buffer InstanceIndexArray {
     int indices[];
 } instanceIndexArray;
 
@@ -39,10 +41,20 @@ layout(location=6) flat out int glInstanceIdx;
 
 vec3 globalLightPos = vec3(-6, -3, 0.0);
 
-void main() {
-    int instanceIndex = instanceIndexArray.indices[gl_InstanceIndex];
 
-    glInstanceIdx = instanceIndex;
+#extension GL_EXT_debug_printf : enable
+
+void main() {
+    // instance index has been tested to have no problem.
+    // gl_InstanceIndex: cow has 0, viking room has 10
+    // something is wrong with ssbo indexing
+    // indices[0] and indices[10] both == 0 -- means they're not written into
+    // -- or the way i read SSBO is wrong
+    glInstanceIdx = gl_InstanceIndex;
+    int instanceIndex = instanceIndexArray.indices[gl_InstanceIndex];
+    //instanceIndex = 1;
+    //glInstanceIdx = instanceIndexArray.indices[20]; // should be 1, got 0 from frag printing
+
     mat4 model = instanceDataArray.data[instanceIndex].model;
 
     gl_Position = uboStatic.proj * uboStatic.view * model * vec4(inPosition, 1.0);
@@ -55,5 +67,5 @@ void main() {
     fragPos = vec3(model * vec4(inPosition, 1.0)); // Transform the vertex position to world space
     fragGlobalLightPos = globalLightPos; // Pass the light position in world space to the fragment shader
 
-    fragTexIndex = instanceDataArray.data[instanceIndex].textureId;
+    fragTexIndex = instanceDataArray.data[instanceIndex].textureAlbedo;
 }

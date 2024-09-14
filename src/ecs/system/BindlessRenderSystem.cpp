@@ -36,8 +36,8 @@ void BindlessRenderSystem::updateMeshInstanceData(int frame) {
         ASSERT(systemComponent);
 
         // get pointer to the instance's data
-        BindlessInstanceData* instanceData
-            = reinterpret_cast<BindlessInstanceData*>(
+        SSBOInstanceData* instanceData
+            = reinterpret_cast<SSBOInstanceData*>(
                 reinterpret_cast<char*>(
                     _bindlessBuffers[frame].instanceDataArray.bufferAddress
                 )
@@ -561,7 +561,9 @@ BindlessRenderSystemComponent* BindlessRenderSystem::MakeComponent(
             // too all descriptors(including one that's in flight). use an
             // update queue instead.
             updateTextureDescriptorSet();
-            _textureDescriptorIndices.insert({texturePath, textureOffset});
+            auto res = _textureDescriptorIndices.insert({texturePath, textureOffset});
+            ASSERT(res.second);
+            textureIndex = res.first->second;
         } else {
             textureIndex = it->second;
         }
@@ -602,7 +604,7 @@ BindlessRenderSystemComponent* BindlessRenderSystem::MakeComponent(
     DEBUG("_instanceDataArrayOffset = {}", _instanceDataArrayOffset);
 
     // create new instance data, push to instance data array
-    BindlessInstanceData data{
+    SSBOInstanceData data{
         .model = glm::mat4(1.f),
         .transparency = 0.f,
         .textureIndex = {.albedo = textureIndex},
@@ -616,9 +618,9 @@ BindlessRenderSystemComponent* BindlessRenderSystem::MakeComponent(
                          _bindlessBuffers[i].instanceDataArray.bufferAddress
                      )
                      + _instanceDataArrayOffset;
-        memcpy(addr, std::addressof(data), sizeof(BindlessInstanceData));
+        memcpy(addr, std::addressof(data), sizeof(SSBOInstanceData));
     }
-    _instanceDataArrayOffset += sizeof(BindlessInstanceData);
+    _instanceDataArrayOffset += sizeof(SSBOInstanceData);
 
     {
         DEBUG("Culling hack begin for {}", meshPath);
@@ -638,12 +640,12 @@ BindlessRenderSystemComponent* BindlessRenderSystem::MakeComponent(
             unsigned int* pIndex = reinterpret_cast<unsigned int*>(
                 (char*)_bindlessBuffers[i].instanceIndexArray.bufferAddress
                 + ((pCmd->firstInstance + pCmd->instanceCount)
-                   * sizeof(InstanceIndexArrayIndexType))
+                   * sizeof(SSBOInstanceIndex))
             );
             pCmd->instanceCount++;
             DEBUG("cmd now has instance count of {}", pCmd->instanceCount);
             *pIndex = ret->instanceDataOffset
-                      / sizeof(BindlessInstanceData
+                      / sizeof(SSBOInstanceData
                       ); // offset divided by size to get index
             DEBUG("pindex: {}", *pIndex);
         }
@@ -782,7 +784,7 @@ BindlessRenderSystem::RenderBatch BindlessRenderSystem::createRenderBatch(
     cmd.indexCount = indices.size();
     cmd.vertexOffset = _vertexBuffersWriteOffset / sizeof(Vertex);
     cmd.instanceCount = 0; // draw 0 instance by default
-    cmd.firstInstance = _instanceIndexArrayOffset / sizeof(InstanceIndexArrayIndexType);
+    cmd.firstInstance = _instanceIndexArrayOffset / sizeof(SSBOInstanceIndex);
     DEBUG("First instance {}", cmd.firstInstance);
 
     for (int i = 0; i < NUM_FRAME_IN_FLIGHT; i++) {
@@ -813,7 +815,7 @@ BindlessRenderSystem::RenderBatch BindlessRenderSystem::createRenderBatch(
     // reserve `instanceNumber` * sizeof(unsigned int) in
     // instanceLookupArray
     // bumping the offset will do so
-    _instanceIndexArrayOffset += batchSize * sizeof(InstanceIndexArrayIndexType);
+    _instanceIndexArrayOffset += batchSize * sizeof(SSBOInstanceIndex);
 
     // bump offset for next writes
     _vertexBuffersWriteOffset += vertexBufferSize;

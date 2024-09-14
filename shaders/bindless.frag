@@ -16,9 +16,6 @@ vec3 ambientLighting = vec3(0.6431, 0.6431, 0.6431);
 vec3 lightSourceColor = vec3(0.7, 1.0, 1.0); // White light
 float lightSourceIntensity = 100;
 
-const vec3 instance1Color = vec3(1, 0, 0); // red
-
-const vec3 instance2Color = vec3(0, 1, 0); // green
 
 void main() {
     vec4 textureColor = texture(textureSampler[fragTexIndex], fragTexCoord);
@@ -36,6 +33,18 @@ void main() {
 
 
     outColor = diffuseColor + ambientColor;
-    
-    outColor =  glInstanceIdx== 0 ? vec4(instance1Color, 0.f) : vec4(instance2Color, 0.f);
+
+    // debug statementse for visualizing instance indices
+    // if (glInstanceIdx == 0) { // red
+    //     outColor = vec4(1.f, 0.f, 0.f, 1.f);
+    // }
+    // else if (glInstanceIdx == 1) {
+    //     outColor = vec4(0.f, 1.f, 0.f, 1.f);
+    // }
+    // else if (glInstanceIdx == 10) {
+    //     outColor = vec4(0.f, 0.f, 1.f, 1.f);
+    // }
+    // else {
+    //     outColor = vec4(0.f, 0.f, 0.f, 1.f); // paint it black
+    // }
 }
