@@ -8,8 +8,9 @@ struct QueueFamilyIndices
 {
     std::optional<uint32_t> graphicsFamily;
     std::optional<uint32_t> presentationFamily;
+    std::optional<uint32_t> computeFamily;
 
-    inline bool isComplete() { return graphicsFamily.has_value() && presentationFamily.has_value(); }
+    inline bool isComplete() { return graphicsFamily.has_value() && presentationFamily.has_value() && computeFamily.has_value(); }
 };
 struct VQBuffer;
 
@@ -42,6 +43,8 @@ struct VQDevice
     VkQueue graphicsQueue = VK_NULL_HANDLE;
 
     VkQueue presentationQueue = VK_NULL_HANDLE;
+
+    VkQueue computeQueue = VK_NULL_HANDLE;
 
     VkCommandPool graphicsCommandPool = VK_NULL_HANDLE;
 

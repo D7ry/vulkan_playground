@@ -40,6 +40,7 @@ void VQDevice::CreateLogicalDeviceAndQueue(const std::vector<const char*>& exten
     }
     vkGetDeviceQueue(this->logicalDevice, queueFamilyIndices.graphicsFamily.value(), 0, &this->graphicsQueue);
     vkGetDeviceQueue(this->logicalDevice, queueFamilyIndices.presentationFamily.value(), 0, &this->presentationQueue);
+    vkGetDeviceQueue(this->logicalDevice, queueFamilyIndices.computeFamily.value(), 0, &this->computeQueue);
 }
 
 void VQDevice::InitQueueFamilyIndices(VkSurfaceKHR surface) {
@@ -51,6 +52,10 @@ void VQDevice::InitQueueFamilyIndices(VkSurfaceKHR surface) {
     int i = 0;
     for (const auto& queueFamily : queueFamilies) {
         VkBool32 presentationSupport = false;
+        if (queueFamily.queueFlags & VK_QUEUE_COMPUTE_BIT) {
+            this->queueFamilyIndices.computeFamily = i;
+            DEBUG("Compute family found at {}", i);
+        }
         if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
             this->queueFamilyIndices.graphicsFamily = i;
             DEBUG("Graphics family found at {}", i);
