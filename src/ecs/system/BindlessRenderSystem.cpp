@@ -514,6 +514,48 @@ void BindlessRenderSystem::Tick(const TickContext* ctx) {
     );
 }
 
+void BindlessRenderSystem::DestroyComponent(
+    BindlessRenderSystemComponent* component
+) {
+    // internally we perform the "copy and decrement method":
+    // 1. overwrite the instance data in the array with the last instance
+    // data
+    // 2. decrement the total # of instances
+    int instanceDataOffset = component->instanceDataOffset;
+    for (int i = 0; i < NUM_FRAME_IN_FLIGHT; i++) {
+        SSBOInstanceData* pData;
+        SSBOInstanceData* pLastData;
+
+        pData = reinterpret_cast<SSBOInstanceData*>(
+            reinterpret_cast<char*>( // char for byte ptr arithmetics
+                _bindlessBuffers[i].instanceDataArray.bufferAddress
+            )
+            + instanceDataOffset
+        );
+
+        pLastData = reinterpret_cast<SSBOInstanceData*>(
+            reinterpret_cast<char*>( // char for byte ptr arithmetics
+                _bindlessBuffers[i].instanceDataArray.bufferAddress
+            )
+            + _instanceDataArrayOffset - sizeof(SSBOInstanceData)
+        );
+
+        if (pLastData != pData) {
+            memcpy(pData, pLastData, sizeof(SSBOInstanceData));
+        }
+    }
+    _instanceDataArrayOffset -= sizeof(SSBOInstanceData);
+}
+
+std::vector<BindlessRenderSystemComponent*> BindlessRenderSystem::
+    MakeComponents(
+        const std::string& meshPath,
+        const std::string& texturePath,
+        unsigned int count
+    ) {
+    NEEDS_IMPLEMENTATION();
+}
+
 BindlessRenderSystemComponent* BindlessRenderSystem::MakeComponent(
     const std::string& meshPath,
     const std::string& texturePath
@@ -703,7 +745,9 @@ void BindlessRenderSystem::FlagUpdate(Entity* entity) {
     }
 }
 
-BindlessRenderSystem::MeshBufferOffsets BindlessRenderSystem::loadMeshBuffer(const std::string& meshPath) {
+BindlessRenderSystem::MeshBufferOffsets BindlessRenderSystem::loadMeshBuffer(
+    const std::string& meshPath
+) {
     DEBUG("Loading mesh into buffer array from {}", meshPath);
     // load mesh into vertex and index buffer
     std::vector<Vertex> vertices;
@@ -775,7 +819,7 @@ BindlessRenderSystem::MeshBufferOffsets BindlessRenderSystem::loadMeshBuffer(con
     vkDestroyBuffer(_device->logicalDevice, stagingBuffer, nullptr);
     vkFreeMemory(_device->logicalDevice, stagingBufferMemory, nullptr);
 
-    MeshBufferOffsets result {
+    MeshBufferOffsets result{
         .vertexBeginOffset = _vertexBuffersWriteOffset,
         .vertexEndOffset = _vertexBuffersWriteOffset + vertexBufferSize,
         .indexBeginOffset = _indexBuffersWriteOffset,
@@ -805,7 +849,8 @@ BindlessRenderSystem::RenderBatch BindlessRenderSystem::createRenderBatch(
 
     // create a draw command and store into `drawCommandArray`
     VkDrawIndexedIndirectCommand cmd{};
-    cmd.firstIndex = meshBuffer.indexBeginOffset / sizeof(INDEX_BUFFER_INDEX_TYPE);
+    cmd.firstIndex
+        = meshBuffer.indexBeginOffset / sizeof(INDEX_BUFFER_INDEX_TYPE);
     cmd.indexCount = meshBuffer.numIndices;
     cmd.vertexOffset = meshBuffer.vertexBeginOffset / sizeof(Vertex);
     cmd.instanceCount = 0; // draw 0 instance by default

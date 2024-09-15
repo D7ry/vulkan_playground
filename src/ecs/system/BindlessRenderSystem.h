@@ -19,12 +19,32 @@ class BindlessRenderSystem : public IRenderSystem
     virtual void Tick(const TickContext* tickData) override;
     virtual void Cleanup() override;
 
-    // TODO: is this a good abstraction barrier?
+    // Create a new bindless render system component
+    // the component allows rendering of `meshPath` and `texturePath`
     BindlessRenderSystemComponent* MakeComponent(
         const std::string& meshPath,
         const std::string& texturePath
     );
-    void DestroyComponent(BindlessRenderSystemComponent*& component);
+
+    // Create components in batch
+    std::vector<BindlessRenderSystemComponent*> MakeComponents(
+        const std::string& meshPath,
+        const std::string& texturePath,
+        unsigned int count
+    );
+
+    // Destroy the rendering component, releasing all resources
+    //
+    // TODO: this is not tested
+    // FIXME: this is also not thread safe. Need to figure out a global
+    // thread-safe paradigm to update rendering resources
+    // can either:
+    // 1. wait for all frame in flight to finish processing, lock the rendering
+    // thread and perform updates on rendering resources
+    // 2. make additional copies of resrouces such as _instanceDataArrayOffset,
+    // s.t. each frame in flight have their own resource, and then can safely perform
+    // update in compute shaders&render loop
+    void DestroyComponent(BindlessRenderSystemComponent* component);
 
     // flag the entity as dirty, so that its buffer will be flushed
     void FlagUpdate(Entity* entity);
@@ -129,10 +149,15 @@ class BindlessRenderSystem : public IRenderSystem
     };
 
     std::array<BindlessBuffer, NUM_FRAME_IN_FLIGHT> _bindlessBuffers;
+
+    // offset to `instanceIndexArray`, to which we can append a new
+    // `SSBOInstanceIndex` a.k.a. unsigned int
     unsigned int _instanceIndexArrayOffset = 0;
-    unsigned int _drawCommandArrayOffset
-        = 0; // offset in drawCommandArray, to which we can append a new
-             // VkDrawIndexedIndirectCommand
+    // offset to `drawCommandArray`, to which we can append a new
+    // `VkDrawIndexedIndirectCommand`
+    unsigned int _drawCommandArrayOffset = 0;
+    // offset to `instanceDataArray` to which we can append a new
+    // `SSBOInstanceData`
     unsigned int _instanceDataArrayOffset = 0;
 
     /* ---------- Internal Data Structures ----------- */
@@ -145,11 +170,11 @@ class BindlessRenderSystem : public IRenderSystem
         // additional render batch infos
     };
 
-    // each model can have multiple batches, with each batch being able to 
+    // each model can have multiple batches, with each batch being able to
     // render more instances than the previous one. This avoids fragmentation
-    // and reduces model resizing cost. Note this does create a manageable amount of 
-    // additional draw calls for large instance count, but if we scale up batch size
-    // geometrically the draw call cost can be treated as O(1).
+    // and reduces model resizing cost. Note this does create a manageable
+    // amount of additional draw calls for large instance count, but if we scale
+    // up batch size geometrically the draw call cost can be treated as O(1).
     std::unordered_map<std::string, std::vector<RenderBatch>> _modelBatches;
 
     DeletionStack _deletionStack;
@@ -159,7 +184,7 @@ class BindlessRenderSystem : public IRenderSystem
         _updateQueue;
 
     // representation of a mesh loaded into `_vertexBuffers` and `_indexBuffers`
-    // different draw commands may hold the same mesh buffer as instances are 
+    // different draw commands may hold the same mesh buffer as instances are
     // dynamically loaded in.
     struct MeshBufferOffsets
     {

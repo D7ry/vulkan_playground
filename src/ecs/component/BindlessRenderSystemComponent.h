@@ -5,10 +5,10 @@ class BindlessRenderSystem;
 
 struct BindlessRenderSystemComponent : IComponent
 {
+    friend BindlessRenderSystem;
     void FlagUpdate();
-
   private:
-    friend class BindlessRenderSystem;
+    BindlessRenderSystemComponent() = default;
     BindlessRenderSystem* parentSystem;
     int instanceDataOffset; // used to update the instance data
 };
