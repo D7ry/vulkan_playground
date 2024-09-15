@@ -474,6 +474,12 @@ void BindlessRenderSystem::Cleanup() {
     DEBUG("Done cleaning up");
 }
 
+void BindlessRenderSystem::AddEntity(Entity* entity) {
+    // must have a bindless component
+    ASSERT(entity->GetComponent<BindlessRenderSystemComponent>() != nullptr);
+    _entities.push_back(entity);
+}
+
 void BindlessRenderSystem::Tick(const TickContext* ctx) {
     PROFILE_SCOPE(ctx->profiler, "Bindless System Tick");
     VkCommandBuffer CB = ctx->graphics.CB;
@@ -678,12 +684,6 @@ BindlessRenderSystemComponent* BindlessRenderSystem::MakeComponent(
     }
 
     return ret;
-}
-
-void BindlessRenderSystem::DestroyComponent(
-    BindlessRenderSystemComponent*& component
-) {
-    NEEDS_IMPLEMENTATION();
 }
 
 void BindlessRenderSystem::updateTextureDescriptorSet(int frame) {

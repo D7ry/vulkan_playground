@@ -19,6 +19,8 @@ class BindlessRenderSystem : public IRenderSystem
     virtual void Tick(const TickContext* tickData) override;
     virtual void Cleanup() override;
 
+    virtual void AddEntity(Entity* entity) override;
+
     // Create a new bindless render system component
     // the component allows rendering of `meshPath` and `texturePath`
     BindlessRenderSystemComponent* MakeComponent(
