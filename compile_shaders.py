@@ -1,8 +1,11 @@
 import os
 import subprocess
-import sys
-# compile all shader files in the current directory and all subdirectories
-for root, dirs, files in os.walk(os.getcwd()):
+
+# compile all shader files in "shaders" folder into spir-v binaries
+shaders_path = os.path.join(os.getcwd(), "shaders")
+
+print("Compiling all shaders in {}".format(shaders_path))
+for root, dirs, files in os.walk(shaders_path):
     for file in files:
         if file.endswith(".vert") or file.endswith(".frag"):
             print("Compiling shader: " + file)
