@@ -318,6 +318,7 @@ void VulkanEngine::Tick() {
         }
     }
     _profiler.NewProfile();
+    _numTicks++;
 }
 
 void VulkanEngine::framebufferResizeCallback(
@@ -1198,6 +1199,7 @@ void VulkanEngine::flushEngineUBOStatic(uint8_t frame) {
     getMainProjectionMatrix(ubo.proj);
     ubo.timeSinceStartSeconds = _timeSinceStartSeconds;
     ubo.sinWave = (sin(_timeSinceStartSeconds) + 1) / 2.f; // offset to [0, 1]
+    ubo.flip = _numTicks % 2 == 0;
     memcpy(buf.bufferAddress, &ubo, sizeof(ubo));
 }
 

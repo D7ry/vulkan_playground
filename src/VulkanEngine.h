@@ -50,6 +50,7 @@ class VulkanEngine
         glm::mat4 proj;              // proj matrix
         float timeSinceStartSeconds; // time in seconds since engine start
         float sinWave;               // a number interpolating between [0,1]
+        bool flip;                   // a switch that gets flipped every frame
     };
 
     void Init();
@@ -206,6 +207,7 @@ class VulkanEngine
 
     float _FOV = 90;
     float _timeSinceStartSeconds; // seconds in time since engine start
+    unsigned long int _numTicks;  // how many ticks has happened so far
 
     /* ---------- Systems from ecs ---------- */
     // TODO: SystemManager
