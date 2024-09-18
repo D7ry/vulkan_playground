@@ -1253,9 +1253,14 @@ void VulkanEngine::drawFrame(TickContext* ctx, uint8_t frame) {
         CB.begin(vk::CommandBufferBeginInfo());
     }
 
-    {     // invoke all GraphicsSystem under the main render pass
+    { // main render pass
+        vk::Extent2D extend = vk::Extent2D(
+            _swapChainExtent.width * 0.5, _swapChainExtent.height * 0.5
+        );
+        extend = _swapChainExtent;
+        // the main render pass renders the actual graphics of the game.
         { // begin main render pass
-            vk::Rect2D renderArea(VkOffset2D{0, 0}, _swapChainExtent);
+            vk::Rect2D renderArea(VkOffset2D{0, 0}, extend);
             std::array<vk::ClearValue, 2> clearValues{};
             clearValues[0].color = {0.f, 0.f, 0.f, 1.f};
             clearValues[1].depthStencil = vk::ClearDepthStencilValue(1.f, 0.f);
@@ -1276,15 +1281,15 @@ void VulkanEngine::drawFrame(TickContext* ctx, uint8_t frame) {
             VkViewport viewport{};
             viewport.x = 0.0f;
             viewport.y = 0.0f;
-            viewport.width = static_cast<float>(_swapChainExtent.width);
-            viewport.height = static_cast<float>(_swapChainExtent.height);
+            viewport.width = static_cast<float>(extend.width);
+            viewport.height = static_cast<float>(extend.height);
             viewport.minDepth = 0.0f;
             viewport.maxDepth = 1.0f;
             vkCmdSetViewport(CB, 0, 1, &viewport);
 
             VkRect2D scissor{};
             scissor.offset = {0, 0};
-            scissor.extent = _swapChainExtent;
+            scissor.extent = extend;
             vkCmdSetScissor(CB, 0, 1, &scissor);
         }
         // this->_phongSystem->Tick(ctx);
@@ -1401,10 +1406,13 @@ void VulkanEngine::drawImGui() {
         std::unique_ptr<std::vector<Profiler::Entry>> lastProfile
             = _profiler.GetLastProfile();
         _perfPlot.Draw(
-            lastProfile, _deltaTimer.GetDeltaTimeSeconds(), _timeSinceStartSeconds
+            lastProfile,
+            _deltaTimer.GetDeltaTimeSeconds(),
+            _timeSinceStartSeconds
         );
     }
     ImGui::End(); // VulkanEngine
+    _widgetDeviceInfo.Draw(this);
     _entityViewerSystem->DrawImGui();
     _imguiManager.EndImGuiContext();
 }

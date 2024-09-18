@@ -28,13 +28,14 @@
 
 // Engine Components
 #include "components/Camera.h"
-#include "components/DeletionStack.h"
 #include "components/DeltaTimer.h"
 #include "components/ImGuiManager.h"
 #include "components/ImGuiPerfPlot.h"
 #include "components/InputManager.h"
 #include "components/Profiler.h"
 #include "components/TextureManager.h"
+#include "components/imgui_widgets/ImGuiWidget.h"
+#include "components/imgui_widgets/ImGuiWidgetDeviceInfo.h"
 
 class TickContext;
 
@@ -224,4 +225,8 @@ class VulkanEngine
     InputManager _inputManager;
     Profiler _profiler;
     ImGuiPerfPlot _perfPlot;
+
+    // ImGui widgets
+    friend class ImGuiWidget;
+    ImGuiWidgetDeviceInfo _widgetDeviceInfo;
 };

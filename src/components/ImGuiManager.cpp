@@ -13,7 +13,8 @@ void ImGuiManager::InitializeImgui() {
         |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
     io.ConfigFlags
         |= ImGuiConfigFlags_NavEnableGamepad; // Enable Gamepad Controls
-
+    io.ConfigFlags
+        |= ImGuiConfigFlags_DockingEnable; // Enable Docking(experimental)
     ImGui::StyleColorsDark();
 #if __APPLE__
     ImFont* font = io.Fonts->AddFontFromFileTTF(
