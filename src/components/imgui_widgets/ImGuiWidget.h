@@ -3,6 +3,8 @@
 
 class VulkanEngine;
 
+// An ImGui widget that draws information related to 
+// the main engine.
 class ImGuiWidget
 {
   public:

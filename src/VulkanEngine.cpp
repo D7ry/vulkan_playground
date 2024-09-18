@@ -1406,7 +1406,7 @@ void VulkanEngine::drawImGui() {
         std::unique_ptr<std::vector<Profiler::Entry>> lastProfile
             = _profiler.GetLastProfile();
         _perfPlot.Draw(
-            lastProfile,
+            std::move(lastProfile),
             _deltaTimer.GetDeltaTimeSeconds(),
             _timeSinceStartSeconds
         );

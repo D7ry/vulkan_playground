@@ -2,6 +2,8 @@
 
 // inspired by cgc profiler
 
+// Scope-based profiler utility that records time and 
+// call hierarchy information for subroutines.
 class Profiler
 {
   public:

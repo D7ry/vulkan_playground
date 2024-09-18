@@ -7,6 +7,9 @@
 
 class DeltaTimer;
 
+// Draws framerate and performance profiling metrics
+// The perf plot should work hand-in-hand with Profiler class,
+// which performs actual stats collection
 class ImGuiPerfPlot
 {
   public:
