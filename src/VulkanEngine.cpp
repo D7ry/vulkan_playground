@@ -1220,8 +1220,7 @@ void VulkanEngine::drawFrame(TickContext* ctx, uint8_t frame) {
         VK_NULL_HANDLE,
         &imageIndex
     );
-    [[unlikely]] if (result == VK_ERROR_OUT_OF_DATE_KHR
-                     || result == VK_SUBOPTIMAL_KHR) {
+    [[unlikely]] if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
         this->recreateSwapChain();
         return;
     } else [[unlikely]] if (result != VK_SUCCESS) {
@@ -1379,32 +1378,49 @@ void VulkanEngine::drawImGui() {
     PROFILE_SCOPE(&_profiler, "ImGui Draw");
     _imguiManager.BeginImGuiContext();
     if (ImGui::Begin("Vulkan Engine")) {
-        ImGui::SetWindowPos(ImVec2(0, 0), ImGuiCond_Once);
-        ImGui::SetWindowSize(ImVec2(400, 400), ImGuiCond_Once);
-        ImGui::Separator();
-        ImGui::SeparatorText("Camera");
-        {
-            ImGui::Text(
-                "Position: (%f, %f, %f)",
-                _mainCamera.GetPosition().x,
-                _mainCamera.GetPosition().y,
-                _mainCamera.GetPosition().z
-            );
-            ImGui::Text(
-                "Yaw: %f Pitch: %f Roll: %f",
-                _mainCamera.GetRotation().y,
-                _mainCamera.GetRotation().x,
-                _mainCamera.GetRotation().z
-            );
-            if (_lockCursor) {
-                ImGui::Text("View Mode: Active");
-            } else {
-                ImGui::Text("View Mode: Deactive");
+        if (ImGui::BeginTabBar("Engine Tab")) {
+            if (ImGui::BeginTabItem("General")) {
+                ImGui::SeparatorText("Camera");
+                {
+                    ImGui::Text(
+                        "Position: (%f, %f, %f)",
+                        _mainCamera.GetPosition().x,
+                        _mainCamera.GetPosition().y,
+                        _mainCamera.GetPosition().z
+                    );
+                    ImGui::Text(
+                        "Yaw: %f Pitch: %f Roll: %f",
+                        _mainCamera.GetRotation().y,
+                        _mainCamera.GetRotation().x,
+                        _mainCamera.GetRotation().z
+                    );
+                }
+                if (ImGui::Button("Reset")) {
+                    _mainCamera.SetPosition(0, 0, 0);
+                }
+                ImGui::SeparatorText("Cursor Lock(tab)");
+                if (_lockCursor) {
+                    ImGui::Text("Cursor Lock: Active");
+                } else {
+                    ImGui::Text("Cursor Lock: Deactive");
+                }
+                ImGui::EndTabItem();
             }
+
+            if (ImGui::BeginTabItem("Performance")) {
+                _widgetPerfPlot.Draw(this);
+                ImGui::EndTabItem();
+            }
+
+            if (ImGui::BeginTabItem("Device")) {
+                _widgetDeviceInfo.Draw(this);
+                ImGui::EndTabItem();
+            }
+
+            ImGui::EndTabBar(); // Engine Tab
         }
-        _widgetPerfPlot.Draw(this);
-        _widgetDeviceInfo.Draw(this);
     }
+
     ImGui::End(); // VulkanEngine
     _entityViewerSystem->DrawImGui();
     _imguiManager.EndImGuiContext();
