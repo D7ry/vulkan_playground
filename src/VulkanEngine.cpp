@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <functional>
+#include <iostream>
 #include <limits>
 #include <set>
 
@@ -27,18 +28,68 @@
 static Entity* entityInstanced = new Entity("instanced entity");
 static Entity* entityInstanced2 = new Entity("instanced entity2");
 
-void VulkanEngine::initGLFW() {
+// in CLI pop up a monitor selection interface, that lists
+// monitor names and properties
+// the user would input a number to select the right monitor.
+GLFWmonitor* VulkanEngine::cliMonitorSelection() {
+    const char* line = nullptr;
+    line = "---------- Please Select Monitor Index ----------"; // lol
+    std::cout << line << std::endl;
+    int numMonitors;
+    GLFWmonitor** monitors = glfwGetMonitors(&numMonitors);
+    // print out monitor details
+    for (int monitorIdx = 0; monitorIdx < numMonitors; monitorIdx++) {
+        GLFWmonitor* monitor = monitors[monitorIdx];
+        const char* name = glfwGetMonitorName(monitor);
+        int width, height;
+        glfwGetMonitorPhysicalSize(monitor, &width, &height);
+        fmt::println("{}: {} {}mm x {}mm", monitorIdx, name, width, height);
+    }
+    line = "-------------------------------------------------";
+    std::cout << line << std::endl;
+    // scan user input for monitor idx and choose monitor
+    int monitorIdx = 0;
+    do {
+        std::string input;
+        getline(std::cin, input);
+        char* endPtr;
+        monitorIdx = strtol(input.c_str(), &endPtr, 10);
+        if (endPtr) { // conversion success
+            if (monitorIdx < numMonitors) {
+                break;
+            } else {
+                std::cout << "Monitor index out of range!" << std::endl;
+            }
+        } else {
+            std::cout << "Please input a valid integer number!" << std::endl;
+        }
+    } while (1);
+    return monitors[monitorIdx];
+}
+
+void VulkanEngine::initGLFW(const InitOptions& options) {
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
     if (!glfwVulkanSupported()) {
         FATAL("Vulkan is not supported on this machine!");
     }
+    // having monitor as nullptr initializes a windowed window
+    GLFWmonitor* monitor = nullptr;
+    if (options.fullScreen) {
+        monitor = glfwGetPrimaryMonitor();
+        if (options.manualMonitorSelection) {
+            monitor = cliMonitorSelection();
+        }
+        fmt::println(
+            "Selected {} as full-screen monitor.", glfwGetMonitorName(monitor)
+        );
+    }
     this->_window = glfwCreateWindow(
         DEFAULTS::WINDOW_WIDTH,
         DEFAULTS::WINDOW_HEIGHT,
         "Vulkan Engine",
-        nullptr,
+        monitor,
         nullptr
     );
     if (this->_window == nullptr) {
@@ -76,11 +127,11 @@ void VulkanEngine::cursorPosCallback(
     prevY = ypos;
 }
 
-void VulkanEngine::Init() {
+void VulkanEngine::Init(const VulkanEngine::InitOptions& options) {
 #if __APPLE__
     MoltenVKConfig::Setup();
 #endif // __APPLE__
-    initGLFW();
+    initGLFW(options);
     { // Input Handling
         auto keyCallback
             = [](GLFWwindow* window, int key, int scancode, int action, int mods

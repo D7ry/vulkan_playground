@@ -40,6 +40,14 @@ class TickContext;
 class VulkanEngine
 {
   public:
+    struct InitOptions
+    {
+        bool fullScreen = false; // full screen mode
+        bool manualMonitorSelection
+            = false; // the user may select a monitor that's not the primary
+                     // monitor through CLI
+    };
+
     // Engine-wide static UBO that gets updated every Tick()
     // systems can read from `InitData::engineUBOStaticDescriptorBufferInfo`
     // to bind to the UBO in their own graphics pipelines.
@@ -51,7 +59,7 @@ class VulkanEngine
         float sinWave;               // a number interpolating between [0,1]
     };
 
-    void Init();
+    void Init(const InitOptions& options);
     void Run();
     void Tick();
     void Cleanup();
@@ -71,7 +79,8 @@ class VulkanEngine
     };
 
     /* ---------- Initialization Subroutines ---------- */
-    void initGLFW();
+    GLFWmonitor* cliMonitorSelection();
+    void initGLFW(const InitOptions& options);
     void initVulkan();
     void createInstance();
     void createSurface();
@@ -225,7 +234,8 @@ class VulkanEngine
     Camera _mainCamera;
     InputManager _inputManager;
     Profiler _profiler;
-    std::unique_ptr<std::vector<Profiler::Entry>> _lastProfilerData = _profiler.NewProfile();
+    std::unique_ptr<std::vector<Profiler::Entry>> _lastProfilerData
+        = _profiler.NewProfile();
 
     // ImGui widgets
     friend class ImGuiWidgetDeviceInfo;
@@ -233,4 +243,3 @@ class VulkanEngine
     friend class ImGuiWidgetPerfPlot;
     ImGuiWidgetPerfPlot _widgetPerfPlot;
 };
-
