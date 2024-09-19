@@ -1220,7 +1220,8 @@ void VulkanEngine::drawFrame(TickContext* ctx, uint8_t frame) {
         VK_NULL_HANDLE,
         &imageIndex
     );
-    [[unlikely]] if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+    [[unlikely]] if (result == VK_ERROR_OUT_OF_DATE_KHR
+                     || result == VK_SUBOPTIMAL_KHR) {
         this->recreateSwapChain();
         return;
     } else [[unlikely]] if (result != VK_SUCCESS) {
@@ -1299,6 +1300,7 @@ void VulkanEngine::drawFrame(TickContext* ctx, uint8_t frame) {
     }
 
     _imguiManager.RecordCommandBuffer(ctx);
+
     // end command buffer
     CB.end();
 
@@ -1375,6 +1377,9 @@ void VulkanEngine::initSwapChain() {
 }
 
 void VulkanEngine::drawImGui() {
+    if (!_wantToDrawImGui) {
+        return;
+    }
     PROFILE_SCOPE(&_profiler, "ImGui Draw");
     _imguiManager.BeginImGuiContext();
     if (ImGui::Begin("Vulkan Engine")) {
@@ -1491,6 +1496,17 @@ void VulkanEngine::bindDefaultInputs() {
         GLFW_KEY_ESCAPE,
         InputManager::KeyCallbackCondition::PRESS,
         [this]() { glfwSetWindowShouldClose(_window, GLFW_TRUE); }
+    );
+    // flip imgui draw with "`" key
+    _inputManager.RegisterCallback(
+        GLFW_KEY_GRAVE_ACCENT,
+        InputManager::KeyCallbackCondition::PRESS,
+        [this]() {
+            _wantToDrawImGui = !_wantToDrawImGui;
+            if (!_wantToDrawImGui) {
+                _imguiManager.ClearImGuiElements();
+            }
+        }
     );
 }
 

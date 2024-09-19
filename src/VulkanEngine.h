@@ -196,6 +196,9 @@ class VulkanEngine
     uint8_t _currentFrame = 0;
     // whether we are locking the cursor within the glfw window
     bool _lockCursor = false;
+    // whether we want to draw imgui, set to false disables
+    // all imgui windows
+    bool _wantToDrawImGui = true;
 
     std::shared_ptr<VQDevice> _device;
 
