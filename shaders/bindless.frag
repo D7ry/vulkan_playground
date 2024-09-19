@@ -34,10 +34,10 @@ void main() {
 
     outColor = diffuseColor + ambientColor;
 
-    vec4 r = vec4(1.f, 0.f, 0.f, 1.f);
-    vec4 b = vec4(0.f, 0.f, 1.f, 1.f);
-
-    outColor = (flip == 1) ? r : b;
+    // vec4 r = vec4(1.f, 0.f, 0.f, 1.f);
+    // vec4 b = vec4(0.f, 0.f, 1.f, 1.f);
+    //
+    // outColor = (flip == 1) ? r : b;
     // debug statementse for visualizing instance indices
     // if (glInstanceIdx == 0) { // red
     //     outColor = vec4(1.f, 0.f, 0.f, 1.f);
