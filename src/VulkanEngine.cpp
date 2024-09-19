@@ -1479,6 +1479,7 @@ void VulkanEngine::drawImGui() {
                         _mainCamera.GetRotation().x,
                         _mainCamera.GetRotation().z
                     );
+                    ImGui::SliderFloat("FOV", &_FOV, 30, 120, "%.f");
                 }
                 if (ImGui::Button("Reset")) {
                     _mainCamera.SetPosition(0, 0, 0);
