@@ -4,6 +4,9 @@
 layout(binding = 0) uniform UBOStatic {
     mat4 view;
     mat4 proj;
+    float timeSinceStartSeconds; // time in seconds since engine start
+    float sinWave;               // a number interpolating between [0,1]
+    bool flip;                   // a switch that gets flipped every frame
 } uboStatic;
 
 struct InstanceData
@@ -37,6 +40,8 @@ layout(location = 3) out vec3 fragPos; // frag position in view space
 layout(location = 4) out vec3 fragGlobalLightPos; // light position in view space
 layout(location = 5) out int fragTexIndex; // texture index
 
+layout(location = 7) flat out int flip;
+
 layout(location=6) flat out int glInstanceIdx;
 
 vec3 globalLightPos = vec3(-6, -3, 0.0);
@@ -45,6 +50,7 @@ vec3 globalLightPos = vec3(-6, -3, 0.0);
 #extension GL_EXT_debug_printf : enable
 
 void main() {
+    flip = uboStatic.flip == true ? 1 : 0;
     // instance index has been tested to have no problem.
     // gl_InstanceIndex: cow has 0, viking room has 10
     // something is wrong with ssbo indexing

@@ -9,7 +9,7 @@ layout(location = 3) in vec3 fragPos;
 layout(location = 4) in vec3 fragGlobalLightPos;
 layout(location = 5) flat in int fragTexIndex;
 layout(location=6) flat in int glInstanceIdx;
-
+layout(location = 7) flat in int flip;
 layout(location = 0) out vec4 outColor;
 
 vec3 ambientLighting = vec3(0.6431, 0.6431, 0.6431);
@@ -34,6 +34,10 @@ void main() {
 
     outColor = diffuseColor + ambientColor;
 
+    vec4 r = vec4(1.f, 0.f, 0.f, 1.f);
+    vec4 b = vec4(0.f, 0.f, 1.f, 1.f);
+
+    outColor = (flip == 1) ? r : b;
     // debug statementse for visualizing instance indices
     // if (glInstanceIdx == 0) { // red
     //     outColor = vec4(1.f, 0.f, 0.f, 1.f);
