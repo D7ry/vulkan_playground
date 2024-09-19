@@ -57,6 +57,7 @@ add_executable(vulkan_playground
         src/components/InputManager.cpp
         src/components/imgui_widgets/ImGuiWidgetPerfPlot.cpp
         src/components/imgui_widgets/ImGuiWidgetDeviceInfo.cpp
+        src/components/imgui_widgets/ImGuiWidgetUBOViewer.cpp
         src/lib/VQDevice.cpp
         src/lib/VQUtils.cpp
         src/VulkanEngine.cpp

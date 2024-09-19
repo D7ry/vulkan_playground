@@ -209,6 +209,8 @@ class VulkanEngine
     // whether we want to draw imgui, set to false disables
     // all imgui windows
     bool _wantToDrawImGui = true;
+    // engine level pause, toggle with P key
+    bool _paused = false;
 
     std::shared_ptr<VQDevice> _device;
 
@@ -244,4 +246,6 @@ class VulkanEngine
     ImGuiWidgetDeviceInfo _widgetDeviceInfo;
     friend class ImGuiWidgetPerfPlot;
     ImGuiWidgetPerfPlot _widgetPerfPlot;
+    friend class ImGuiWidgetUBOViewer;
+    ImGuiWidgetUBOViewer _widgetUBOViewer;
 };

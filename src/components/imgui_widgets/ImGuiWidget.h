@@ -9,7 +9,7 @@ class VulkanEngine;
 class ImGuiWidget
 {
   public:
-    ImGuiWidget(){};
+    ImGuiWidget() {};
     virtual void Draw(const VulkanEngine* engine) = 0;
 };
 
@@ -49,4 +49,11 @@ class ImGuiWidgetPerfPlot : public ImGuiWidget
     // lower-end systems the profiler plot itself consumes
     // CPU cycles (~2ms on a M3 mac)
     bool _wantShowPerfPlot = true;
+};
+
+// view and edit engineUBO
+class ImGuiWidgetUBOViewer : public ImGuiWidget
+{
+  public:
+    virtual void Draw(const VulkanEngine* engine) override;
 };

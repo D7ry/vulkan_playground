@@ -158,6 +158,9 @@ void VulkanEngine::Init(const VulkanEngine::InitOptions& options) {
                   VulkanEngine* pThis = reinterpret_cast<VulkanEngine*>(
                       glfwGetWindowUserPointer(window)
                   );
+                  if (key == GLFW_KEY_P && action == GLFW_PRESS) {
+                      pThis->_paused = !pThis->_paused;
+                  }
                   pThis->_inputManager.OnKeyInput(
                       window, key, scancode, action, mods
                   );
@@ -360,18 +363,23 @@ void VulkanEngine::Init(const VulkanEngine::InitOptions& options) {
 
 void VulkanEngine::Run() {
     while (!glfwWindowShouldClose(_window)) {
+        glfwPollEvents();
         Tick();
     }
 }
 
 void VulkanEngine::Tick() {
+    _deltaTimer.Tick();// tick deltaTimer regardless of pause,
+                       // for correct _timeSinceStartSeconds
+    if (_paused) {
+        std::this_thread::yield();
+        return;
+    }
     {
         PROFILE_SCOPE(&_profiler, "Main Tick");
         {
             PROFILE_SCOPE(&_profiler, "CPU");
             // CPU-exclusive workloads
-            glfwPollEvents();
-            _deltaTimer.Tick();
             double deltaTime = _deltaTimer.GetDeltaTime();
             _timeSinceStartSeconds += deltaTime;
             _inputManager.Tick(deltaTime);
@@ -1481,6 +1489,8 @@ void VulkanEngine::drawImGui() {
                 } else {
                     ImGui::Text("Cursor Lock: Deactive");
                 }
+                ImGui::SeparatorText("Engine UBO");
+                _widgetUBOViewer.Draw(this);
                 ImGui::EndTabItem();
             }
 
