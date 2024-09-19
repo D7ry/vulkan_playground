@@ -60,6 +60,8 @@ class ImGuiManager
     void Cleanup(VkDevice logicalDevice);
 
   private:
+    void setupImGuiStyle();
+
     VkRenderPass _imGuiRenderPass; // render pass sepcifically for imgui
     VkDescriptorPool _imguiDescriptorPool;
     std::vector<VkFramebuffer> _imGuiFramebuffers;

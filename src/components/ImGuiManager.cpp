@@ -3,6 +3,50 @@
 #include "imgui.h"
 #include "implot.h"
 
+void ImGuiManager::setupImGuiStyle() {
+    auto& style = ImGui::GetStyle();
+    auto& colors = style.Colors;
+    // Theme from https://github.com/ArranzCNL/ImprovedCameraSE-NG
+    // style.WindowTitleAlign = ImVec2(0.5, 0.5);
+    // style.FramePadding = ImVec2(4, 4);
+
+    // Rounded slider grabber
+    style.GrabRounding = 12.0f;
+
+    // Window
+    colors[ImGuiCol_WindowBg] = ImVec4{0.118f, 0.118f, 0.118f, 0.784f};
+    colors[ImGuiCol_ResizeGrip] = ImVec4{0.2f, 0.2f, 0.2f, 0.5f};
+    colors[ImGuiCol_ResizeGripHovered] = ImVec4{0.3f, 0.3f, 0.3f, 0.75f};
+    colors[ImGuiCol_ResizeGripActive] = ImVec4{0.15f, 0.15f, 0.15f, 1.0f};
+
+    // Header
+    colors[ImGuiCol_Header] = ImVec4{0.2f, 0.2f, 0.2f, 1.0f};
+    colors[ImGuiCol_HeaderHovered] = ImVec4{0.3f, 0.3f, 0.3f, 1.0f};
+    colors[ImGuiCol_HeaderActive] = ImVec4{0.15f, 0.15f, 0.15f, 1.0f};
+
+    // Title
+    colors[ImGuiCol_TitleBg] = ImVec4{0.15f, 0.15f, 0.15f, 1.0f};
+    colors[ImGuiCol_TitleBgActive] = ImVec4{0.15f, 0.15f, 0.15f, 1.0f};
+    colors[ImGuiCol_TitleBgCollapsed] = ImVec4{0.15f, 0.15f, 0.15f, 1.0f};
+
+    // Frame Background
+    colors[ImGuiCol_FrameBg] = ImVec4{0.2f, 0.2f, 0.2f, 1.0f};
+    colors[ImGuiCol_FrameBgHovered] = ImVec4{0.3f, 0.3f, 0.3f, 1.0f};
+    colors[ImGuiCol_FrameBgActive] = ImVec4{0.15f, 0.15f, 0.15f, 1.0f};
+
+    // Button
+    colors[ImGuiCol_Button] = ImVec4{0.2f, 0.2f, 0.2f, 1.0f};
+    colors[ImGuiCol_ButtonHovered] = ImVec4{0.3f, 0.3f, 0.3f, 1.0f};
+    colors[ImGuiCol_ButtonActive] = ImVec4{0.15f, 0.15f, 0.15f, 1.0f};
+
+    // Tab
+    colors[ImGuiCol_Tab] = ImVec4{0.15f, 0.15f, 0.15f, 1.0f};
+    colors[ImGuiCol_TabHovered] = ImVec4{0.38f, 0.38f, 0.38f, 1.0f};
+    colors[ImGuiCol_TabActive] = ImVec4{0.28f, 0.28f, 0.28f, 1.0f};
+    colors[ImGuiCol_TabUnfocused] = ImVec4{0.15f, 0.15f, 0.15f, 1.0f};
+    colors[ImGuiCol_TabUnfocusedActive] = ImVec4{0.2f, 0.2f, 0.2f, 1.0f};
+}
+
 void ImGuiManager::InitializeImgui() {
     INFO("Initializing imgui...");
     IMGUI_CHECKVERSION();
@@ -18,9 +62,10 @@ void ImGuiManager::InitializeImgui() {
     ImGui::StyleColorsDark();
 #if __APPLE__
     ImFont* font = io.Fonts->AddFontFromFileTTF(
-        "/Users/dtry/Library/Fonts/FiraCode-Retina.ttf", DEFAULTS::ImGui::DEFAULT_FONT_SIZE
+        "/System/Library/Fonts/Optima.ttc", DEFAULTS::ImGui::DEFAULT_FONT_SIZE
     );
 #endif
+    setupImGuiStyle();
     INFO("ImGui initialized.");
 }
 
