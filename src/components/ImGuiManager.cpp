@@ -18,7 +18,7 @@ void ImGuiManager::InitializeImgui() {
     ImGui::StyleColorsDark();
 #if __APPLE__
     ImFont* font = io.Fonts->AddFontFromFileTTF(
-        "/Users/dtry/Library/Fonts/FiraCode-Retina.ttf", 16
+        "/Users/dtry/Library/Fonts/FiraCode-Retina.ttf", DEFAULTS::ImGui::DEFAULT_FONT_SIZE
     );
 #endif
     INFO("ImGui initialized.");

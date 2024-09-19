@@ -34,7 +34,7 @@ namespace ImGui
 #if !__APPLE__
 const float DEFAULT_FONT_SIZE = 17;
 #else
-const float DEFAULT_FONT_SIZE = 20;
+const float DEFAULT_FONT_SIZE = 34;
 #endif // __APPLE__
 } // namespace ImGui
 
