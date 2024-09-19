@@ -41,9 +41,15 @@ GLFWmonitor* VulkanEngine::cliMonitorSelection() {
     for (int monitorIdx = 0; monitorIdx < numMonitors; monitorIdx++) {
         GLFWmonitor* monitor = monitors[monitorIdx];
         const char* name = glfwGetMonitorName(monitor);
-        int width, height;
-        glfwGetMonitorPhysicalSize(monitor, &width, &height);
-        fmt::println("{}: {} {}mm x {}mm", monitorIdx, name, width, height);
+        const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+        fmt::println( // print out monitor's detailed infos
+            "{}: {} {} x {}, {} Hz",
+            monitorIdx,
+            name,
+            mode->width,
+            mode->height,
+            mode->refreshRate
+        );
     }
     line = "-------------------------------------------------";
     std::cout << line << std::endl;
@@ -74,6 +80,8 @@ void VulkanEngine::initGLFW(const InitOptions& options) {
     if (!glfwVulkanSupported()) {
         FATAL("Vulkan is not supported on this machine!");
     }
+    size_t width = DEFAULTS::WINDOW_WIDTH;
+    size_t height = DEFAULTS::WINDOW_HEIGHT;
     // having monitor as nullptr initializes a windowed window
     GLFWmonitor* monitor = nullptr;
     if (options.fullScreen) {
@@ -84,14 +92,18 @@ void VulkanEngine::initGLFW(const InitOptions& options) {
         fmt::println(
             "Selected {} as full-screen monitor.", glfwGetMonitorName(monitor)
         );
+        // update width and height with monitor's form factor
+        const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+        glfwWindowHint(GLFW_RED_BITS, mode->redBits);
+        glfwWindowHint(GLFW_GREEN_BITS, mode->greenBits);
+        glfwWindowHint(GLFW_BLUE_BITS, mode->blueBits);
+        glfwWindowHint(GLFW_REFRESH_RATE, mode->refreshRate);
+        width = mode->width;
+        height = mode->height;
     }
-    this->_window = glfwCreateWindow(
-        DEFAULTS::WINDOW_WIDTH,
-        DEFAULTS::WINDOW_HEIGHT,
-        "Vulkan Engine",
-        monitor,
-        nullptr
-    );
+
+    this->_window
+        = glfwCreateWindow(width, height, "Vulkan Engine", monitor, nullptr);
     if (this->_window == nullptr) {
         FATAL("Failed to initialize GLFW windlw!");
     }
@@ -1273,8 +1285,7 @@ void VulkanEngine::drawFrame(TickContext* ctx, uint8_t frame) {
         VK_NULL_HANDLE,
         &imageIndex
     );
-    [[unlikely]] if (result == VK_ERROR_OUT_OF_DATE_KHR
-                     || result == VK_SUBOPTIMAL_KHR) {
+    [[unlikely]] if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
         this->recreateSwapChain();
         return;
     } else [[unlikely]] if (result != VK_SUCCESS) {
