@@ -30,12 +30,10 @@
 #include "components/Camera.h"
 #include "components/DeltaTimer.h"
 #include "components/ImGuiManager.h"
-#include "components/ImGuiPerfPlot.h"
 #include "components/InputManager.h"
 #include "components/Profiler.h"
 #include "components/TextureManager.h"
 #include "components/imgui_widgets/ImGuiWidget.h"
-#include "components/imgui_widgets/ImGuiWidgetDeviceInfo.h"
 
 class TickContext;
 
@@ -224,9 +222,12 @@ class VulkanEngine
     Camera _mainCamera;
     InputManager _inputManager;
     Profiler _profiler;
-    ImGuiPerfPlot _perfPlot;
+    std::unique_ptr<std::vector<Profiler::Entry>> _lastProfilerData = _profiler.NewProfile();
 
     // ImGui widgets
-    friend class ImGuiWidget;
+    friend class ImGuiWidgetDeviceInfo;
     ImGuiWidgetDeviceInfo _widgetDeviceInfo;
+    friend class ImGuiWidgetPerfPlot;
+    ImGuiWidgetPerfPlot _widgetPerfPlot;
 };
+

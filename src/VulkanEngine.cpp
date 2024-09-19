@@ -317,7 +317,7 @@ void VulkanEngine::Tick() {
             vkDeviceWaitIdle(this->_device->logicalDevice);
         }
     }
-    _profiler.NewProfile();
+    _lastProfilerData = _profiler.NewProfile();
 }
 
 void VulkanEngine::framebufferResizeCallback(
@@ -1402,17 +1402,10 @@ void VulkanEngine::drawImGui() {
                 ImGui::Text("View Mode: Deactive");
             }
         }
-        // draw profiler
-        std::unique_ptr<std::vector<Profiler::Entry>> lastProfile
-            = _profiler.GetLastProfile();
-        _perfPlot.Draw(
-            std::move(lastProfile),
-            _deltaTimer.GetDeltaTimeSeconds(),
-            _timeSinceStartSeconds
-        );
+        _widgetPerfPlot.Draw(this);
+        _widgetDeviceInfo.Draw(this);
     }
     ImGui::End(); // VulkanEngine
-    _widgetDeviceInfo.Draw(this);
     _entityViewerSystem->DrawImGui();
     _imguiManager.EndImGuiContext();
 }
