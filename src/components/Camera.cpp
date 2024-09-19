@@ -95,3 +95,10 @@ void Camera::updateViewMatrix() {
     // Create view matrix
     _viewMatrix = glm::lookAt(_position, _position + direction, up);
 }
+
+void Camera::SetPosition(float x, float y, float z) {
+    _position.x = x;
+    _position.y = y;
+    _position.z = z;
+    updateViewMatrix();
+}

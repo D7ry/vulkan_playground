@@ -228,3 +228,8 @@ void ImGuiManager::BeginImGuiContext() {
 }
 
 void ImGuiManager::EndImGuiContext() { ImGui::Render(); }
+
+void ImGuiManager::ClearImGuiElements() {
+    BeginImGuiContext();
+    EndImGuiContext();
+}

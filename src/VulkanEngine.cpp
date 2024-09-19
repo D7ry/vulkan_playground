@@ -317,7 +317,7 @@ void VulkanEngine::Tick() {
             vkDeviceWaitIdle(this->_device->logicalDevice);
         }
     }
-    _profiler.NewProfile();
+    _lastProfilerData = _profiler.NewProfile();
 }
 
 void VulkanEngine::framebufferResizeCallback(
@@ -1300,6 +1300,7 @@ void VulkanEngine::drawFrame(TickContext* ctx, uint8_t frame) {
     }
 
     _imguiManager.RecordCommandBuffer(ctx);
+
     // end command buffer
     CB.end();
 
@@ -1376,43 +1377,56 @@ void VulkanEngine::initSwapChain() {
 }
 
 void VulkanEngine::drawImGui() {
+    if (!_wantToDrawImGui) {
+        return;
+    }
     PROFILE_SCOPE(&_profiler, "ImGui Draw");
     _imguiManager.BeginImGuiContext();
     if (ImGui::Begin("Vulkan Engine")) {
-        ImGui::SetWindowPos(ImVec2(0, 0), ImGuiCond_Once);
-        ImGui::SetWindowSize(ImVec2(400, 400), ImGuiCond_Once);
-        ImGui::Separator();
-        ImGui::SeparatorText("Camera");
-        {
-            ImGui::Text(
-                "Position: (%f, %f, %f)",
-                _mainCamera.GetPosition().x,
-                _mainCamera.GetPosition().y,
-                _mainCamera.GetPosition().z
-            );
-            ImGui::Text(
-                "Yaw: %f Pitch: %f Roll: %f",
-                _mainCamera.GetRotation().y,
-                _mainCamera.GetRotation().x,
-                _mainCamera.GetRotation().z
-            );
-            if (_lockCursor) {
-                ImGui::Text("View Mode: Active");
-            } else {
-                ImGui::Text("View Mode: Deactive");
+        if (ImGui::BeginTabBar("Engine Tab")) {
+            if (ImGui::BeginTabItem("General")) {
+                ImGui::SeparatorText("Camera");
+                {
+                    ImGui::Text(
+                        "Position: (%f, %f, %f)",
+                        _mainCamera.GetPosition().x,
+                        _mainCamera.GetPosition().y,
+                        _mainCamera.GetPosition().z
+                    );
+                    ImGui::Text(
+                        "Yaw: %f Pitch: %f Roll: %f",
+                        _mainCamera.GetRotation().y,
+                        _mainCamera.GetRotation().x,
+                        _mainCamera.GetRotation().z
+                    );
+                }
+                if (ImGui::Button("Reset")) {
+                    _mainCamera.SetPosition(0, 0, 0);
+                }
+                ImGui::SeparatorText("Cursor Lock(tab)");
+                if (_lockCursor) {
+                    ImGui::Text("Cursor Lock: Active");
+                } else {
+                    ImGui::Text("Cursor Lock: Deactive");
+                }
+                ImGui::EndTabItem();
             }
+
+            if (ImGui::BeginTabItem("Performance")) {
+                _widgetPerfPlot.Draw(this);
+                ImGui::EndTabItem();
+            }
+
+            if (ImGui::BeginTabItem("Device")) {
+                _widgetDeviceInfo.Draw(this);
+                ImGui::EndTabItem();
+            }
+
+            ImGui::EndTabBar(); // Engine Tab
         }
-        // draw profiler
-        std::unique_ptr<std::vector<Profiler::Entry>> lastProfile
-            = _profiler.GetLastProfile();
-        _perfPlot.Draw(
-            std::move(lastProfile),
-            _deltaTimer.GetDeltaTimeSeconds(),
-            _timeSinceStartSeconds
-        );
     }
+
     ImGui::End(); // VulkanEngine
-    _widgetDeviceInfo.Draw(this);
     _entityViewerSystem->DrawImGui();
     _imguiManager.EndImGuiContext();
 }
@@ -1482,6 +1496,17 @@ void VulkanEngine::bindDefaultInputs() {
         GLFW_KEY_ESCAPE,
         InputManager::KeyCallbackCondition::PRESS,
         [this]() { glfwSetWindowShouldClose(_window, GLFW_TRUE); }
+    );
+    // flip imgui draw with "`" key
+    _inputManager.RegisterCallback(
+        GLFW_KEY_GRAVE_ACCENT,
+        InputManager::KeyCallbackCondition::PRESS,
+        [this]() {
+            _wantToDrawImGui = !_wantToDrawImGui;
+            if (!_wantToDrawImGui) {
+                _imguiManager.ClearImGuiElements();
+            }
+        }
     );
 }
 

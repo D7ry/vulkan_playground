@@ -30,12 +30,10 @@
 #include "components/Camera.h"
 #include "components/DeltaTimer.h"
 #include "components/ImGuiManager.h"
-#include "components/ImGuiPerfPlot.h"
 #include "components/InputManager.h"
 #include "components/Profiler.h"
 #include "components/TextureManager.h"
 #include "components/imgui_widgets/ImGuiWidget.h"
-#include "components/imgui_widgets/ImGuiWidgetDeviceInfo.h"
 
 class TickContext;
 
@@ -198,6 +196,9 @@ class VulkanEngine
     uint8_t _currentFrame = 0;
     // whether we are locking the cursor within the glfw window
     bool _lockCursor = false;
+    // whether we want to draw imgui, set to false disables
+    // all imgui windows
+    bool _wantToDrawImGui = true;
 
     std::shared_ptr<VQDevice> _device;
 
@@ -224,9 +225,12 @@ class VulkanEngine
     Camera _mainCamera;
     InputManager _inputManager;
     Profiler _profiler;
-    ImGuiPerfPlot _perfPlot;
+    std::unique_ptr<std::vector<Profiler::Entry>> _lastProfilerData = _profiler.NewProfile();
 
     // ImGui widgets
-    friend class ImGuiWidget;
+    friend class ImGuiWidgetDeviceInfo;
     ImGuiWidgetDeviceInfo _widgetDeviceInfo;
+    friend class ImGuiWidgetPerfPlot;
+    ImGuiWidgetPerfPlot _widgetPerfPlot;
 };
+

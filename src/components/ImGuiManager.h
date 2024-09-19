@@ -47,8 +47,12 @@ class ImGuiManager
     // which pushes all draw calls to the CB.
     void BeginImGuiContext();
 
-    // end the `BeginRecordImGui` context
+    // end the `BeginImGuiContext` context
     void EndImGuiContext();
+
+    // clears off all lingering imgui draw commands.
+    // useful when disabling imgui draw globally.
+    void ClearImGuiElements();
 
     // Push all recorded ImGui UI elements onto the CB.
     void RecordCommandBuffer(const TickContext* tickData);

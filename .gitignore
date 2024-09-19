@@ -1,4 +1,5 @@
 # everything under build
+release/
 build/
 build_ninja/
 .cache/
