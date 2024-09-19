@@ -53,9 +53,10 @@ add_executable(vulkan_playground
         src/structs/Vertex.cpp
         src/components/VulkanUtils.cpp
         src/components/ImGuiManager.cpp
-        src/components/ImGuiPerfPlot.cpp
         src/components/TextureManager.cpp
         src/components/InputManager.cpp
+        src/components/imgui_widgets/ImGuiWidgetPerfPlot.cpp
+        src/components/imgui_widgets/ImGuiWidgetDeviceInfo.cpp
         src/lib/VQDevice.cpp
         src/lib/VQUtils.cpp
         src/VulkanEngine.cpp

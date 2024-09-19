@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <functional>
+#include <iostream>
 #include <limits>
 #include <set>
 
@@ -27,18 +28,68 @@
 static Entity* entityInstanced = new Entity("instanced entity");
 static Entity* entityInstanced2 = new Entity("instanced entity2");
 
-void VulkanEngine::initGLFW() {
+// in CLI pop up a monitor selection interface, that lists
+// monitor names and properties
+// the user would input a number to select the right monitor.
+GLFWmonitor* VulkanEngine::cliMonitorSelection() {
+    const char* line = nullptr;
+    line = "---------- Please Select Monitor Index ----------"; // lol
+    std::cout << line << std::endl;
+    int numMonitors;
+    GLFWmonitor** monitors = glfwGetMonitors(&numMonitors);
+    // print out monitor details
+    for (int monitorIdx = 0; monitorIdx < numMonitors; monitorIdx++) {
+        GLFWmonitor* monitor = monitors[monitorIdx];
+        const char* name = glfwGetMonitorName(monitor);
+        int width, height;
+        glfwGetMonitorPhysicalSize(monitor, &width, &height);
+        fmt::println("{}: {} {}mm x {}mm", monitorIdx, name, width, height);
+    }
+    line = "-------------------------------------------------";
+    std::cout << line << std::endl;
+    // scan user input for monitor idx and choose monitor
+    int monitorIdx = 0;
+    do {
+        std::string input;
+        getline(std::cin, input);
+        char* endPtr;
+        monitorIdx = strtol(input.c_str(), &endPtr, 10);
+        if (endPtr) { // conversion success
+            if (monitorIdx < numMonitors) {
+                break;
+            } else {
+                std::cout << "Monitor index out of range!" << std::endl;
+            }
+        } else {
+            std::cout << "Please input a valid integer number!" << std::endl;
+        }
+    } while (1);
+    return monitors[monitorIdx];
+}
+
+void VulkanEngine::initGLFW(const InitOptions& options) {
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
     if (!glfwVulkanSupported()) {
         FATAL("Vulkan is not supported on this machine!");
     }
+    // having monitor as nullptr initializes a windowed window
+    GLFWmonitor* monitor = nullptr;
+    if (options.fullScreen) {
+        monitor = glfwGetPrimaryMonitor();
+        if (options.manualMonitorSelection) {
+            monitor = cliMonitorSelection();
+        }
+        fmt::println(
+            "Selected {} as full-screen monitor.", glfwGetMonitorName(monitor)
+        );
+    }
     this->_window = glfwCreateWindow(
         DEFAULTS::WINDOW_WIDTH,
         DEFAULTS::WINDOW_HEIGHT,
         "Vulkan Engine",
-        nullptr,
+        monitor,
         nullptr
     );
     if (this->_window == nullptr) {
@@ -76,11 +127,11 @@ void VulkanEngine::cursorPosCallback(
     prevY = ypos;
 }
 
-void VulkanEngine::Init() {
+void VulkanEngine::Init(const VulkanEngine::InitOptions& options) {
 #if __APPLE__
     MoltenVKConfig::Setup();
 #endif // __APPLE__
-    initGLFW();
+    initGLFW(options);
     { // Input Handling
         auto keyCallback
             = [](GLFWwindow* window, int key, int scancode, int action, int mods
@@ -317,7 +368,7 @@ void VulkanEngine::Tick() {
             vkDeviceWaitIdle(this->_device->logicalDevice);
         }
     }
-    _profiler.NewProfile();
+    _lastProfilerData = _profiler.NewProfile();
     _numTicks++;
 }
 
@@ -1255,9 +1306,14 @@ void VulkanEngine::drawFrame(TickContext* ctx, uint8_t frame) {
         CB.begin(vk::CommandBufferBeginInfo());
     }
 
-    {     // invoke all GraphicsSystem under the main render pass
+    { // main render pass
+        vk::Extent2D extend = vk::Extent2D(
+            _swapChainExtent.width * 0.5, _swapChainExtent.height * 0.5
+        );
+        extend = _swapChainExtent;
+        // the main render pass renders the actual graphics of the game.
         { // begin main render pass
-            vk::Rect2D renderArea(VkOffset2D{0, 0}, _swapChainExtent);
+            vk::Rect2D renderArea(VkOffset2D{0, 0}, extend);
             std::array<vk::ClearValue, 2> clearValues{};
             clearValues[0].color = {0.f, 0.f, 0.f, 1.f};
             clearValues[1].depthStencil = vk::ClearDepthStencilValue(1.f, 0.f);
@@ -1278,15 +1334,15 @@ void VulkanEngine::drawFrame(TickContext* ctx, uint8_t frame) {
             VkViewport viewport{};
             viewport.x = 0.0f;
             viewport.y = 0.0f;
-            viewport.width = static_cast<float>(_swapChainExtent.width);
-            viewport.height = static_cast<float>(_swapChainExtent.height);
+            viewport.width = static_cast<float>(extend.width);
+            viewport.height = static_cast<float>(extend.height);
             viewport.minDepth = 0.0f;
             viewport.maxDepth = 1.0f;
             vkCmdSetViewport(CB, 0, 1, &viewport);
 
             VkRect2D scissor{};
             scissor.offset = {0, 0};
-            scissor.extent = _swapChainExtent;
+            scissor.extent = extend;
             vkCmdSetScissor(CB, 0, 1, &scissor);
         }
         // this->_phongSystem->Tick(ctx);
@@ -1297,6 +1353,7 @@ void VulkanEngine::drawFrame(TickContext* ctx, uint8_t frame) {
     }
 
     _imguiManager.RecordCommandBuffer(ctx);
+
     // end command buffer
     CB.end();
 
@@ -1373,39 +1430,55 @@ void VulkanEngine::initSwapChain() {
 }
 
 void VulkanEngine::drawImGui() {
+    if (!_wantToDrawImGui) {
+        return;
+    }
     PROFILE_SCOPE(&_profiler, "ImGui Draw");
     _imguiManager.BeginImGuiContext();
     if (ImGui::Begin("Vulkan Engine")) {
-        ImGui::SetWindowPos(ImVec2(0, 0), ImGuiCond_Once);
-        ImGui::SetWindowSize(ImVec2(400, 400), ImGuiCond_Once);
-        ImGui::Separator();
-        ImGui::SeparatorText("Camera");
-        {
-            ImGui::Text(
-                "Position: (%f, %f, %f)",
-                _mainCamera.GetPosition().x,
-                _mainCamera.GetPosition().y,
-                _mainCamera.GetPosition().z
-            );
-            ImGui::Text(
-                "Yaw: %f Pitch: %f Roll: %f",
-                _mainCamera.GetRotation().y,
-                _mainCamera.GetRotation().x,
-                _mainCamera.GetRotation().z
-            );
-            if (_lockCursor) {
-                ImGui::Text("View Mode: Active");
-            } else {
-                ImGui::Text("View Mode: Deactive");
+        if (ImGui::BeginTabBar("Engine Tab")) {
+            if (ImGui::BeginTabItem("General")) {
+                ImGui::SeparatorText("Camera");
+                {
+                    ImGui::Text(
+                        "Position: (%f, %f, %f)",
+                        _mainCamera.GetPosition().x,
+                        _mainCamera.GetPosition().y,
+                        _mainCamera.GetPosition().z
+                    );
+                    ImGui::Text(
+                        "Yaw: %f Pitch: %f Roll: %f",
+                        _mainCamera.GetRotation().y,
+                        _mainCamera.GetRotation().x,
+                        _mainCamera.GetRotation().z
+                    );
+                }
+                if (ImGui::Button("Reset")) {
+                    _mainCamera.SetPosition(0, 0, 0);
+                }
+                ImGui::SeparatorText("Cursor Lock(tab)");
+                if (_lockCursor) {
+                    ImGui::Text("Cursor Lock: Active");
+                } else {
+                    ImGui::Text("Cursor Lock: Deactive");
+                }
+                ImGui::EndTabItem();
             }
+
+            if (ImGui::BeginTabItem("Performance")) {
+                _widgetPerfPlot.Draw(this);
+                ImGui::EndTabItem();
+            }
+
+            if (ImGui::BeginTabItem("Device")) {
+                _widgetDeviceInfo.Draw(this);
+                ImGui::EndTabItem();
+            }
+
+            ImGui::EndTabBar(); // Engine Tab
         }
-        // draw profiler
-        std::unique_ptr<std::vector<Profiler::Entry>> lastProfile
-            = _profiler.GetLastProfile();
-        _perfPlot.Draw(
-            lastProfile, _deltaTimer.GetDeltaTimeSeconds(), _timeSinceStartSeconds
-        );
     }
+
     ImGui::End(); // VulkanEngine
     _entityViewerSystem->DrawImGui();
     _imguiManager.EndImGuiContext();
@@ -1476,6 +1549,17 @@ void VulkanEngine::bindDefaultInputs() {
         GLFW_KEY_ESCAPE,
         InputManager::KeyCallbackCondition::PRESS,
         [this]() { glfwSetWindowShouldClose(_window, GLFW_TRUE); }
+    );
+    // flip imgui draw with "`" key
+    _inputManager.RegisterCallback(
+        GLFW_KEY_GRAVE_ACCENT,
+        InputManager::KeyCallbackCondition::PRESS,
+        [this]() {
+            _wantToDrawImGui = !_wantToDrawImGui;
+            if (!_wantToDrawImGui) {
+                _imguiManager.ClearImGuiElements();
+            }
+        }
     );
 }
 

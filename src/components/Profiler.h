@@ -2,6 +2,8 @@
 
 // inspired by cgc profiler
 
+// Scope-based profiler utility that records time and 
+// call hierarchy information for subroutines.
 class Profiler
 {
   public:
@@ -39,7 +41,6 @@ class Profiler
     Profiler() {
         _currEntryLevel = 0;
         _profileData = std::make_unique<std::vector<Profiler::Entry>>();
-        _lastProfileData = std::make_unique<std::vector<Profiler::Entry>>();
     }
 
 
@@ -62,23 +63,17 @@ class Profiler
         _currEntryLevel--;
     }
 
-    // takes ownership of profile data of the previous profiling
-    std::unique_ptr<std::vector<Profiler::Entry>> GetLastProfile() {
-        return std::move(_lastProfileData);
-    }
-
-    // Clears all entries that has been profiled, should be called every Tick
-    // Stores all the result of current profiling into what can be obtained by calling
-    // `GetLastProfileData`
-    void NewProfile() {
+    // Clears all entries that has been profiled, 
+    // returns all entries that has been profiled. should be called every Tick
+    std::unique_ptr<std::vector<Profiler::Entry>> NewProfile() {
         _currEntryLevel = 0;
-        _lastProfileData = std::move(_profileData);
+        auto lastProfileData = std::move(_profileData);
         _profileData = std::make_unique<std::vector<Profiler::Entry>>();
+        return lastProfileData;
     }
 
   private:
     int _currEntryLevel = 0;
-    std::unique_ptr<std::vector<Profiler::Entry>> _lastProfileData;
     std::unique_ptr<std::vector<Profiler::Entry>> _profileData;
 };
 

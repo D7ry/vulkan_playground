@@ -28,19 +28,26 @@
 
 // Engine Components
 #include "components/Camera.h"
-#include "components/DeletionStack.h"
 #include "components/DeltaTimer.h"
 #include "components/ImGuiManager.h"
-#include "components/ImGuiPerfPlot.h"
 #include "components/InputManager.h"
 #include "components/Profiler.h"
 #include "components/TextureManager.h"
+#include "components/imgui_widgets/ImGuiWidget.h"
 
 class TickContext;
 
 class VulkanEngine
 {
   public:
+    struct InitOptions
+    {
+        bool fullScreen = false; // full screen mode
+        bool manualMonitorSelection
+            = false; // the user may select a monitor that's not the primary
+                     // monitor through CLI
+    };
+
     // Engine-wide static UBO that gets updated every Tick()
     // systems can read from `InitData::engineUBOStaticDescriptorBufferInfo`
     // to bind to the UBO in their own graphics pipelines.
@@ -53,7 +60,7 @@ class VulkanEngine
         bool flip;                   // a switch that gets flipped every frame
     };
 
-    void Init();
+    void Init(const InitOptions& options);
     void Run();
     void Tick();
     void Cleanup();
@@ -73,7 +80,8 @@ class VulkanEngine
     };
 
     /* ---------- Initialization Subroutines ---------- */
-    void initGLFW();
+    GLFWmonitor* cliMonitorSelection();
+    void initGLFW(const InitOptions& options);
     void initVulkan();
     void createInstance();
     void createSurface();
@@ -198,6 +206,9 @@ class VulkanEngine
     uint8_t _currentFrame = 0;
     // whether we are locking the cursor within the glfw window
     bool _lockCursor = false;
+    // whether we want to draw imgui, set to false disables
+    // all imgui windows
+    bool _wantToDrawImGui = true;
 
     std::shared_ptr<VQDevice> _device;
 
@@ -225,5 +236,12 @@ class VulkanEngine
     Camera _mainCamera;
     InputManager _inputManager;
     Profiler _profiler;
-    ImGuiPerfPlot _perfPlot;
+    std::unique_ptr<std::vector<Profiler::Entry>> _lastProfilerData
+        = _profiler.NewProfile();
+
+    // ImGui widgets
+    friend class ImGuiWidgetDeviceInfo;
+    ImGuiWidgetDeviceInfo _widgetDeviceInfo;
+    friend class ImGuiWidgetPerfPlot;
+    ImGuiWidgetPerfPlot _widgetPerfPlot;
 };
