@@ -100,6 +100,13 @@ void VulkanEngine::initGLFW(const InitOptions& options) {
         glfwWindowHint(GLFW_REFRESH_RATE, mode->refreshRate);
         width = mode->width;
         height = mode->height;
+#if __APPLE__
+        const int MACOS_SCALING_FACTOR = 2;
+        if (monitor == glfwGetPrimaryMonitor()) {
+            width *= MACOS_SCALING_FACTOR;
+            height *= MACOS_SCALING_FACTOR;
+        }
+#endif // __APPLE__
     }
 
     this->_window
@@ -1285,7 +1292,8 @@ void VulkanEngine::drawFrame(TickContext* ctx, uint8_t frame) {
         VK_NULL_HANDLE,
         &imageIndex
     );
-    [[unlikely]] if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+    [[unlikely]] if (result == VK_ERROR_OUT_OF_DATE_KHR
+                     || result == VK_SUBOPTIMAL_KHR) {
         this->recreateSwapChain();
         return;
     } else [[unlikely]] if (result != VK_SUCCESS) {
